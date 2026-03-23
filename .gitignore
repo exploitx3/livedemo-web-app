@@ -17,3 +17,8 @@ prod.env
 staging.env
 dev.env
 
+
+src/injectScript/config.json
+src/injectScript/injectScript.bundle.js.LICENSE.txt
+src/injectScript/injectScript.bundle.js
+
