@@ -1,0 +1,39 @@
+image: node:8.16.0
+
+cache:
+  paths:
+    - node_modules/
+    - dist/
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  only:
+    - develop
+  script:
+    - npm install
+    - npm install @babel/node
+    - npm run build-prod
+
+deploy-staging:
+  stage: deploy
+  when: manual
+  environment: staging
+  only:
+    - develop
+  script:
+    - npm run build-staging
+    - ./tools/deploy/deploy-staging.sh
+
+deploy-prod:
+  stage: deploy
+  when: manual
+  environment: prod
+  only:
+    - develop
+  script:
+    - npm run build-prod
+    - ./tools/deploy/deploy-prod.sh

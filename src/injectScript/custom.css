@@ -1,0 +1,22 @@
+/* CSS Reset - Remove default browser margins and padding */
+body {
+    margin: 0;
+    padding: 0;
+}
+
+/** {*/
+/*    !*cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3C!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--%3E%3Cpath d='M448 240v96c0 3.1-.4 6.2-1.1 9.2l-32 136C410.7 499.2 394.6 512 376 512H168a40 40 0 0 1 -32.4-16.5l-128-176c-13-17.9-9-42.9 8.8-55.9 17.9-13 42.9-9 55.9 8.8L104 316V40c0-22.1 17.9-40 40-40s40 17.9 40 40v200h8v-40c0-22.1 17.9-40 40-40s40 17.9 40 40v40h8v-24c0-22.1 17.9-40 40-40s40 17.9 40 40v24h8c0-22.1 17.9-40 40-40s40 17.9 40 40zm-256 80h-8v96h8v-96zm88 0h-8v96h8v-96zm88 0h-8v96h8v-96z' fill='%23f9f9f9' width='32' height='32'/%3E%3C/svg%3E") 16 16, auto;*!*/
+/*    !*cursor: url('../assets/macos-cursor.svg') 24 24, auto;*!*/
+/*    !*cursor: none !important;*!*/
+/*    !*cursor: default;*!*/
+/*} */
+
+/*.cursor-pointer:hover {*/
+/*    cursor: url('../assets/macos-cursor-click.svg') 24 24, auto !important;*/
+/*}*/
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        cursor: auto; /* Reverts to the default cursor */
+    }
+}

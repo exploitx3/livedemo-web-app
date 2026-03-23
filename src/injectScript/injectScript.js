@@ -1,0 +1,228 @@
+import React from 'react'
+import {createRoot} from 'react-dom/client'
+// import {WalkthroughComponent} from '../../../livedemo-components/dist/index.js'
+// import {WalkthroughComponent} from '@georgi.apostolov/livedemo-components.js'
+import WalkthroughComponent from './WalkthroughComponent.js'
+import elementPicker from './storyElementPicker.js'
+import ENV from '../config.json'
+import '@fontsource/lexend/latin.css'
+import './custom.css'
+
+/* eslint-disable import/default */
+import styled from 'styled-components'
+
+setDocumentDomain()
+
+// document.domain = ENV.URL_COMMON_DOMAIN
+
+window.elementPicker = elementPicker
+
+function setDocumentDomain() {
+
+    try {
+
+        document.domain = ENV.URL_COMMON_DOMAIN
+    } catch (e) {
+        // console.log("couldn't set document.domain")
+    }
+
+}
+
+
+function setupReact() {
+
+    // setupSessionRecording()
+
+    function WrapperComponent({steps, transitions, workspaceId, storyId, storyDemo, firstScreenId}) {
+
+
+        return (
+            <React.Fragment>
+                <WalkthroughComponent
+                    storyId={storyId}
+                    steps={window.config.STEPS}
+                    storyDemo={window.config.storyDemo}
+                    screens={window.config.SCREENS}
+                    workspaceId={workspaceId}
+                    firstScreenId={firstScreenId}
+                    isEmbed={window.config.isEmbed}
+                    isSessionRecordingDisabled={window.config.isSessionRecordingDisabled}
+                    width={
+                        window.config.storyDemo &&
+                        window.config.storyDemo.windowMeasures &&
+                        window.config.storyDemo.windowMeasures.innerWidth
+                    }
+                    height={
+                        window.config.storyDemo &&
+                        window.config.storyDemo.windowMeasures &&
+                        window.config.storyDemo.windowMeasures.innerHeight
+                    }
+                />
+            </React.Fragment>
+        )
+    }
+
+
+    const screens = window.config.SCREENS
+    if (screens.length === 0) {
+
+        // console.log('No Screens found in Story')
+        return
+    }
+
+    const workspaceId = window.config.workspaceId
+    const storyId = window.config.storyId
+    const storyDemo = window.config.storyDemo
+    let firstStepIndex = window.config.currentStepIndex || 0
+    let firstStepScreenId = window.config.STEPS[firstStepIndex].screenId
+
+
+    const container = document.getElementById('reactInjectTourApp')
+
+    const root = createRoot(container) // createRoot(container!) if you use TypeScript
+    root.render(
+        <IS.TopWrapper
+            style={{
+                width: "100%",
+                height: "100%",
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                padding: "24px",
+                boxSizing: 'border-box'
+            }}
+            background={(storyDemo.custom && storyDemo.custom.theme && storyDemo.custom.theme.backgroundColor) || '#FFFFFF'}
+
+        >
+            <WrapperComponent
+                steps={window.config.STEPS}
+                transitions={window.config.TRANSITIONS}
+                workspaceId={workspaceId}
+                storyId={storyId}
+                storyDemo={storyDemo}
+                firstScreenId={firstStepScreenId}
+            />
+        </IS.TopWrapper>)
+}
+
+
+window.addEventListener('DOMContentLoaded', (event) => {
+    let steps = window.config.STEPS
+    let firstStep = steps[0]
+
+    // let initialSelector = firstStep.view.viewType === 'Post' ? 'body' : getInitialSelector(steps)
+    setupReact()
+
+    // return checkForElement(initialSelector)
+    //   .then(() => {
+    // setupToursDrierjs(tour)
+
+    // setupTours(tour)
+    // setup(window.config.SCREENS, window.config.STEPS)
+
+    // })
+// setupToursIntro(TOURS)
+// setupToursDrierjs(TOURS)});
+})
+
+
+// console.log(window.config.SCREENS)
+// console.log(window.config.STEPS)
+// console.log(window.config.TRANSITIONS)
+
+
+// function setupEditText() {
+//
+//   function EditText({ target }) {
+//     let [isVisible, setIsVisible] = useState(false)
+//
+//     return (
+//       <TetherComponent
+//         renderTarget={ref => {
+//           return target
+//         }}
+//         renderElement={ref => (
+//           <div>Test tether</div>
+//         )
+//
+//         }
+//
+//         attachment="middle left"/>
+//     )
+//   }
+// }
+
+
+function setup(screens, steps) {
+    if (screens.length === 0) {
+
+        // console.log('No Screens found in Story')
+        return
+    }
+
+    let firstStepScreenId = steps[0].screenId
+    let firstIframeContent = ''
+
+    // addIframeElement()
+    changeIframeScreen('#story-demo-iframe', window.config.workspaceId, window.config.storyId, firstStepScreenId)
+
+
+}
+
+function addIframeElement() {
+
+    let iFrame = document.createElement('iframe')
+    // iFrame.src = URL.createObjectURL(blobContent);
+    iFrame.src = 'about:blank'
+    iFrame.id = 'story-demo-iframe'
+    iFrame.style = '    width: 100%;\n' +
+        '    height: 100%;\n' +
+        '    position: absolute;\n' +
+        '    border: none;'
+
+    // let iFrameDoc = iFrame.contentWindow && iFrame.contentWindow.document;
+    // if (!iFrameDoc) {
+    //   console.log("iFrame security.");
+    //   return;
+    // }
+
+
+    let iframeContainer = document.createElement('div')
+    iframeContainer.append(iFrame)
+
+    document.getElementById('demoWrapper').append(iframeContainer)
+}
+
+function createIframe(iframeSelector, content) {
+    const blobContent = new Blob([content], {type: 'text/html'})
+    // iFrame.src = URL.createObjectURL(blobContent);
+
+    let iFrame = document.querySelector(iframeSelector)
+    // iFrame.src = "about:blank";
+    iFrame.src = URL.createObjectURL(blobContent)
+
+    iFrame.style = '    width: 100%;\n' +
+        '    height: 100%;\n' +
+        '    position: absolute;\n' +
+        '    border: none;'
+
+    let iFrameDoc = iFrame.contentWindow && iFrame.contentWindow.document
+    if (!iFrameDoc) {
+        // console.log('iFrame security.')
+        return
+    }
+    // iFrameDoc.write(content);
+    // iFrameDoc.close();
+}
+
+
+const IS = {
+    TopWrapper: styled.div`
+        background: ${({background}) => `${background}`};
+
+        &&&&:fullscreen {
+            background: none;
+        }`
+}

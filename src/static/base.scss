@@ -1,0 +1,71 @@
+
+* {
+  font-family: monospace, cursive;
+  font-size: 1em;
+}
+
+
+@import'./toast.scss';
+
+.mention {
+  background: #e8f5fb;
+  padding: 0 2px 1px 2px;
+  border-radius: 3px;
+  text-transform: capitalize;
+  margin-left: 2px;
+  margin-right: 2px;
+}
+
+.mention:hover {
+  cursor: pointer;
+  background: #d1ebf6;
+}
+
+.channel-mention {
+  color: #1264a3;
+  //padding: 0 2px 1px 2px;
+  //border-radius: 3px;
+  text-transform: capitalize;
+  margin-left: 2px;
+  margin-right: 2px;
+}
+
+.channel-mention:hover {
+  cursor: pointer;
+  color: #125994;
+  text-decoration: underline;
+}
+
+
+.erxes-messenger-hidden > iframe {
+  width: 80px!important;
+  height: 80px!important;
+}
+
+.hide {
+  display: none;
+}
+
+.highlight {
+  box-shadow: 0 2px 8px #1890ff;
+}
+
+
+.highlight-channel {
+  border: 2px solid #1890ff;
+  width: 110% !important;
+  margin-left: -10% !important;
+  padding: 10px !important;
+  box-shadow: 0 2px 8px #1890ff;
+}
+
+.react-joyride__tooltip {
+
+  border-radius: 14px !important;
+  border: 2px solid #1890ff;
+}
+
+
+.text_link {
+  text-decoration: none;
+}

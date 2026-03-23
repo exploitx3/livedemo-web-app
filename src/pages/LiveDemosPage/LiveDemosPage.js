@@ -1,0 +1,277 @@
+import React, { useEffect, useState } from 'react'
+import StoryDemosView from './components/StoryDemosView/StoryDemosView'
+import Header from '../../components/Header/Header'
+// //import { Button, Col, Layout, Modal } from 'antd'
+
+import Button from 'antd/es/button'
+import Col from 'antd/es/col'
+import Row from 'antd/es/row'
+import Layout from 'antd/es/layout'
+import Modal from 'antd/es/modal'
+import 'antd/es/button/style'
+import 'antd/es/col/style'
+import 'antd/es/row/style'
+import 'antd/es/layout/style'
+import 'antd/es/modal/style'
+
+import { bindActionCreators } from 'redux'
+import { connect } from 'react-redux'
+import styled from 'styled-components'
+import { authWithToken } from '../../actions/authActions'
+import * as workspacesActions from '../../actions/workspacesActions'
+import * as walkthroughActions from '../../actions/walkthroughActions'
+import mainColors from '../../constants/mainColors'
+import axios from '../../utils/axiosInstance'
+import * as ENV from '../../config.json'
+
+import {chromeAppAuthenticate, showErrorsForResponse} from '../../utils/helperFunctions'
+import {updateCurrentSelectedWorkspace} from "../../actions/workspacesActions";
+
+const { confirm } = Modal
+
+const { Content, Footer, Sider } = Layout
+
+const DEFAULT_REPORTS_LIMIT = 3
+
+var chrome = chrome
+
+var chromeRuntimeExists = false
+
+if(chrome) {
+  chromeRuntimeExists = true
+}
+
+function LiveDemosPage(props) {
+
+  let [liveDemos, setLiveDemos] = useState([])
+  let [storyDemos, setStoryDemos] = useState(null)
+
+  function getLiveDemos(workspaceId, authToken) {
+    return axios.get(`/workspaces/${workspaceId}/livedemos`,{
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    })
+      .then((res) => res.data)
+  }
+
+  function getStoryDemos(workspaceId, authToken) {
+    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories`,{
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    })
+      .then((res) => res.data)
+  }
+
+
+  useEffect(() => {
+    if (props.authData.email) {
+
+
+      if (chromeRuntimeExists) {
+
+        chromeAppAuthenticate(props.authData)
+      }
+    }
+
+
+  }, [])
+
+  useEffect(() => {
+
+    if (props.currentSelectedWorkspace && props.currentSelectedWorkspace._id) {
+
+      Promise.all([
+        // getLiveDemos(props.currentSelectedWorkspace._id, props.authData.token)
+        // .then((liveDemosArray) => {
+        //
+        //
+        //   setLiveDemos(liveDemosArray)
+        // }),
+        getStoryDemos(props.currentSelectedWorkspace._id, props.authData.token)
+          .then((storyDemosArray) => {
+
+            setStoryDemos(storyDemosArray)
+          })
+        ])
+    }
+
+
+  }, [props.currentSelectedWorkspace])
+
+
+  function showConfirmDeleteLiveDemo(liveDemo) {
+
+    let authToken = props.authData.token
+
+    return confirm({
+      title: `Are you sure you want to delete "${liveDemo.name}"?`,
+      content: '',
+      okText: 'Confirm',
+      okButtonProps: { type: 'danger' },
+      cancelText: 'Cancel',
+      onOk() {
+        return axios.delete(`${ENV.STORIES_API}/workspaces/${liveDemo.workspaceId}/stories/${liveDemo._id.toString()}`, { headers: { 'Authorization': `Bearer ${authToken}` } })
+          .then(req => {
+
+            return props.actions.authWithToken(authToken)
+              .then(() => {
+                return props.actions.updateCurrentSelectedWorkspace(authToken, liveDemo.workspaceId)
+              })
+          })
+          .catch(err => {
+
+            return showErrorsForResponse(err)
+          })
+      },
+      onCancel() {
+      },
+    })
+
+  }
+
+  return (
+    <React.Fragment>
+
+      <Header title={'Demos'}/>
+      <S.Content>
+
+        <S.DashboardContainer id={'dashboard-container'}>
+          <S.DashboardRow gutter={[16, 16]}>
+            <S.WorkspacesCol xs={24} lg={24}>
+              <S.ColTitle>LiveDemos</S.ColTitle>
+              <StoryDemosView
+                onDeleteLiveDemo={(liveDemo) => {
+
+                  showConfirmDeleteLiveDemo(liveDemo)
+              }}
+                storydemos={storyDemos}
+                isChromeAppAuthorized={props.isChromeAppAuthorized}
+              />
+            </S.WorkspacesCol>
+            {/*<S.WorkspacesColRight xs={24} lg={12}>*/}
+
+            {/*  <S.ColTitle>LiveDemos</S.ColTitle>*/}
+            {/*  <LiveDemosView onDeleteLiveDemo={() => {*/}
+            {/*  }} livedemos={liveDemos}/>*/}
+            {/*</S.WorkspacesColRight>*/}
+          </S.DashboardRow>
+        </S.DashboardContainer>
+
+      </S.Content>
+
+    </React.Fragment>
+  )
+}
+
+
+const S = {
+  ColTitle: styled.div`
+    font-size: 1.3em;
+    color: ${mainColors.primaryText};
+    text-align: left;
+    margin-left: 30px;
+  `,
+  Content: styled(Content)`
+    && {
+      background: white;
+      padding: 16px;
+      overflow: scroll;
+      overflow-x: hidden;
+      border-top-left-radius: 18px;
+      border-top-right-radius: 4px;
+      width: 100%;
+      height: 100%;
+
+      border-top: 1.6px solid #1070ff;
+      border-left: 1.6px solid #1070ff;
+    }
+
+`,
+  Wrapper: styled.div`
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: white;
+`,
+  TutorialButton: styled(Button)`
+      && {
+
+        background: ${mainColors.primaryColor};
+        color: white;
+        display: inline-block;
+        //margin: 0 20px;
+        //padding: 5px 15px;
+        border: 0.125rem solid ${mainColors.primaryColor};
+        border-radius: 2rem;
+        font-family: 'Baloo Chettan 2', cursive;
+        font-size: 1.0em;
+        text-decoration: none;
+        transition: all 0.2s;
+        cursor: pointer;
+      }
+      &&:hover {
+        background: white;
+        color: ${mainColors.primaryColor};
+      }
+
+`,
+  DashboardContainer: styled.div`
+    background: white;
+    width: 100%;
+  `,
+  DashboardRow: styled(Row)`
+    && {
+      width: 100%;
+    }
+  `,
+  WorkspacesCol: styled(Col)`
+    && {
+      display: flex;
+      flex-direction: column;
+    }
+  `,
+  WorkspacesColRight: styled(Col)`
+    && {
+      display: flex;
+      flex-direction: column;
+      text-align: center;
+    }
+
+    @media (max-width: 992px) {
+      & {
+        margin-top: 30px;
+      }
+    }
+  `,
+  ExitDemoButton: styled(Button)`
+   margin-left: 25px;
+  `
+}
+
+
+function mapStateToProps(state) {
+
+  return {
+    workspaces: state.workspacesReducer.workspaces,
+    currentSelectedWorkspace: state.workspacesReducer.currentSelectedWorkspace,
+    isChromeAppAuthorized: state.workspacesReducer.isChromeAppAuthorized,
+    authData: state.authReducer.authData
+  }
+}
+
+function mapDispatchToProps(dispatch) {
+  return {
+
+    actions: bindActionCreators({
+      authWithToken: authWithToken,
+      updateAllWorkspacesForUser: workspacesActions.updateAllWorkspacesForUser,
+      updateCurrentSelectedWorkspace: workspacesActions.updateCurrentSelectedWorkspace,
+      runWalkthrough: walkthroughActions.runWalkthrough
+    }, dispatch)
+
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(LiveDemosPage)

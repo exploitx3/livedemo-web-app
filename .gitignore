@@ -1,0 +1,19 @@
+# package directories
+
+node_modules
+jspm_packages
+
+# config
+src/config.json
+
+# Webstorm
+.idea
+.idea/
+dist/
+dist
+dist/*
+
+prod.env
+staging.env
+dev.env
+

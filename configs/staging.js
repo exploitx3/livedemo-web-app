@@ -1,0 +1,17 @@
+export default {
+  ENV: 'staging',
+  CAPTCHA_SITE_KEY: process.env.CAPTCHA_SITE_KEY || '',
+  CAPTCHA_SECRET_KEY: process.env.CAPTCHA_SECRET_KEY || '',
+  SERVER_URL: process.env.SERVER_URL || '',
+  LANDING_URL: process.env.LANDING_URL || '',
+  APP_URL: process.env.APP_URL || '',
+  API_URL: process.env.API_URL || '',
+  URL_COMMON_DOMAIN: process.env.URL_COMMON_DOMAIN || '',
+  STRIPE_PUBLISHABLE: process.env.STRIPE_PUBLISHABLE || '',
+  CHROME_APP_ID: process.env.CHROME_APP_ID|| '',
+  STORIES_API: process.env.STORIES_API || '',
+  LIVE_DOMAIN_STORIES_API: process.env.STORIES_API || '',
+  LANDING_PAGE_CLIENT_TOKEN: process.env.LANDING_PAGE_CLIENT_TOKEN || '',
+  LIVEDEMO_CDN_URL: process.env.LIVEDEMO_CDN_URL || '',
+  GOOGLE_FONT_API_KEY: process.env.GOOGLE_FONT_API_KEY || '',
+}

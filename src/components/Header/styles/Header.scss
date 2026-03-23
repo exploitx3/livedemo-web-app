@@ -1,0 +1,38 @@
+
+
+.site-header {
+    position: relative;
+    padding: 0px 0;
+    width: 100%;
+    transition: all 0.35s ease;
+}
+
+
+.site-header-inner {
+    position: relative; /* To display all elements above the background color */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-links {
+    display: inline-flex;
+
+li {
+    display: inline-flex;
+}
+
+
+}
+
+.navbar-fixed-top {
+    background-color: #fffffff3;
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    border: 0;
+    border-radius: 3px;
+    box-shadow: 0 10px 20px -12px rgba(0,0,0,.42), 0 3px 20px 0 rgba(0,0,0,.12), 0 8px 10px -5px rgba(0,0,0,.2);
+}
+

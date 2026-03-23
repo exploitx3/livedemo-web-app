@@ -1,0 +1,8 @@
+export default {
+  'STARTUP_MONTHLY': 1,
+  'STARTUP_ANNUALLY': 1,
+  'PRO_MONTHLY': 5,
+  'PRO_ANNUALLY': 5,
+  'BUSINESS_MONTHLY': 20,
+  'BUSINESS_ANNUALLY': 20,
+}

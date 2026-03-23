@@ -1,0 +1,18 @@
+.stripe-element {
+  margin-top: 12.5px;
+  margin-bottom: 12.5px;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-radius: 2px;
+  border-color: #3a3a3a;
+  color: #424770;
+
+  padding-left: 40px;
+  font-family: Open Sans, sans-serif;
+  font-size: 16px;
+}
+
+.stripe-element:focus {
+  box-shadow: unset;
+}

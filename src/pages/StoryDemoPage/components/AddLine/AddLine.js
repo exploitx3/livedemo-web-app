@@ -1,0 +1,236 @@
+import React, { useState, useEffect } from 'react'
+import Colors from '../../../../constants/mainColors'
+//import { Button, Dropdown, Icon, Input, Menu, Modal } from 'antd'
+
+import Button from 'antd/es/button'
+import Dropdown from 'antd/es/dropdown'
+import Icon from '../../../../components/Icon/Icon'
+import Input from 'antd/es/input'
+import Menu from 'antd/es/menu'
+import Modal from 'antd/es/modal'
+import styled from 'styled-components'
+import { MdAdsClick, MdOutlineMouse } from 'react-icons/md'
+
+const { confirm } = Modal
+
+
+const AddLine = ({onPointerClick, onHotspotClick, onPopupClick}) => {
+  let [addLineText, setAddLineText] = useState('')
+
+
+  return (
+
+    <SC.Wrapper >
+
+      <SC.AddLine onMouseLeave={() => {
+        setAddLineText('')
+      }}>
+
+        <SC.PointerClickIcon
+          onMouseEnter={() => {
+            setAddLineText('Add pointer click')
+          }}
+
+          onClick={onPointerClick}
+
+          className={'AddLine_PointerIcon'}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 6.2C4 5.98 4.18 5.8 4.4 5.8H11.6C11.82 5.8 12 5.98 12 6.2V6.8C12 6.90609 11.9579 7.00783 11.8828 7.08284C11.8078 7.15786 11.7061 7.2 11.6 7.2H4.4C4.29391 7.2 4.19217 7.15786 4.11716 7.08284C4.04214 7.00783 4 6.90609 4 6.8V6.2ZM4.4 8.8C4.34747 8.8 4.29546 8.81035 4.24693 8.83045C4.1984 8.85055 4.1543 8.88001 4.11716 8.91716C4.08001 8.9543 4.05055 8.9984 4.03045 9.04693C4.01035 9.09546 4 9.14747 4 9.2V9.8C4 10.021 4.18 10.2 4.4 10.2H9.6C9.70609 10.2 9.80783 10.1579 9.88284 10.0828C9.95786 10.0078 10 9.90609 10 9.8V9.2C10 9.14747 9.98965 9.09546 9.96955 9.04693C9.94945 8.9984 9.91999 8.9543 9.88284 8.91716C9.8457 8.88001 9.8016 8.85055 9.75307 8.83045C9.70454 8.81035 9.65253 8.8 9.6 8.8H4.4Z" fill="black"/>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M6 2H4.8C3.12 2 2.28 2 1.638 2.327C1.07354 2.61462 0.614616 3.07354 0.327 3.638C0 4.28 0 5.12 0 6.8V9.2C0 10.88 0 11.72 0.327 12.362C0.614616 12.9265 1.07354 13.3854 1.638 13.673C2.28 14 3.12 14 4.8 14H11.2C12.88 14 13.72 14 14.362 13.673C14.9265 13.3854 15.3854 12.9265 15.673 12.362C16 11.72 16 10.88 16 9.2V6.8C16 5.12 16 4.28 15.673 3.638C15.3854 3.07354 14.9265 2.61462 14.362 2.327C13.72 2 12.88 2 11.2 2H10L9.131 1.131C8.735 0.735 8.537 0.537 8.31 0.463C8.10917 0.397749 7.89283 0.397749 7.692 0.463C7.464 0.537 7.266 0.735 6.87 1.131L6 2ZM10.083 3.4C9.838 3.4 9.716 3.4 9.601 3.372C9.49862 3.34751 9.40075 3.30701 9.311 3.252C9.211 3.191 9.124 3.104 8.951 2.932L8.141 2.122L8 1.98L7.859 2.121L7.049 2.931C6.876 3.104 6.789 3.191 6.689 3.253C6.59925 3.30801 6.50138 3.34851 6.399 3.373C6.284 3.4 6.162 3.4 5.917 3.4H4.8C3.937 3.4 3.374 3.401 2.944 3.436C2.53 3.47 2.364 3.528 2.274 3.574C1.97253 3.72747 1.72747 3.97253 1.574 4.274C1.528 4.364 1.47 4.53 1.436 4.944C1.401 5.374 1.4 5.937 1.4 6.8V9.2C1.4 10.063 1.401 10.626 1.436 11.056C1.47 11.47 1.528 11.636 1.574 11.726C1.72747 12.0275 1.97253 12.2725 2.274 12.426C2.364 12.472 2.53 12.53 2.944 12.564C3.374 12.599 3.937 12.6 4.8 12.6H11.2C12.063 12.6 12.626 12.599 13.056 12.564C13.47 12.53 13.636 12.472 13.726 12.426C14.0275 12.2725 14.2725 12.0275 14.426 11.726C14.472 11.636 14.53 11.47 14.564 11.056C14.599 10.626 14.6 10.063 14.6 9.2V6.8C14.6 5.937 14.599 5.374 14.564 4.944C14.53 4.53 14.472 4.364 14.426 4.274C14.2725 3.97253 14.0275 3.72747 13.726 3.574C13.636 3.528 13.47 3.47 13.056 3.436C12.626 3.401 12.063 3.4 11.2 3.4H10.083V3.4Z" fill="black"/>
+          </svg>
+        </SC.PointerClickIcon>
+        <SC.AddStepIcon className={'AddLine_AddStepIcon'}>
+          <SC.AddStepIconText>+</SC.AddStepIconText>
+        </SC.AddStepIcon>
+        <SC.HotspotIcon
+          onMouseEnter={() => {
+            setAddLineText('Add hotspot')
+          }}
+          className={'AddLine_HotspotIcon'}
+          onClick={onHotspotClick}
+        />
+        <SC.PopupClickIcon
+          onMouseEnter={() => {
+            setAddLineText('Add popup')
+          }}
+
+          onClick={onPopupClick}
+
+          className={'AddLine_PopupIcon'}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+          <path d="M15 1V15H1V1H15ZM14 2H2V14H14V2ZM13 7H3V3H13V7ZM13 9H3V8H13V9ZM13 11H3V10H13V11ZM13 13H3V12H13V13Z" fill="black"/>
+          </svg>
+        </SC.PopupClickIcon>
+
+      </SC.AddLine>
+      <SC.AddLine_TextLine>
+        <SC.AddLine_Text>{addLineText}</SC.AddLine_Text>
+      </SC.AddLine_TextLine>
+
+    </SC.Wrapper>
+  )
+}
+
+
+const SC = {
+  Wrapper: styled.div`
+    font-family: monospace,cursive;
+    position: relative;
+    //width: 100%;
+    //height: 100%;
+
+  `,
+
+  EClickIcon: styled(MdOutlineMouse)`
+    height: 25px;
+    width: 45px;
+    
+    fill: ${Colors.primaryColor};
+    
+    &:hover {
+      cursor: pointer;
+      fill: ${Colors.primaryColorDarker};
+    }
+
+    transition: 0.4s ease-in-out;
+
+    transform: translate(50px, 0px) scale(0.9);
+    opacity: 0;
+    margin: 0 10px;
+
+    
+  `,
+  PointerClickIcon: styled.div`
+    height: 25px;
+    width: 45px;
+    
+    && svg path { 
+      fill: ${Colors.primaryColor};
+    }
+    
+    && svg {
+      width: 100%;
+      height: 100%;
+    }
+    
+    
+    &:hover svg {
+      cursor: pointer;
+      fill: ${Colors.primaryColorDarker};
+    }
+    margin: 0 10px;
+    
+    transition: 0.4s ease-in-out;
+
+    transform: translate(50px, 0px) scale(0.9);
+    opacity: 0;
+
+    
+  `,
+
+  HotspotIcon: styled(MdAdsClick)`
+    height: 25px;
+    width: 45px;
+    
+    fill: ${Colors.primaryColor};
+    
+    &:hover {
+      cursor: pointer;
+      fill: ${Colors.primaryColorDarker};
+    }
+    
+    transition: 0.4s ease-in-out;
+    
+    transform: translate(0px, 0px) scale(0.9);
+    opacity: 0;
+    position: absolute;
+    
+  `,
+
+  PopupClickIcon: styled.div`
+    height: 25px;
+    width: 45px;
+    
+
+    && svg path { 
+      fill: ${Colors.primaryColor};
+    }
+    
+    && svg {
+      width: 100%;
+      height: 100%;
+    }
+    
+    &:hover svg {
+      cursor: pointer;
+      fill: ${Colors.primaryColorDarker};
+    }
+    margin: 0 10px;
+
+    transition: 0.4s ease-in-out;
+
+    transform: translate(-50px, 0px) scale(0.9);
+    opacity: 0;
+
+    
+  `,
+  AddStepIcon: styled.div`
+
+    background: #1070ff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    
+    transition: 0.2s ease-in-out;
+
+ 
+
+  `,
+  AddStepIconText: styled.p`
+    margin: 0px;
+    font-size: 30px;
+    line-height: 40px;
+    color: white;
+  `,
+  AddLine_TextLine: styled.div`
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  `,
+  AddLine_Text: styled.p`
+    line-height: 20px;
+    min-height: 20px;
+    text-align: center;
+    margin: 0px;
+    color: ${Colors.primaryColor};
+  `,
+  AddLine: styled.div`
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    
+    margin-top: 10px;
+    
+    &&:hover .AddLine_PointerIcon,
+    &&:hover .AddLine_HotspotIcon,
+    &&:hover .AddLine_PopupIcon {
+        opacity: 1;
+        transform: translate(0px, 0px);
+    }
+    
+    &&:hover .AddLine_AddStepIcon {
+      opacity: 0;
+    }
+    
+  `,
+}
+
+export default AddLine
