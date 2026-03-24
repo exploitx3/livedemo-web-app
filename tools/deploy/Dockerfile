@@ -12,7 +12,8 @@ RUN npm ci
 COPY . .
 
 EXPOSE 5000
+EXPOSE 8080
 
 # start-vite: . ./dev.env && node configEnv.js && vite serve --port 5000
 # --host 0.0.0.0 is required so the server accepts connections from outside the container
-CMD ["npm", "run", "start-vite-docker", "--", "--host", "0.0.0.0"]
+CMD ["/bin/sh", "-c", "npm run start-vite-docker -- --host 0.0.0.0 & npm run bundle-inject & wait"]
