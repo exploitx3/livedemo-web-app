@@ -15,4 +15,4 @@ EXPOSE 5000
 
 # start-vite: . ./dev.env && node configEnv.js && vite serve --port 5000
 # --host 0.0.0.0 is required so the server accepts connections from outside the container
-CMD ["npm", "run", "start-vite", "--", "--host", "0.0.0.0"]
+CMD ["npm", "run", "start-vite-docker", "--", "--host", "0.0.0.0"]
