@@ -35,12 +35,12 @@ Security concerns particularly relevant to this project:
 
 ## Out of scope
 
-- Vulnerabilities in upstream services (Stripe, Google OAuth, reCAPTCHA) — report those to the respective vendors.
+- Vulnerabilities in upstream services (Stripe, Google OAuth, reCAPTCHA) - report those to the respective vendors.
 - Issues that require physical access to the user's machine.
 
 ## Security best practices for contributors
 
-- Never commit real secrets to `local.env` or any tracked file — use `dev.env` (gitignored) for personal keys.
+- Never commit real secrets to `local.env` or any tracked file - use `dev.env` (gitignored) for personal keys.
 - Use `pk_test_` Stripe publishable keys in development.
 - Keep dependencies up to date: `npm audit` and `npm update`.
 - Avoid using `dangerouslySetInnerHTML` unless the content is explicitly sanitized.

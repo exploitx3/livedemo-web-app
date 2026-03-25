@@ -16,7 +16,7 @@ Why is this needed? What problem does it solve, or what use case does it enable?
 
 ## Proposed solution
 
-Describe the change you'd like to see — a new UI component, editor capability, workflow improvement, etc.
+Describe the change you'd like to see - a new UI component, editor capability, workflow improvement, etc.
 
 ## Mockup or example (if applicable)
 

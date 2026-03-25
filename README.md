@@ -1,17 +1,17 @@
 # livedemo-web-app
 
-React frontend for the livedemo platform — the interactive demo editor at [app.livedemo.ai](https://app.livedemo.ai).
+React frontend for the livedemo platform - the web-app demo editor at [app.livedemo.ai](https://app.livedemo.ai).
 
 ![livedemo](https://github.com/exploitx3/livedemo-deploy/blob/main/screenshots/2.png?raw=true)
 
 ## Stack
 
-- **Framework** — React 18 + Redux
-- **Bundler** — Vite (dev & prod), Webpack (inject script bundle)
-- **Styling** — Styled Components, SASS
-- **Routing** — React Router
-- **Payments** — Stripe
-- **Auth** — Google OAuth2, reCAPTCHA
+- **Framework** - React 18 + Redux
+- **Bundler** - Vite (dev & prod), Webpack (inject script bundle)
+- **Styling** - Styled Components, SASS
+- **Routing** - React Router
+- **Payments** - Stripe
+- **Auth** - Google OAuth2, reCAPTCHA
 
 ---
 
@@ -38,7 +38,7 @@ npm install
 cp local.env dev.env
 ```
 
-> `dev.env` is listed in `.gitignore` — your secrets will never be committed.
+> `dev.env` is listed in `.gitignore` - your secrets will never be committed.
 
 Key variables to update in `dev.env`:
 

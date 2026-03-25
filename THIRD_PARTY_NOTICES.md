@@ -4,7 +4,7 @@ The application code in this repository is licensed under the MIT License (see [
 
 ---
 
-## LAME / lamejs (`lame.all.js`) — GNU LGPL 2.1
+## LAME / lamejs (`lame.all.js`) - GNU LGPL 2.1
 
 | | |
 | --- | --- |
@@ -30,7 +30,7 @@ The LAME project describes commercial use under the LGPL as follows (paraphrased
 
 ---
 
-## Payment card SVG icons (`payment-icons`) — Mozilla Public License 2.0
+## Payment card SVG icons (`payment-icons`) - Mozilla Public License 2.0
 
 | | |
 | --- | --- |

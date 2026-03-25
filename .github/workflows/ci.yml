@@ -1,8 +1,8 @@
 # Equivalent to .gitlab-ci.yml (build stage jobs).
 #
 # Secrets (configure in repo Settings → Secrets and variables → Actions):
-#   CI_MINE_USERNAME — Docker registry username
-#   CI_MINE_PASSWORD — Docker registry password
+#   CI_MINE_USERNAME - Docker registry username
+#   CI_MINE_PASSWORD - Docker registry password
 
 name: CI
 

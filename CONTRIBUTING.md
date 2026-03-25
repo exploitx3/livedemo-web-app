@@ -53,7 +53,7 @@ refactor: extract shared modal component
 
 ## Code conventions
 
-- React functional components with hooks — no class components
+- React functional components with hooks - no class components
 - One component per file; filename matches the component name
 - Styles via Styled Components (preferred) or SASS modules
 - Redux for global state; local state via `useState`/`useReducer` where appropriate
