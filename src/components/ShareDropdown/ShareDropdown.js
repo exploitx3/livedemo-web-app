@@ -434,7 +434,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
   ]
 
   function renderDefaultSecondView() {
-    debugger
+
     return (
 
       <SD.Row>

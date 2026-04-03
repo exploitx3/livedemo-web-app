@@ -106,7 +106,7 @@ const AutoPlayOptions = ({
           <ST.ActionSelectorLine>
             <ST.ActionSelectorText>Type:</ST.ActionSelectorText>
             <ST.Selector value={internalStep.autoPlayConfig.type} style={{width: 120}} onChange={(newType) => {
-              debugger
+
               updateAutoPlayConfigField('type', newType)
             }}>
               {
@@ -123,7 +123,7 @@ const AutoPlayOptions = ({
             <ST.ActionSelectorText>Delay:</ST.ActionSelectorText>
             <ST.DelayInput
               onChange={(newDelay) => {
-                debugger
+
                 let newStep = JSON.parse(JSON.stringify(internalStep))
                 newStep.autoPlayConfig.delay = newDelay
                 setInternalStep(newStep)

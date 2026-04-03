@@ -161,7 +161,6 @@ export default function storyDemoReducer(state = initialState.storyDemoReducer, 
       }
     case UPDATE_STORY_DEMO:
 
-
       return {
         ...newState,
         currentStoryDemo: {

@@ -8,7 +8,7 @@ trap "exit" INT
 #aws_profile=$AWS_PROFILE
 s3_bucket="$S3_BUCKET"
 cf_id="$CLOUDFRONT_ID" # app.livedemo.ai
-build_folder="$BUILD_FOLDER}"
+build_folder="$BUILD_FOLDER"
 clear_cloudflare=1
 cloudflare_id="$CLOUDFLARE_ID"
 cloudflare_token="$CLOUDFLARE_TOKEN"

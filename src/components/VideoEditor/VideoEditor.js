@@ -257,7 +257,7 @@ const VideoEditor = (props) => {
     if (currentScreen && currentScreen.asset && currentScreen.asset.duration) {
       // Reset tracker
       setVideoPercentageTime(0)
-      
+
       videoDurationRef.current = currentScreen.asset.duration
 
       if (window) {
@@ -351,7 +351,7 @@ const VideoEditor = (props) => {
       if (event.data.type && event.data.type === 'zoomSpan_set') {
 
 
-        debugger
+
         console.log('zoomSpan_set')
         console.log('event.data')
         console.log(event.data)

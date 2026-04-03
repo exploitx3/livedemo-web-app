@@ -32,8 +32,18 @@ function setDocumentDomain() {
 function setupReact() {
 
     // setupSessionRecording()
+    const IS = {
+        TopWrapper: styled.div`
+            background: ${({background}) => `${background}`};
+
+            &&&&:fullscreen {
+                background: none;
+            }`
+    }
 
     function WrapperComponent({steps, transitions, workspaceId, storyId, storyDemo, firstScreenId}) {
+
+
 
 
         return (
@@ -108,52 +118,11 @@ function setupReact() {
 }
 
 
-window.addEventListener('DOMContentLoaded', (event) => {
-    let steps = window.config.STEPS
-    let firstStep = steps[0]
-
-    // let initialSelector = firstStep.view.viewType === 'Post' ? 'body' : getInitialSelector(steps)
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', () => setupReact())
+} else {
     setupReact()
-
-    // return checkForElement(initialSelector)
-    //   .then(() => {
-    // setupToursDrierjs(tour)
-
-    // setupTours(tour)
-    // setup(window.config.SCREENS, window.config.STEPS)
-
-    // })
-// setupToursIntro(TOURS)
-// setupToursDrierjs(TOURS)});
-})
-
-
-// console.log(window.config.SCREENS)
-// console.log(window.config.STEPS)
-// console.log(window.config.TRANSITIONS)
-
-
-// function setupEditText() {
-//
-//   function EditText({ target }) {
-//     let [isVisible, setIsVisible] = useState(false)
-//
-//     return (
-//       <TetherComponent
-//         renderTarget={ref => {
-//           return target
-//         }}
-//         renderElement={ref => (
-//           <div>Test tether</div>
-//         )
-//
-//         }
-//
-//         attachment="middle left"/>
-//     )
-//   }
-// }
-
+}
 
 function setup(screens, steps) {
     if (screens.length === 0) {
@@ -217,12 +186,3 @@ function createIframe(iframeSelector, content) {
     // iFrameDoc.close();
 }
 
-
-const IS = {
-    TopWrapper: styled.div`
-        background: ${({background}) => `${background}`};
-
-        &&&&:fullscreen {
-            background: none;
-        }`
-}

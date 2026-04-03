@@ -6,7 +6,7 @@ const ENV = ENVmodule.default ?? ENVmodule
 
 export function deriveRenderSteps(storyDemo) {
 
-  let newSteps = storyDemo.screens
+  let newSteps = storyDemo.screens.length === 0 ? [] : storyDemo.screens
     .sort((firstScreen, secondScreen) => firstScreen.index - secondScreen.index)
     .reduce((accum, screen) => {
 

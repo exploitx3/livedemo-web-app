@@ -29,8 +29,11 @@ const Header = (props) => {
   let workspaceName = props.workspaceName ? props.workspaceName : ''
   let liveDemoName = props.liveDemoName ? props.liveDemoName : ''
 
+
   let liveDemoWorkspaceId = liveDemo && liveDemo.workspaceId && liveDemo.workspaceId._id ? liveDemo.workspaceId._id : ''
   let liveDemoId = liveDemo && liveDemo._id ? liveDemo._id : ''
+
+  let demoNavLink = props.isAutoRecording ? `/demos` : `/workspace/${liveDemoWorkspaceId}/storydemo/${liveDemoId}`
 
   return (
     <ErrorBoundary>
@@ -41,7 +44,7 @@ const Header = (props) => {
               <S.Breadcrumbs__Text>{workspaceName}</S.Breadcrumbs__Text>
             </S.Breadcrumbs__Link>
             <S.Seperator>/</S.Seperator>
-            <S.Breadcrumbs__Link to={`/workspace/${liveDemoWorkspaceId}/storydemo/${liveDemoId}`}>
+            <S.Breadcrumbs__Link to={demoNavLink}>
               <S.Breadcrumbs__Text>{liveDemoName}</S.Breadcrumbs__Text>
             </S.Breadcrumbs__Link>
           </S.Breadcrumbs>
@@ -182,11 +185,13 @@ const S = {
     width: 100%;
     justify-content: space-between;
     align-items: center;
+    box-sizing: content-box;
 
     &.ant-layout-header {
       text-transform: capitalize;
+      min-height: 36px;
       z-index: 2;
-      padding: 0px 25px;
+      padding: 15px 25px 5px 25px !important;
       background: ${mainColors.App.sidebarColor};
       position: relative;
       width: 100%;

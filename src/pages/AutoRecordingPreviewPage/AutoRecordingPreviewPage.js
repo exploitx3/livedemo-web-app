@@ -19,7 +19,7 @@ import Header from './components/Header/Header'
 import Spinner from '../../components/Spinner/Spinner'
 import IconTextButton from '../../components/IconTextButton/IconTextButton'
 import Icon from '../../components/Icon/Icon'
-import {useNavigate, useLocation, useParams} from 'react-router-dom'
+import {useLocation, useNavigate, useParams} from 'react-router-dom'
 import styled from 'styled-components'
 import {bindActionCreators} from 'redux'
 import {connect} from 'react-redux'
@@ -209,9 +209,11 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
   const navigate = useNavigate()
   const location = useLocation()
   const params = useParams()
-  
+
   let [autoRecordingDoc, setAutoRecordingDoc] = useState(null)
-  let [visibleSteps, setVisibleSteps] = useState({})
+
+
+  let [visibleStepsIndex, setVisibleStepsIndex] = useState(null)
   let [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(null)
   let checkUploadedTimer = useRef(null)
 
@@ -335,12 +337,6 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
         .map((randomIndex) => RANDOM_LOADING_TEXT[randomIndex])
     )
 
-  const toggleStepsVisibility = (index) => {
-    setVisibleSteps(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }))
-  }
 
   function generateLiveDemoFromDemoSuggestion(demoSuggestion, authToken) {
 
@@ -373,6 +369,7 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
         }
         authData={authData}
         liveDemo={autoRecordingDoc}
+        isAutoRecording={true}
         style={{boxShadow: 'none'}}
       />
       <S.Content>
@@ -441,14 +438,14 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
                   text="Generate LiveDemo"
                   disabled={selectedSuggestionIndex === null}
                   buttonStyles={{
-                    backgroundColor: selectedSuggestionIndex !== null ? `white !important` : '#d9d9d9 !important',
-                    color: selectedSuggestionIndex !== null ? '#111 !important' : '#8c8c8c !important',
+                    backgroundColor: selectedSuggestionIndex !== null ? `${mainColors.primaryColor} !important` : '#d9d9d9 !important',
+                    color: selectedSuggestionIndex !== null ? '#111 !important' : '#FFF !important',
                     border: selectedSuggestionIndex !== null ? `2px solid ${mainColors.primaryColor} !important` : 'none',
                     cursor: selectedSuggestionIndex !== null ? 'pointer' : 'not-allowed',
                     opacity: selectedSuggestionIndex !== null ? 1 : 0.6,
                   }}
                   textStyles={{
-                    color: selectedSuggestionIndex !== null ? '#111' : '#8c8c8c',
+                    color: selectedSuggestionIndex !== null ? '#FFF' : '#8c8c8c',
                     fontSize: '1em',
                   }}
                   isImgOnLeftSide={false}
@@ -460,16 +457,20 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
                 <S.DemoSuggestionsList>
                   {autoRecordingDoc.demoSuggestions.map((suggestion, index) => {
                       let selected = selectedSuggestionIndex === index
-                      let isStepsVisible = visibleSteps[index]
+                      let isStepsVisible = visibleStepsIndex === index
 
                       return (<S.DemoSuggestionItem
                         key={index}
                         onClick={() => {
                           if (selectedSuggestionIndex === index) {
                             setSelectedSuggestionIndex(null)
+                            setVisibleStepsIndex(null)
+
                           } else {
                             setSelectedSuggestionIndex(index)
+                            setVisibleStepsIndex(index)
                           }
+
 
                         }}
                         isSelected={selectedSuggestionIndex === index}
@@ -487,8 +488,7 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
                         {suggestion.steps && suggestion.steps.length > 0 && (
                           <>
                             <IconTextButton
-                              onClick={() => toggleStepsVisibility(index)}
-                              img={<S.Icon type={visibleSteps[index] ? 'down' : 'right'}/>}
+                              img={<S.Icon type={isStepsVisible ? 'down' : 'right'}/>}
                               text={'See steps'}
 
                               textStyles={{
@@ -523,7 +523,7 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
                               isImgOnLeftSide={false}
 
                             />
-                            {visibleSteps[index] && (
+                            {isStepsVisible && (
                               <S.DemoSuggestionStepsList>
                                 {suggestion.steps.map((step, stepIndex) => (
                                   <S.DemoSuggestionStepItem key={stepIndex}>
@@ -710,6 +710,7 @@ const S = {
     }
   `,
   DemoSuggestionItem: styled.div`
+    height: fit-content;
     display: flex;
     flex-direction: column;
     align-items: center;

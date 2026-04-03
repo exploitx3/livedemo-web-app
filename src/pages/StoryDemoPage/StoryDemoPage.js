@@ -1,11 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, {useEffect, useRef, useState} from 'react'
 import Button from 'antd/es/button'
 import 'antd/es/button/style'
 import Col from 'antd/es/col'
 import 'antd/es/col/style'
-import Row from 'antd/es/row'
 import 'antd/es/row/style'
-import Form from 'antd/es/form'
 import 'antd/es/form/style'
 import Icon from '../../components/Icon/Icon'
 import Input from 'antd/es/input'
@@ -16,24 +14,22 @@ import Menu from 'antd/es/menu'
 import 'antd/es/menu/style'
 import Modal from 'antd/es/modal'
 import 'antd/es/modal/style'
-import Tabs from 'antd/es/tabs'
 import 'antd/es/tabs/style'
 import axios from '../../utils/axiosInstance'
 import TabsView from './components/TabsView/TabsView'
 import Header from '../../components/Header/Header'
-import { Resizable } from 're-resizable'
-import { URL_COMMON_DOMAIN } from '../../config.json'
-import { Route, Routes, useNavigate, useLocation, useParams } from 'react-router-dom'
-import { CSSTransition, TransitionGroup, } from 'react-transition-group'
+import {Resizable} from 're-resizable'
+import {Route, Routes, useLocation, useNavigate, useParams} from 'react-router-dom'
+import {CSSTransition, TransitionGroup,} from 'react-transition-group'
 import styled from 'styled-components'
 import Colors from '../../constants/mainColors'
 import ScreenTypes from '../../constants/ScreenTypes'
-import { bindActionCreators } from 'redux'
-import { connect } from 'react-redux'
-import { updateCurrentSelectedWorkspace } from '../../actions/workspacesActions'
-import { refreshToken } from '../../actions/authActions'
-import { getWorkspaceEncryptionKey } from '../../actions/secureStorageActions'
-import { getStoryDemo, updateStoryDemo } from '../../actions/storyDemoActions'
+import {bindActionCreators} from 'redux'
+import {connect} from 'react-redux'
+import {updateCurrentSelectedWorkspace} from '../../actions/workspacesActions'
+import {refreshToken} from '../../actions/authActions'
+import {getWorkspaceEncryptionKey} from '../../actions/secureStorageActions'
+import {getStoryDemo, updateStoryDemo} from '../../actions/storyDemoActions'
 import * as ENV from '../../config'
 import Toolbar from './components/Toolbar/Toolbar'
 import Library from './components/Library/Library'
@@ -44,7 +40,7 @@ import 'tippy.js/dist/tippy.css' // optional
 import 'tippy.js/animations/scale.css'
 import Confetti from 'react-confetti'
 import Tippy from '@tippyjs/react'
-import { deriveRenderSteps } from '../../utils/storyHelpers'
+import {deriveRenderSteps} from '../../utils/storyHelpers'
 // import {WalkthroughComponent} from '@georgi.apostolov/livedemo-components/dist/index'
 // import {WalkthroughComponent} from '../../livedemo-components/dist/index'
 // import WalkthroughComponent from '../../livedemo-components/components/WalkthroughComponent'
@@ -52,37 +48,36 @@ import { deriveRenderSteps } from '../../utils/storyHelpers'
 import WalkthroughComponent from '../../injectScript/WalkthroughComponent'
 
 
-
 import Spinner from '../../components/Spinner/Spinner'
 import VideoEditor from '../../components/VideoEditor/VideoEditor'
 
 import ShareDropdown from '../../components/ShareDropdown/ShareDropdown'
-import { MdAddPhotoAlternate, MdOutlineVideoLibrary, MdZoomIn } from 'react-icons/md'
+import {MdAddPhotoAlternate, MdOutlineVideoLibrary, MdZoomIn} from 'react-icons/md'
 
 //import { Button, Col, Form, Icon, Input, Layout, Menu, Modal, Tabs } from 'antd'
 
-const { Content, Footer, Sider } = Layout
-const { confirm } = Modal
+const {Content, Footer, Sider} = Layout
+const {confirm} = Modal
 // const { getFieldDecorator } = Form // Removed - deprecated in Ant Design v6
 // const { TabPane } = Tabs // Removed - deprecated in Ant Design v6, use items prop instead
 // const { SubMenu } = Menu // Removed - deprecated in Ant Design v6, use items prop instead
 
-function Tip({ children, ...props }) {
+function Tip({children, ...props}) {
 
   return <S.Tippy {...props}>{children}</S.Tippy>
 }
 
 const StoryDemoPage = ({
-  collapsed,
-  currentSelectedWorkspace,
-  currentStoryDemo,
-  renderSteps,
-  authData,
-  actions,
-  navigate,
-  location,
-  params
-}) => {
+                         collapsed,
+                         currentSelectedWorkspace,
+                         currentStoryDemo,
+                         renderSteps,
+                         authData,
+                         actions,
+                         navigate,
+                         location,
+                         params
+                       }) => {
   const workspaceIdFromURL = params?.workspaceId
   const storyDemoIdFromUrl = params?.storyDemoId
 
@@ -1471,7 +1466,6 @@ const StoryDemoPage = ({
   const windowConfigRef = useRef(window.config)
 
 
-
   const walkthroughElementRef = useRef(null)
   // const iframeContainerWrapperRef = useRef(null)
 
@@ -1496,18 +1490,13 @@ const StoryDemoPage = ({
 
     // _setStoryDemo(storyDemoValue)
 
-    if (newStoryDemoValue.screens.length) {
-
-      actions.updateStoryDemo(newStoryDemoValue)
-        .then(() => {
+    actions.updateStoryDemo(newStoryDemoValue)
+      .then(() => {
 
 
-
-        })
-
+      })
 
 
-    }
   }
 
   useEffect(() => {
@@ -1675,7 +1664,6 @@ const StoryDemoPage = ({
       }
 
 
-
       return accum
     }, [])
 
@@ -1703,13 +1691,13 @@ const StoryDemoPage = ({
 
         if (isPatchTransition) {
           patchTransition({
-            // frameX: event.data.frameX * ((iframeScaleX.current) + 1),
-            // frameY: event.data.frameY * ((iframeScaleY.current) + 1),
-            hotspot: {
-              frameX: event.data.frameX,
-              frameY: event.data.frameY
-            }
-          },
+              // frameX: event.data.frameX * ((iframeScaleX.current) + 1),
+              // frameY: event.data.frameY * ((iframeScaleY.current) + 1),
+              hotspot: {
+                frameX: event.data.frameX,
+                frameY: event.data.frameY
+              }
+            },
             workspaceIdFromURL,
             storyDemoIdFromUrl,
             event.data.screenId,
@@ -1731,7 +1719,7 @@ const StoryDemoPage = ({
               )
 
               if (foundTransition) {
-                foundTransition = { ...foundTransition, ...newTransition }
+                foundTransition = {...foundTransition, ...newTransition}
                 foundTransition.hotspot.frameX = event.data.frameX
                 foundTransition.hotspot.frameY = event.data.frameY
 
@@ -1742,14 +1730,14 @@ const StoryDemoPage = ({
             })
         } else {
           patchStep({
-            view: {
-              hotspot: {
-                frameX: event.data.frameX,
-                frameY: event.data.frameY
+              view: {
+                hotspot: {
+                  frameX: event.data.frameX,
+                  frameY: event.data.frameY
+                }
               }
-            }
 
-          },
+            },
             workspaceIdFromURL,
             storyDemoIdFromUrl,
             event.data.screenId,
@@ -1773,7 +1761,7 @@ const StoryDemoPage = ({
 
 
               if (foundStep) {
-                foundStep = { ...foundStep, ...newStep }
+                foundStep = {...foundStep, ...newStep}
                 foundStep.view.hotspot.frameX = event.data.frameX
                 foundStep.view.hotspot.frameY = event.data.frameY
 
@@ -1785,7 +1773,6 @@ const StoryDemoPage = ({
         }
 
 
-
       }
 
 
@@ -1794,7 +1781,6 @@ const StoryDemoPage = ({
         console.log('region_set')
         console.log('event.data')
         console.log(event.data)
-
 
 
         let newSelectorLocation = {
@@ -1845,7 +1831,7 @@ const StoryDemoPage = ({
 
               if (newScreen && newScreen.steps.length && newStepData) {
 
-                newScreen = { ...newScreen }
+                newScreen = {...newScreen}
 
                 newScreen.steps = [...newScreen.steps].map(step => {
                   if (step._id === newStepData._id) {
@@ -1882,13 +1868,13 @@ const StoryDemoPage = ({
                 return
               }
 
-              let newStoryDemo = { ...storyDemoRef.current }
+              let newStoryDemo = {...storyDemoRef.current}
 
               let newScreen = newStoryDemo.screens.find(scr => scr._id === event.data.screenId)
 
               if (newScreen && newScreen.customTransitions.length && newTransition) {
 
-                newScreen = { ...newScreen }
+                newScreen = {...newScreen}
 
                 newScreen.customTransitions = [...newScreen.customTransitions].map(transition => {
                   if (transition._id === newTransition._id) {
@@ -1909,7 +1895,6 @@ const StoryDemoPage = ({
               }
             })
         }
-
 
 
       }
@@ -1940,7 +1925,7 @@ const StoryDemoPage = ({
 
     let isEventListenerSet = false
 
-    console.log('getStoryDemo called from useEffect', { workspaceIdFromURL, storyDemoIdFromUrl })
+    console.log('getStoryDemo called from useEffect', {workspaceIdFromURL, storyDemoIdFromUrl})
     actions.getStoryDemo(workspaceIdFromURL, storyDemoIdFromUrl, authData.token)
       .then((storyDemoData) => {
         if (!storyDemoData || !storyDemoData._id) {
@@ -1996,7 +1981,7 @@ const StoryDemoPage = ({
   function reloadStoryDemo() {
     return getStoryDemo(workspaceIdFromURL, storyDemoIdFromUrl, authData.token)
       .then((storyDemoData) => {
-
+        debugger
         setStoryDemo(storyDemoData)
       })
   }
@@ -2081,7 +2066,7 @@ const StoryDemoPage = ({
       })
       .then(() => {
 
-        let newStoryDemo = { ...storyDemo }
+        let newStoryDemo = {...storyDemo}
         newStoryDemo.isPublished = isPublished
         setStoryDemo(newStoryDemo)
       })
@@ -2101,14 +2086,15 @@ const StoryDemoPage = ({
   // Show loading spinner if we don't have story demo data or if it doesn't match URL params
   // This check must be AFTER all hooks to follow Rules of Hooks
   if (!currentStoryDemo || !currentStoryDemo._id || currentStoryDemo._id !== storyDemoIdFromUrl) {
-    return <Spinner />
+    return <Spinner/>
   }
 
+  let noScreensForDemo = hasDemoLoaded && renderSteps && renderSteps.length === 0
 
   return (
     <React.Fragment>
       <Header
-        style={{ boxShadow: 'none' }}
+        style={{boxShadow: 'none'}}
         title={currentStoryDemo.name || 'LiveDemo'}
         liveDemo={currentStoryDemo}
         rightSideComponent={
@@ -2161,101 +2147,100 @@ const StoryDemoPage = ({
               }}
             >
 
-            <S.WorkspacesCol style={{
-              flexGrow: 1,
-              minWidth: '100%',
-            }} id={'info-column-left'} xs={6} lg={6}>
-              <TransitionGroup style={{ height: '100%' }} className="transition-group">
-                <CSSTransition
-                  key={location.key || location.pathname}
-                  timeout={{ enter: 300, exit: 300 }}
-                  classNames="fade"
-                >
-                  <div style={{ width: '100%', height: '100%' }}>
+              <S.WorkspacesCol style={{
+                flexGrow: 1,
+                minWidth: '100%',
+              }} id={'info-column-left'} xs={6} lg={6}>
+                <TransitionGroup style={{height: '100%'}} className="transition-group">
+                  <CSSTransition
+                    key={location.key || location.pathname}
+                    timeout={{enter: 300, exit: 300}}
+                    classNames="fade"
+                  >
+                    <div style={{width: '100%', height: '100%'}}>
 
-                    <Routes location={location}>
+                      <Routes location={location}>
 
-                      <Route path="*"
-                        element={
-                          <TabsView
-                            tabsWidth={tabsWidth}
-                            storyDemo={currentStoryDemo}
-                            storyDemoRef={storyDemoRef}
-                            setStoryDemo={setStoryDemo}
-                            authData={authData}
-                            currentStepIndex={currentStepIndex}
-                            previousStepIndex={previousStepIndex}
-                            previousStep={previousStep}
-                            changeStep={(newStepNumber) => {
-                              return changeIframeStep(currentStoryDemo, authData, newStepNumber)
-                            }}
-                            reloadStoryDemo={() => {
-                              return reloadStoryDemo()
-                              // .then(() => {
-                              //
-                              //   scrollToLastScreen()
-                              // })
-                            }}
-                            iframeRef={walkthroughElementRef}
-                          />
-                        }
-                      />
+                        <Route path="*"
+                               element={
+                                 <TabsView
+                                   tabsWidth={tabsWidth}
+                                   storyDemo={currentStoryDemo}
+                                   storyDemoRef={storyDemoRef}
+                                   setStoryDemo={setStoryDemo}
+                                   authData={authData}
+                                   currentStepIndex={currentStepIndex}
+                                   previousStepIndex={previousStepIndex}
+                                   previousStep={previousStep}
+                                   changeStep={(newStepNumber) => {
+                                     return changeIframeStep(currentStoryDemo, authData, newStepNumber)
+                                   }}
+                                   reloadStoryDemo={() => {
+                                     return reloadStoryDemo()
+                                     // .then(() => {
+                                     //
+                                     //   scrollToLastScreen()
+                                     // })
+                                   }}
+                                   iframeRef={walkthroughElementRef}
+                                 />
+                               }
+                        />
 
 
-                    </Routes>
-                    <Library libraryObj={currentSelectedWorkspace?.library || {
-                      pages: [],
-                      screenshots: [],
-                      videos: []
-                    }}
-                      workspaceId={workspaceIdFromURL}
-                      storyDemoId={storyDemoIdFromUrl}
-                      authData={authData}
-                      onCancel={() => setIsLibraryOpen(false)}
-                      isOpen={isLibraryOpen}
-                      isLoading={isLibraryLoading}
-                      setIsLoading={setIsLibraryLoading}
-                      addScreen={(screenId) => {
-                        setIsLibraryLoading(true)
-                        addScreen(screenId, workspaceIdFromURL, storyDemoIdFromUrl, authData.token)
-                          .then(() => {
-                            setIsLibraryLoading(false)
-                            setIsLibraryOpen(false)
-                          })
+                      </Routes>
+                      <Library libraryObj={currentSelectedWorkspace?.library || {
+                        pages: [],
+                        screenshots: [],
+                        videos: []
                       }}
-                    />
-                    <AIEnhance
-                      workspaceId={workspaceIdFromURL}
-                      storyDemoId={storyDemoIdFromUrl}
-                      authData={authData}
-                      onCancel={() => setIsAIEnhanceOpen(false)}
-                      isOpen={isAIEnhanceOpen}
-                      setShowConfetti={setShowConfetti}
-                      reloadStoryDemo={reloadStoryDemo}
-                    />
-                    {showConfetti ? (<Confetti
-                      recycle={false}
-                      width={window.innerWidth}
-                      height={window.innerHeight}
-                      // confettiSource={{
-                      //   w: 10,
-                      //   h: 10,
-                      //   x: window.innerWidth / 2,
-                      //   y: window.innerHeight / 2,
-                      // }}
-                      tweenDuration={5000}
-                      numberOfPieces={1000}
-                      gravity={0.23}
-                      run={true}
-                    />) : ''}
+                               workspaceId={workspaceIdFromURL}
+                               storyDemoId={storyDemoIdFromUrl}
+                               authData={authData}
+                               onCancel={() => setIsLibraryOpen(false)}
+                               isOpen={isLibraryOpen}
+                               isLoading={isLibraryLoading}
+                               setIsLoading={setIsLibraryLoading}
+                               addScreen={(screenId) => {
+                                 setIsLibraryLoading(true)
+                                 addScreen(screenId, workspaceIdFromURL, storyDemoIdFromUrl, authData.token)
+                                   .then(() => {
+                                     setIsLibraryLoading(false)
+                                     setIsLibraryOpen(false)
+                                   })
+                               }}
+                      />
+                      <AIEnhance
+                        workspaceId={workspaceIdFromURL}
+                        storyDemoId={storyDemoIdFromUrl}
+                        authData={authData}
+                        onCancel={() => setIsAIEnhanceOpen(false)}
+                        isOpen={isAIEnhanceOpen}
+                        setShowConfetti={setShowConfetti}
+                        reloadStoryDemo={reloadStoryDemo}
+                      />
+                      {showConfetti ? (<Confetti
+                        recycle={false}
+                        width={window.innerWidth}
+                        height={window.innerHeight}
+                        // confettiSource={{
+                        //   w: 10,
+                        //   h: 10,
+                        //   x: window.innerWidth / 2,
+                        //   y: window.innerHeight / 2,
+                        // }}
+                        tweenDuration={5000}
+                        numberOfPieces={1000}
+                        gravity={0.23}
+                        run={true}
+                      />) : ''}
 
-                  </div>
-                </CSSTransition>
-              </TransitionGroup>
+                    </div>
+                  </CSSTransition>
+                </TransitionGroup>
 
 
-
-            </S.WorkspacesCol>
+              </S.WorkspacesCol>
             </div>
           </Resizable>
           <Resizable
@@ -2285,9 +2270,9 @@ const StoryDemoPage = ({
               background: (currentStoryDemo.custom && currentStoryDemo.custom.theme && currentStoryDemo.custom.theme.backgroundColor) || '#FFFFFF'
             }} id={'info-column-right'} xs={18} lg={18}>
               {isLoading ? (
-                <PulseLoader css={{ 'margin': '0 auto', 'width': '100%', 'height': '100%' }}
-                  color={Colors.App.spinnerColor}
-                  size={15} speedMultiplier={0.5} />) : (
+                <PulseLoader css={{'margin': '0 auto', 'width': '100%', 'height': '100%'}}
+                             color={Colors.App.spinnerColor}
+                             size={15} speedMultiplier={0.5}/>) : (
                 <S.IFrameWrapper>
                   <S.Omnibox>
                     <S.OmniLeftSide>
@@ -2360,7 +2345,7 @@ const StoryDemoPage = ({
                             loading={false}
                             onClick={(e) => {
                             }}
-                            img={<S.ShareIcon type={'share-alt'} />}
+                            img={<S.ShareIcon type={'share-alt'}/>}
                             text={'Share'}
 
                             textStyles={{
@@ -2430,6 +2415,12 @@ const StoryDemoPage = ({
                       }}
                       id={'story_iframeContainerWrapper'}>
                       <S.IFrameContainer
+                        onClick={() => {
+                          if (noScreensForDemo) {
+                            setIsLibraryOpen(true)
+                          }
+                        }}
+                        noScreensForDemo={noScreensForDemo}
                         ref={walkthroughElementRef}
                         width={(currentStoryDemo.tabInfo && currentStoryDemo.tabInfo.width ? currentStoryDemo.tabInfo.width : '1366')}
                         height={(currentStoryDemo.tabInfo && currentStoryDemo.tabInfo.height ? currentStoryDemo.tabInfo.height : '768')}
@@ -2448,9 +2439,10 @@ const StoryDemoPage = ({
 
                           authData={authData}
                           reloadStoryDemo={reloadStoryDemo}
-                        /> : (hasDemoLoaded && renderSteps && renderSteps.length === 0 ? <div>
-                          <S.ToolbarText style={{ fontSize: '1.5em' }}>Add Screen from Library or Upload screenshot or video</S.ToolbarText>
-                        </div> : <Spinner />)
+                        /> : (noScreensForDemo ? <div>
+                          <S.ToolbarText style={{fontSize: '1.5em'}}>Add Screen from Library or Upload screenshot or
+                            video</S.ToolbarText>
+                        </div> : <Spinner/>)
                         }
                       </S.IFrameContainer>
                     </S.IFrameContainerWrapper>
@@ -2510,7 +2502,7 @@ const StoryDemoPage = ({
                     setStoryDemo(newStoryDemo)
                   }}
                 />
-              ) : (<S.ZoomPlaceholder />)}
+              ) : (<S.ZoomPlaceholder/>)}
 
             </S.ChartWorkspacesCol>
           </Resizable>
@@ -2522,168 +2514,168 @@ const StoryDemoPage = ({
 
 const S = {
   Content: styled(Content)`
-                      && {
-                      background: white;
+    && {
+      background: white;
 
-                      overflow: hidden;
-                      //overflow-x: hidden;
-                      border-top-left-radius: 18px;
-                      border-top-right-radius: 4px;
-                      width: 100%;
-                      height: 100%;
+      overflow: hidden;
+      //overflow-x: hidden;
+      border-top-left-radius: 18px;
+      border-top-right-radius: 4px;
+      width: 100%;
+      height: 100%;
 
-                      border-top: 1.6px solid #1070ff;
-                      border-left: 1.6px solid #1070ff;
-                      }
+      border-top: 1.6px solid #1070ff;
+      border-left: 1.6px solid #1070ff;
+    }
 
-                      `,
+  `,
   Menu: styled(Menu)`
-                      && {
-                      height: 400px;
-                      overflow-y: scroll;
-                      overflow-x: hidden;
-                      direction: rtl;
+    && {
+      height: 400px;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      direction: rtl;
 
-                      }
+    }
 
-                      &&::-webkit-scrollbar-track {
-                      -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
-                      border-radius: 10px;
-                      background-color: #fff;
-                      }
+    &&::-webkit-scrollbar-track {
+      -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      background-color: #fff;
+    }
 
-                      &&::-webkit-scrollbar {
-                      width: 2px;
-                      background-color: #fff;
-                      }
+    &&::-webkit-scrollbar {
+      width: 2px;
+      background-color: #fff;
+    }
 
-                      &&::-webkit-scrollbar-thumb {
-                      border-radius: 10px;
-                      //-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
-                      background-color: ${Colors.primaryColor};
-                      }
+    &&::-webkit-scrollbar-thumb {
+      border-radius: 10px;
+      //-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+      background-color: ${Colors.primaryColor};
+    }
 
-                      `,
+  `,
   WorkspaceColTitle: styled.h2`
-                      width: 50%;
-                      margin: 0 auto;
-                      display: flex;
-                      justify-content: space-evenly;
-                      font-size: 24px;
-`,
+    width: 50%;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-evenly;
+    font-size: 24px;
+  `,
 
 
   WorkspacesCol: styled(Col)`
-                      && {
-                      display: flex;
-                      flex-direction: column;
-                      height: 100%;
-                      }
+    && {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
 
-                      @media only screen and (max-width: 577px) {
-                      margin-bottom: 45px;
-                      }
-`,
+    @media only screen and (max-width: 577px) {
+      margin-bottom: 45px;
+    }
+  `,
 
   ChartWorkspacesCol: styled(Col)`
-                      && {
-                        float: unset !important;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        flex-direction: column;
-                        //display: inline-block;
-                        vertical-align: top;
-                        //width: 100%;
-                        height: 100%;
+    && {
+      float: unset !important;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      //display: inline-block;
+      vertical-align: top;
+      //width: 100%;
+      height: 100%;
 
-                        background: #f9fafb;
-                      }
+      background: #f9fafb;
+    }
 
-                      @media only screen and (max-width: 577px) {
-                      margin-bottom: 45px;
-                      }
-`,
+    @media only screen and (max-width: 577px) {
+      margin-bottom: 45px;
+    }
+  `,
   List: styled.ul`
-                      list-style-type: none;
-                      text-align: center;
-                      padding: 0px;
-`,
+    list-style-type: none;
+    text-align: center;
+    padding: 0px;
+  `,
   ListText: styled.p`
-                      margin: 0;
-                      padding: 0;
-                      font-size: 1.25em;
-`,
+    margin: 0;
+    padding: 0;
+    font-size: 1.25em;
+  `,
   ListContainer: styled.div`
-                      text-align: center;
-`,
+    text-align: center;
+  `,
   ListTitle: styled.p`
-                      font-size: 1.4em;
+    font-size: 1.4em;
 
-                      `,
+  `,
   GraphWrapper: styled.div`
-                      && > div {
-                      width: 100%;
-                      height: 100%;
-                      }
-`,
+    && > div {
+      width: 100%;
+      height: 100%;
+    }
+  `,
   Wrapper: styled.div`
-                      margin: 10px 0;
-                      display: flex;
-                      flex-direction: column;
-                      height: 100%;
-                      position: relative;
-`,
+    margin: 10px 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+  `,
   Overview: styled.div`
-                      display: flex;
-                      justify-content: space-evenly;
-`,
+    display: flex;
+    justify-content: space-evenly;
+  `,
   EmotionContainer: styled.div`
-                      display: flex;
-`,
+    display: flex;
+  `,
   EmotionLabels: styled.div`
-                      display: flex;
-                      justify-content: space-evenly;
+    display: flex;
+    justify-content: space-evenly;
 
-                      flex-direction: column;
-`,
+    flex-direction: column;
+  `,
   EmotionLines: styled.div`
-                      display: flex;
-                      justify-content: space-evenly;
+    display: flex;
+    justify-content: space-evenly;
 
-                      flex-direction: column;
+    flex-direction: column;
 
-                      `,
+  `,
   EmotionText: styled.p`
-                      font-size: 1.2em;
-                      margin: 0 20px 5px;
-`,
+    font-size: 1.2em;
+    margin: 0 20px 5px;
+  `,
   ChartWrapper: styled.div`
-                      height: 50%;
+    height: 50%;
 
-                      `,
+  `,
   MemberImage: styled.img`
-                      width: 25px;
-                      height: 25px;
-                      margin-left: 12px;
-                      border-radius: 4px;
+    width: 25px;
+    height: 25px;
+    margin-left: 12px;
+    border-radius: 4px;
 
-                      `,
+  `,
   MemberLine: styled.li`
-                      display: flex;
-                      justify-content: space-between;
-                      `,
+    display: flex;
+    justify-content: space-between;
+  `,
 
   IFrameWrapper: styled.div`
 
-                      width: 100%;
-                      height: calc(100% - 100px);
-                      flex-grow: 1;
+    width: 100%;
+    height: calc(100% - 100px);
+    flex-grow: 1;
 
-                      //aspect-ratio:
-                      //padding-bottom: 56.25%; /* 16:9, for an aspect ratio of 1:1 change to this value to 100% */
-                      //overflow: scroll;
-                      `,
+    //aspect-ratio:
+    //padding-bottom: 56.25%; /* 16:9, for an aspect ratio of 1:1 change to this value to 100% */
+    //overflow: scroll;
+  `,
   IFrameContainerWrapperMain: styled.div`
     display: flex;
     justify-content: center;
@@ -2705,81 +2697,83 @@ const S = {
     //height: 379px;
   `,
   IFrameContainer: styled.div`
-                      //height: 100%;
-                      //width: 100%;
-
-                      height: ${({ height }) => height}px;//calc(100% - 142px);
-                      width: ${({ width }) => width}px;
-                      max-height: calc(100% - 142px);
-                      max-width: 100%;
-
-                      position: relative;
-                      // padding-bottom: ${(props) => `calc(${(props.height / props.width) * 100}%)`};
-                      //padding-bottom: 50%;
-                      // padding-bottom: ${() => (379 / 820) * 100}%;
-                      //padding-bottom: ${() => 6 / 13 * 100}%;
-                      overflow: hidden;
-
-                      transform-origin: top left;
-                      // transform: scale(${({ iframeScaleX, iframeScaleY }) => `${iframeScaleX}, ${iframeScaleY}`});
-
-                      display: flex;
-                      flex-direction: column;
-                      justify-content: center;
-                      align-items: center;
-                      border: 2px solid ${Colors.primaryColor};
-                      border-radius: 6px;
+    //height: 100%;
+    //width: 100%;
 
 
+    cursor: ${({noScreensForDemo}) => noScreensForDemo ? 'pointer' : 'auto'};
+    height: ${({height}) => height}px; //calc(100% - 142px);
+    width: ${({width}) => width}px;
+    max-height: calc(100% - 142px);
+    max-width: 100%;
 
-                      `,
+    position: relative;
+      // padding-bottom: ${(props) => `calc(${(props.height / props.width) * 100}%)`};
+    //padding-bottom: 50%;
+      // padding-bottom: ${() => (379 / 820) * 100}%;
+      //padding-bottom: ${() => 6 / 13 * 100}%;
+    overflow: hidden;
+
+    transform-origin: top left;
+      // transform: scale(${({iframeScaleX, iframeScaleY}) => `${iframeScaleX}, ${iframeScaleY}`});
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid ${Colors.primaryColor};
+    border-radius: 6px;
+
+
+
+  `,
   IFrame: styled.iframe`
-                      position: absolute;
-                      //transform: translate(-120px,-50px) scale(0.70);
-                      //transform: translate(-235px,-50px) scale(0.65);
-                      left: 0;
-                      top: 0;
-                      bottom: 0;
-                      right: 0;
-                      //width: calc(130% + 200px);
-                      //transform: translate(-30px,-40px) scale(0.85);
-                      //left: 0;
-                      //top: 0;
+    position: absolute;
+    //transform: translate(-120px,-50px) scale(0.70);
+    //transform: translate(-235px,-50px) scale(0.65);
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    //width: calc(130% + 200px);
+    //transform: translate(-30px,-40px) scale(0.85);
+    //left: 0;
+    //top: 0;
 
-                      // width: ${({ iframeScaleX }) => iframeScaleX * 100}vw;
-                      // height: ${({ iframeScaleY }) => iframeScaleY * 100}vw;
+      // width: ${({iframeScaleX}) => iframeScaleX * 100}vw;
+      // height: ${({iframeScaleY}) => iframeScaleY * 100}vw;
 
-                      width: 100%;
-                      height: 100%;
-                      min-height: 100%;
-                      outline: none;
-                      overflow: scroll;
-                      //outline-color: ${Colors.primaryColor};
-                      transform-origin: top left;
-                      // transform: scale(${({ iframeScaleX, iframeScaleY }) => `${iframeScaleX}, ${iframeScaleY}`});
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    outline: none;
+    overflow: scroll;
+      //outline-color: ${Colors.primaryColor};
+    transform-origin: top left;
+      // transform: scale(${({iframeScaleX, iframeScaleY}) => `${iframeScaleX}, ${iframeScaleY}`});
 
-`,
+  `,
   ToolbarButton: styled.div`
-  height: 32px;
-  text-align: center;
-  line-height: 50px;
-  margin: 0px 15px;
-  font-size: 1.1em;
-  color: #111;
-  padding: 0px 5px;
+    height: 32px;
+    text-align: center;
+    line-height: 50px;
+    margin: 0px 15px;
+    font-size: 1.1em;
+    color: #111;
+    padding: 0px 5px;
 
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 
-  border-radius: 4px;
-  cursor: pointer;
+    border-radius: 4px;
+    cursor: pointer;
 
 
-  &:hover {
-    background: #F3F4F6;
-  }
-`,
+    &:hover {
+      background: #F3F4F6;
+    }
+  `,
   ToolbarIcon: styled.span`
     height: 19px;
     width: 19px;
@@ -2802,20 +2796,20 @@ const S = {
       width: 100%;
       height: 100%;
       fill: ${Colors.primaryColor};
-      //fill: ${({ isDisabled }) => isDisabled ? '#000' : '#111'};
+        //fill: ${({isDisabled}) => isDisabled ? '#000' : '#111'};
     }
 
-    //cursor: ${({ isDisabled }) => isDisabled ? 'not-allowed' : 'pointer'};
+      //cursor: ${({isDisabled}) => isDisabled ? 'not-allowed' : 'pointer'};
 
   `,
   Toolbar__ZoomIcon: styled(MdZoomIn)`
     height: 15px;
     width: 15px;
 
-    // fill: ${({ isDisabled }) => isDisabled ? '#ccc' : '#fff'};
+      // fill: ${({isDisabled}) => isDisabled ? '#ccc' : '#fff'};
     fill: ${Colors.primaryColor}
 
-    // cursor: ${({ isDisabled }) => isDisabled ? 'not-allowed' : 'pointer'};
+      // cursor: ${({isDisabled}) => isDisabled ? 'not-allowed' : 'pointer'};
 
   `,
   Toolbar__StopEditIcon: styled(Icon)`
@@ -2825,7 +2819,7 @@ const S = {
     && svg {
       width: 100%;
       height: 100%;
-      fill: ${({ isDisabled }) => isDisabled ? '#ccc' : '#fff'};
+      fill: ${({isDisabled}) => isDisabled ? '#ccc' : '#fff'};
     }
 
   `,
@@ -2847,138 +2841,143 @@ const S = {
     font-family: ${Colors.fontFamily};
   `,
   Omnibox: styled.div`
-                      background: white;
-                      width: 100%;
-                      height: 46px;
-                      justify-content: flex-start;
-                      display: flex;
-                      flex-direction: row;
-                      align-items: center;
-                      // border-radius: 6px;
-                      `,
+    background: white;
+    width: 100%;
+    height: 46px;
+    justify-content: flex-start;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    // border-radius: 6px;
+  `,
   OmniIcon: styled(Icon)`
-                      height: 35px;
-                      width: 35px;
-                      margin-left: 10px;
-                      line-height: 35px;
+    height: 35px;
+    width: 35px;
+    margin-left: 10px;
+    line-height: 35px;
 
-                      && svg {
-                        border-radius: 25px;
-                        padding: 5px;
-                        vertical-align: middle;
-                        height: 25px;
-                        width: 25px;
-                      }
+    && svg {
+      border-radius: 25px;
+      padding: 5px;
+      vertical-align: middle;
+      height: 25px;
+      width: 25px;
+    }
 
-                      &&:hover svg {
-                        cursor: pointer;
-                        background: #e6e4e4;
-                      }
+    &&:hover svg {
+      cursor: pointer;
+      background: #e6e4e4;
+    }
 
-                      `,
+  `,
   OmniIconLock: styled(Icon)`
-                      height: 35px;
-                      width: 35px;
-                      margin-left: 10px;
-                      line-height: 35px;
+    height: 35px;
+    width: 35px;
+    margin-left: 10px;
+    line-height: 35px;
 
-                      && svg {
-                        border-radius: 25px;
-                        padding: 5px;
-                        vertical-align: middle;
-                        height: 25px;
-                        width: 25px;
-                      }
+    && svg {
+      border-radius: 25px;
+      padding: 5px;
+      vertical-align: middle;
+      height: 25px;
+      width: 25px;
+    }
 
 
-                      `,
+  `,
   AdressBarWrapper: styled.div`
-                      flex-grow: 2;
-                      height: 30px;
-                      background: white;
-                      color: #111;
-                      border-radius: 25px;
-                      margin-left: 10px;
-                      text-overflow: ellipsis;
-                      white-space: nowrap;
-                      overflow: hidden;
+    flex-grow: 2;
+    height: 30px;
+    background: white;
+    color: #111;
+    border-radius: 25px;
+    margin-left: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
 
-                      display: flex;
-                      flex-direction: row;
-                      justify-content: flex-start;
-                      align-items: center;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
 
-                      border: 3px solid #f9f9f9;
-                      background: white;
+    border: 3px solid #f9f9f9;
+    background: white;
 
-                      -webkit-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;ser-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    ser-select: none;
 
-                      `,
+  `,
   AddressBarText: styled(Input)`
-                      && {
-                        flex-grow: 1;
-                        height: 25px;
-                        border-radius: 25px;
-                        margin-left: 10px;
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
-                        overflow: hidden;
-                        padding: 0px 10px;
-                        line-height: 25px;
-                        font-size: 12px;
+    && {
+      flex-grow: 1;
+      height: 25px;
+      border-radius: 25px;
+      margin-left: 10px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      padding: 0px 10px;
+      line-height: 25px;
+      font-size: 12px;
 
-                        background: white;
-                        color: #111;
+      background: white;
+      color: #111;
 
-                        -webkit-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
 
-                        border-left: 3px solid #f9f9f9;
-                        border-top: none;
-                        border-bottom: none;
-                        border-right: none;
-                        background: white;
-                        border-bottom-left-radius: 0px;
-                        border-top-left-radius: 0px;
+      border-left: 3px solid #f9f9f9;
+      border-top: none;
+      border-bottom: none;
+      border-right: none;
+      background: white;
+      border-bottom-left-radius: 0px;
+      border-top-left-radius: 0px;
 
-                      }
-
-
+    }
 
 
-                      &&:hover {
+    &&:hover {
 
-                      -webkit-box-shadow: none;
-                      box-shadow: none;
-                      border-top: none;
-                      }
+      -webkit-box-shadow: none;
+      box-shadow: none;
+      border-top: none;
+    }
 
-                      &&:focus-visible {
+    &&:focus-visible {
 
-                      -webkit-box-shadow: none;
-                      box-shadow: none;
-                      border-top: none;
-                      }
+      -webkit-box-shadow: none;
+      box-shadow: none;
+      border-top: none;
+    }
 
-                      &&:focus {
+    &&:focus {
 
-                      -webkit-box-shadow: none;
-                      box-shadow: none;
-                      border-top: none;
-                      }
+      -webkit-box-shadow: none;
+      box-shadow: none;
+      border-top: none;
+    }
 
-                      &&:active {
+    &&:active {
 
-                      -webkit-box-shadow: none;
-                      box-shadow: none;
-                      border-top: none;
-                      }
+      -webkit-box-shadow: none;
+      box-shadow: none;
+      border-top: none;
+    }
 
-                      `,
+  `,
   PublishButton: styled(Button)`
-                      margin: 0px 10px;
-                      width: 100px;
+    margin: 0px 10px;
+    width: 100px;
 
-                      `,
+  `,
   OmniLeftSide: styled.div`
     flex-grow: 1;
     display: flex;
@@ -3005,7 +3004,7 @@ const S = {
     }
 
     //margin-right: 85px;
-    `,
+  `,
   ToolbarWrapper: styled.div`
     position: absolute;
     top: 96px;
@@ -3074,7 +3073,7 @@ const StoryDemoPageWithRouter = (props) => {
   const location = useLocation()
   const params = useParams()
 
-  return <StoryDemoPage {...props} navigate={navigate} location={location} params={params} />
+  return <StoryDemoPage {...props} navigate={navigate} location={location} params={params}/>
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(StoryDemoPageWithRouter)

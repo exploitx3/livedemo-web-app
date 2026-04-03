@@ -51,14 +51,14 @@ export function sortWorkspaceMembersByOwnerAndAdmin(first, second) {
 export function showErrorsForResponse(error) {
   console.log(error)
   let errorsMsgsArray = []
-  
+
   // Handle cases where error.response might not exist
   if (!error.response || !error.response.data) {
     const errorMessage = error.message || 'An error occurred'
     toast.error(errorMessage)
     return
   }
-  
+
   if (error.response.data.error) {
     errorsMsgsArray.push(error.response.data.error)
   } else if (error.response.data.errors) {
@@ -297,7 +297,8 @@ export const htmlSerialize = (nodes) => {
 const APP_IDS = [
   "dnlnaeifccbhdnbppjjgleapjadjklbe",
   'algjcoioglkejodcjbalinoihaabacnl',
-  'imnmmglpdmhldjglnaifbfhcdfkchjme'
+  'imnmmglpdmhldjglnaifbfhcdfkchjme',
+  'bmdppjnfoimgmgbmmdphnopadjejbdpm'
 ]
 
 export function checkIfIsAuthenticated() {

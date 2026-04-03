@@ -72,7 +72,7 @@ const Header = (props) => {
           {workspaces.map((workspace, index, array) => {
             // let isSelected = workspace._id === currentSelectedWorkspace._id
 
-            debugger
+
             let isLast = index === array.length-1
             return <Option style={{
               background: 'none',
@@ -199,7 +199,7 @@ const S = {
     && .ant-select-selection-selected-value {
       width: 90%;
     }
-    
+
     /* Ant Design v6 compatible selectors - keeping old ones for backward compatibility */
     && .ant-select-selector {
       background: none !important;
@@ -208,7 +208,7 @@ const S = {
       border-radius: 14px !important;
       box-shadow: none !important;
     }
-    
+
     && .ant-select-selector:hover {
       border: none !important;
     }
