@@ -79,7 +79,7 @@ const AiVoiceTab = ({
   let [shouldRegenerate, setShouldRegenerate] = useState(false)
 
   useEffect(() => {
-    debugger
+
     if (text !== stepAudio.text || (selectedAIVoice && selectedAIVoice.voice_id) !== internalStepAudio.voiceType || !internalStepAudio.audioUrl) {
       setShouldRegenerate(true)
     } else {
