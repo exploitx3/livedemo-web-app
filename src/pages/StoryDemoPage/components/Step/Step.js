@@ -103,6 +103,21 @@ const Step = ({
     setInternalStepState(step)
   }
 
+  const autoSaveTimerRef = useRef(null)
+  const isInitialMountRef = useRef(true)
+  const onSaveStepRef = useRef(null)
+  const [userChangeKey, setUserChangeKey] = useState(0)
+
+  function setInternalStepByUser(step) {
+    setUserChangeKey(k => k + 1)
+    setInternalStep(step)
+  }
+
+  function setFormDataByUser(newFormData) {
+    setUserChangeKey(k => k + 1)
+    setFormData(newFormData)
+  }
+
   let { index, view, action } = stepObj
 
   let [isViewOpen, setIsViewOpen] = useState(false)
@@ -119,6 +134,8 @@ const Step = ({
   let [actionType, setActionType] = useState(stepObj.action.actionType)
 
   let [isUpdating, setIsUpdating] = useState(false)
+  let [isSaved, setIsSaved] = useState(false)
+  let savedTimerRef = useRef(null)
 
   const parsed = new DOMParser().parseFromString(view.content, 'text/html')
   const initialValue = deserialize(parsed.body)
@@ -247,6 +264,14 @@ const Step = ({
 
         setInternalStep(newStepData)
         setIsUpdating(false)
+
+        if (savedTimerRef.current) {
+          clearTimeout(savedTimerRef.current)
+        }
+        setIsSaved(true)
+        savedTimerRef.current = setTimeout(() => {
+          setIsSaved(false)
+        }, 1000)
       })
   }
 
@@ -424,6 +449,30 @@ const Step = ({
 
   }, [internalStepState, editorValue, popupDescriptionValue, hotspotViewPlacement, pointerViewPlacement, popupType, alignment, formHasChanged, formData, storyDemoId, screenId, workspaceId, authData.token])
 
+  useEffect(() => {
+    onSaveStepRef.current = onSaveStep
+  }, [onSaveStep])
+
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false
+      return
+    }
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      onSaveStepRef.current()
+    }, 1000)
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [userChangeKey, editorValue, popupDescriptionValue, hotspotViewPlacement, pointerViewPlacement, popupType, alignment])
 
 
   function getView(viewType, openView) {
@@ -443,7 +492,7 @@ const Step = ({
           setPopupDescriptionValue={setPopupDescriptionValue}
           popupTitle={popupTitle}
           setPopupTitle={setPopupTitle}
-          setInternalStep={setInternalStep}
+          setInternalStep={setInternalStepByUser}
           internalStep={internalStepState}
           storyDemo={storyDemo}
         />
@@ -470,7 +519,7 @@ const Step = ({
                   updatedFormData.hubspot = { formId: '' }
                 }
 
-                setFormData(updatedFormData)
+                setFormDataByUser(updatedFormData)
               }}
             >
               <Option value={FormTypes.STEP}>standard</Option>
@@ -483,7 +532,7 @@ const Step = ({
               formHasChanged={formHasChanged}
               setFormHasChanged={setFormHasChanged}
               formData={formData}
-              setFormData={setFormData}
+              setFormData={setFormDataByUser}
               workspaceId={workspaceId}
               authData={authData}
             />
@@ -492,7 +541,7 @@ const Step = ({
               formHasChanged={formHasChanged}
               setFormHasChanged={setFormHasChanged}
               formData={formData}
-              setFormData={setFormData}
+              setFormData={setFormDataByUser}
             />
           )}
         </React.Fragment>
@@ -503,7 +552,7 @@ const Step = ({
     } else if (openView === OPEN_VIEWS.OPTIONS_VIEW && viewType === VIEW_TYPES.POPUP) {
 
       return <PopupOptionsView
-        setInternalStep={setInternalStep}
+        setInternalStep={setInternalStepByUser}
         internalStep={internalStepState}
         popupType={popupType}
         setPopupType={setPopupType}
@@ -515,7 +564,7 @@ const Step = ({
       return <PointerOptionsView
         cancelSelector={cancelSelector}
         updateSelector={updateSelector}
-        setInternalStep={setInternalStep}
+        setInternalStep={setInternalStepByUser}
         internalStep={internalStepState}
         setPointerPlacement={setPointerViewPlacement}
         pointerPlacement={pointerViewPlacement}
@@ -527,7 +576,7 @@ const Step = ({
       return <HotspotOptionsView
         viewPlacement={hotspotViewPlacement}
         setViewPlacement={setHotspotViewPlacement}
-        setInternalStep={setInternalStep}
+        setInternalStep={setInternalStepByUser}
         internalStep={internalStepState}
       />
 
@@ -556,7 +605,11 @@ const Step = ({
           }}>
             {viewType === VIEW_TYPE_NAMES.POINTER ? <img src={PointerIcon} /> : <img src={PostIcon} />}
             <ST.OpenArrow type={isViewOpen ? 'down' : 'right'} />
-            <ST.ViewTitle>{VIEW_TYPE_NAMES[viewType.toUpperCase()]}</ST.ViewTitle>
+            <ST.ViewTitleDiv>
+              <ST.ViewTitle>{VIEW_TYPE_NAMES[viewType.toUpperCase()]}</ST.ViewTitle>
+              <ST.ViewTitle_Updating>{isUpdating ? ' saving...' : isSaved ? ' saved' : ''}
+              </ST.ViewTitle_Updating>
+            </ST.ViewTitleDiv>
           </ST.HeaderMain>
           <ST.EditTextButton
             type="edit"
@@ -585,128 +638,129 @@ const Step = ({
             <ST.DeleteIcon type={'delete'} theme={'filled'} />
           </ST.DeleteButton>
         </ST.ViewHeader>
-        {isUpdating ? <ST.SpinnerWrapper><Spinner /></ST.SpinnerWrapper> : (
-          <React.Fragment>
-            {isViewOpen ? getView(viewType, openView)
-              : ''}
-          </React.Fragment>
-        )}
+        {/* {isUpdating ? <ST.SpinnerWrapper><Spinner /></ST.SpinnerWrapper> : (
+          
+        )} */}
+        <React.Fragment>
+          {isViewOpen ? getView(viewType, openView)
+            : ''}
+        </React.Fragment>
 
       </ST.ViewContainer>
       <ST.StepSeperator></ST.StepSeperator>
-      <ST.ActionContainer isActionOpen={isActionOpen}>
-        <ST.ActionHeader>
-          <ST.ActionTypeButton>
-            {viewType !== VIEW_TYPES.POPUP ? (
-              <ST.ClickIcon
-              //   onClick={() => {
-              //
-              //   setIsActionOpen(true)
-              // }}
-              />
+      {/*<ST.ActionContainer isActionOpen={isActionOpen}>*/}
+      {/*  <ST.ActionHeader>*/}
+      {/*    <ST.ActionTypeButton>*/}
+      {/*      {viewType !== VIEW_TYPES.POPUP ? (*/}
+      {/*        <ST.ClickIcon*/}
+      {/*        //   onClick={() => {*/}
+      {/*        //*/}
+      {/*        //   setIsActionOpen(true)*/}
+      {/*        // }}*/}
+      {/*        />*/}
 
-            ) : (
-              <ST.Next__Button type={'Primary'}
-              // onClick={() => {
-              //   setIsActionOpen(true)
-              // }}
-              >
-                <ST.Next__ButtonIcon />
-                {/*<ST.Next__ButtonIcon src={LongArrow}/>*/}
-              </ST.Next__Button>
+      {/*      ) : (*/}
+      {/*        <ST.Next__Button type={'Primary'}*/}
+      {/*        // onClick={() => {*/}
+      {/*        //   setIsActionOpen(true)*/}
+      {/*        // }}*/}
+      {/*        >*/}
+      {/*          <ST.Next__ButtonIcon />*/}
+      {/*          /!*<ST.Next__ButtonIcon src={LongArrow}/>*!/*/}
+      {/*        </ST.Next__Button>*/}
 
-            )}
-          </ST.ActionTypeButton>
+      {/*      )}*/}
+      {/*    </ST.ActionTypeButton>*/}
 
-          {!isActionOpen ? '' : (
-            <React.Fragment>
+      {/*    {!isActionOpen ? '' : (*/}
+      {/*      <React.Fragment>*/}
 
-              <ST.Select
-                dropdownStyle={{
-                  background: Colors.App.sidebarColor,
-                  border: `1px solid ${Colors.primaryColor}`
-                  // boxShadow: `0 0 0 2px ${Colors.primaryColor}`
-                }}
-                value={actionType}
-                style={{
-                  width: 120
-                }}
-                onChange={(actionTypeKey) => {
-
-
-                  let updateObj = {
-                    action: {
-                      actionType: ACTION_TYPES[actionTypeKey],
-                    }
-                  }
-
-                  setActionType(ACTION_TYPES[actionTypeKey])
-
-                  saveStep(updateObj, storyDemoId, screenId, workspaceId, internalStepRef.current._id, authData.token)
-                }}>
-                {Object.entries(ACTION_TYPES).map(([key, value], index, array) => {
-                  let isLast = index === array.length - 1
-                  return <Option style={{
-                    background: 'none',
-                    color: Colors.primaryColor,
-                    borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
-                  }} key={key} value={key}>{value}</Option>
-                })
-                }
-              </ST.Select>
+      {/*        <ST.Select*/}
+      {/*          dropdownStyle={{*/}
+      {/*            background: Colors.App.sidebarColor,*/}
+      {/*            border: `1px solid ${Colors.primaryColor}`*/}
+      {/*            // boxShadow: `0 0 0 2px ${Colors.primaryColor}`*/}
+      {/*          }}*/}
+      {/*          value={actionType}*/}
+      {/*          style={{*/}
+      {/*            width: 120*/}
+      {/*          }}*/}
+      {/*          onChange={(actionTypeKey) => {*/}
 
 
-              <ST.OpenArrow onClick={() => {
-                setIsActionOpen(false)
-              }} type={isActionOpen ? 'down' : 'right'} />
+      {/*            let updateObj = {*/}
+      {/*              action: {*/}
+      {/*                actionType: ACTION_TYPES[actionTypeKey],*/}
+      {/*              }*/}
+      {/*            }*/}
 
-            </React.Fragment>
-          )}
-        </ST.ActionHeader>
-        {!isActionOpen ? '' : (
-          <ST.ActionMain>
-            <ST.ActionMain__Text>Choose step transition type</ST.ActionMain__Text>
-            {actionType === ACTION_TYPES.ELEMENT_CLICK ? (
-              <ST.ActionSelectorWrapper>
-                <ST.ActionSelectorLine>
-                  <ST.PickSelectorButton onClick={updateActionSelector}>
-                    <ST.PickSelectorText>Pick Selector </ST.PickSelectorText>
-                    <ST.PickSelectorIcon type={'right'} />
-                  </ST.PickSelectorButton>
-                  <ST.SaveButton onClick={() => {
-                    let updateObj = {
-                      action: {
-                        actionType: actionType,
-                        selector: action.selector
-                      }
-                    }
+      {/*            setActionType(ACTION_TYPES[actionTypeKey])*/}
 
-                    saveStep(updateObj, storyDemoId, screenId, workspaceId, internalStepRef.current._id, authData.token)
-                  }}>
-                    <ST.SaveButton__Image type="save" />
-                    <ST.SaveButton__Text>Save</ST.SaveButton__Text>
-                  </ST.SaveButton>
-                </ST.ActionSelectorLine>
-
-                <ST.ActionSelectorLine>
-                  <ST.SelectorInput onChange={(event) => {
-                    let newStep = { ...internalStepRef.current }
-                    newStep.action.selector = event.target.value
-                    setInternalStep(newStep)
+      {/*            saveStep(updateObj, storyDemoId, screenId, workspaceId, internalStepRef.current._id, authData.token)*/}
+      {/*          }}>*/}
+      {/*          {Object.entries(ACTION_TYPES).map(([key, value], index, array) => {*/}
+      {/*            let isLast = index === array.length - 1*/}
+      {/*            return <Option style={{*/}
+      {/*              background: 'none',*/}
+      {/*              color: Colors.primaryColor,*/}
+      {/*              borderBottom: isLast ? 'none' : '1px solid #d9d9d9',*/}
+      {/*            }} key={key} value={key}>{value}</Option>*/}
+      {/*          })*/}
+      {/*          }*/}
+      {/*        </ST.Select>*/}
 
 
-                  }} value={action.selector} />
-                </ST.ActionSelectorLine>
+      {/*        <ST.OpenArrow onClick={() => {*/}
+      {/*          setIsActionOpen(false)*/}
+      {/*        }} type={isActionOpen ? 'down' : 'right'} />*/}
 
-              </ST.ActionSelectorWrapper>
-            ) : ''}
-          </ST.ActionMain>
-        )}
+      {/*      </React.Fragment>*/}
+      {/*    )}*/}
+      {/*  </ST.ActionHeader>*/}
+      {/*  {!isActionOpen ? '' : (*/}
+      {/*    <ST.ActionMain>*/}
+      {/*      <ST.ActionMain__Text>Choose step transition type</ST.ActionMain__Text>*/}
+      {/*      {actionType === ACTION_TYPES.ELEMENT_CLICK ? (*/}
+      {/*        <ST.ActionSelectorWrapper>*/}
+      {/*          <ST.ActionSelectorLine>*/}
+      {/*            <ST.PickSelectorButton onClick={updateActionSelector}>*/}
+      {/*              <ST.PickSelectorText>Pick Selector </ST.PickSelectorText>*/}
+      {/*              <ST.PickSelectorIcon type={'right'} />*/}
+      {/*            </ST.PickSelectorButton>*/}
+      {/*            <ST.SaveButton onClick={() => {*/}
+      {/*              let updateObj = {*/}
+      {/*                action: {*/}
+      {/*                  actionType: actionType,*/}
+      {/*                  selector: action.selector*/}
+      {/*                }*/}
+      {/*              }*/}
+
+      {/*              saveStep(updateObj, storyDemoId, screenId, workspaceId, internalStepRef.current._id, authData.token)*/}
+      {/*            }}>*/}
+      {/*              <ST.SaveButton__Image type="save" />*/}
+      {/*              <ST.SaveButton__Text>Save</ST.SaveButton__Text>*/}
+      {/*            </ST.SaveButton>*/}
+      {/*          </ST.ActionSelectorLine>*/}
+
+      {/*          <ST.ActionSelectorLine>*/}
+      {/*            <ST.SelectorInput onChange={(event) => {*/}
+      {/*              let newStep = { ...internalStepRef.current }*/}
+      {/*              newStep.action.selector = event.target.value*/}
+      {/*              setInternalStep(newStep)*/}
+
+
+      {/*            }} value={action.selector} />*/}
+      {/*          </ST.ActionSelectorLine>*/}
+
+      {/*        </ST.ActionSelectorWrapper>*/}
+      {/*      ) : ''}*/}
+      {/*    </ST.ActionMain>*/}
+      {/*  )}*/}
 
 
 
-      </ST.ActionContainer>
-      <ST.StepSeperator></ST.StepSeperator>
+      {/*</ST.ActionContainer>*/}
+      {/*<ST.StepSeperator></ST.StepSeperator>*/}
 
 
     </ST.StepContainer>
@@ -848,7 +902,7 @@ const ST = {
     align-items: center;
     flex-grow: 1;
     gap: 10px;
-
+    width: 100%;
   `,
 
   SettingsButton: styled(Icon)`
@@ -996,19 +1050,35 @@ const ST = {
 
 
   `,
+  ViewTitle_Updating: styled.p`
+    font-size: 1em;
+    text-align: center;
+    margin-bottom: 0px;
+    margin-right: 10px;
+  `,
+  ViewTitleDiv: styled.div`
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: felx-start;
+    gap: 5px;
+    width: 100%;
+  `,
   ViewTitle: styled.h2`
     font-size: 1em;
     color: #111;
-    text-align: center;
+    text-align: left;
     text-transform: capitalize;
     margin-bottom: 0px;
+    flex-grow: 1;
+    self-align: flex-start;
 
   `,
   StepSeperator: styled.span`
     width:2px;
     height:15px;
     border-radius: 12px;
-    margin: 5px 0px;
+    margin-top: 10px;
     background: ${Colors.primaryColor};
   `,
   ActionContainer: styled.span`
@@ -1210,7 +1280,7 @@ const StepWithRouter = (props) => {
   const navigate = useNavigate()
   const location = useLocation()
   const params = useParams()
-  
+
   return <Step {...props} navigate={navigate} location={location} params={params} />
 }
 

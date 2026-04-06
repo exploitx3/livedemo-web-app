@@ -90,9 +90,11 @@ const PopupOptionsView = ({
   function updateViewField(fieldName, value) {
 
     let newStep = JSON.parse(JSON.stringify(internalStep))
-    newStep.view.popup[fieldName] = value
+    if(newStep.view.popup[fieldName] && newStep.view.popup[fieldName] !== value){ 
+      newStep.view.popup[fieldName] = value
+      setInternalStep(newStep)
 
-    setInternalStep(newStep)
+    }
   }
 
 

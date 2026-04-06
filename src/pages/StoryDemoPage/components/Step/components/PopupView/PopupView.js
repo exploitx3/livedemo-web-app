@@ -119,9 +119,10 @@ function addButton(buttonObj){
         <ST.TitleInput
           onChange={(event) => {
             let newStep = JSON.parse(JSON.stringify(internalStep))
-            newStep.view.popup.title = event.target.value
-            setInternalStep(newStep)
-
+            if(newStep.view.popup.title && newStep.view.popup.title !== event.target.value){ 
+              newStep.view.popup.title = event.target.value
+              setInternalStep(newStep)
+            }
           }}
           value={internalStep.view.popup.title}/>
 

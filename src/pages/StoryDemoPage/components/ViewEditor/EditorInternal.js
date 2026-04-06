@@ -152,7 +152,12 @@ export default function RichEditor(props) {
     return (
         <Slate editor={editor}
             value={props.value}
-            onChange={newValue => props.onChange(newValue)}>
+            onChange={newValue => {
+                const isContentChange = editor.operations.some(op => op.type !== 'set_selection')
+                if (isContentChange) {
+                    props.onChange(newValue)
+                }
+            }}>
             <Toolbar>
                 <MarkButton format="bold" icon="format_bold" />
                 <MarkButton format="italic" icon="format_italic" />
@@ -184,7 +189,6 @@ export default function RichEditor(props) {
                 renderElement={renderElement}
                 renderLeaf={renderLeaf}
                 spellCheck
-                autoFocus
                 onKeyDown={event => {
                     for (const hotkey in HOTKEYS) {
                         if (isHotkey(hotkey, event)) {

@@ -28,6 +28,7 @@ import WorkspaceStatuses from '../../../../constants/WorkspaceStatuses'
 
 const WorkspacesView = (props) => {
   const navigate = useNavigate()
+  const hasWorskpaces = props.workspaces && props.workspaces.length > 0
 
   function onClickAddWorkspace() {
     navigate('/create-workspace')
@@ -38,7 +39,7 @@ const WorkspacesView = (props) => {
 
       <S.WorkspacesTitleWrapper>
         <S.WorkspacesTitle>Workspaces</S.WorkspacesTitle>
-        <S.AddWorkspaceButton onClick={onClickAddWorkspace} type="primary" icon={<DeploymentUnitOutlined />} size={'large'}>Add Workspace</S.AddWorkspaceButton>
+        {hasWorskpaces ? '' : <S.AddWorkspaceButton onClick={onClickAddWorkspace} type="primary" icon={<DeploymentUnitOutlined />} size={'large'}>Add Workspace</S.AddWorkspaceButton>}
       </S.WorkspacesTitleWrapper>
       <S.WorkspacesContainer>
         {generateWorkspaceCards(props.workspaces, props, navigate)}
@@ -62,7 +63,7 @@ function generateWorkspaceCards(workspaces, props, navigate) {
   if (loading) {
 
 
-    return [...Array(3).keys()].map((key) => {
+    return [...Array(0).keys()].map((key) => {
 
       return (
 
@@ -119,7 +120,7 @@ function generateWorkspaceCards(workspaces, props, navigate) {
     if (workspaces.length === 0) {
 
 
-      return [...Array(1).keys()].map((key) => {
+      return [...Array(0).keys()].map((key) => {
 
         return (
 
@@ -223,7 +224,7 @@ function generateWorkspaceCards(workspaces, props, navigate) {
                     <span style={{ textTransform: 'capitalize', fontSize: '0.8rem' }}></span>
                   </span>
                   <span className={'card__right-action'} style={{ width: '30%', borderLeft: '1px solid #e8e8e8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Dropdown 
+                      <Dropdown
                         menu={{ items: menuItems }}
                         placement="bottomRight"
                         trigger={['click', 'hover']}
@@ -376,7 +377,7 @@ S.Workspaces = styled.div`
 
 S.WorkspacesTitleWrapper = styled.span`
   display: flex;
-  justify-content: end;
+  justify-content: center;
 `
 
 S.WorkspacesTitle = styled.h2`

@@ -1,5 +1,5 @@
 import Colors from "../../../../../../constants/mainColors";
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useRef} from "react";
 import styled from "styled-components";
 import Input from "antd/es/input";
 import Icon from "../../../../../../components/Icon/Icon";
@@ -33,8 +33,13 @@ const PopupButton = ({popupButton, setPopupButton, deleteButton, storyDemo}) => 
 
   let [isViewOpen, setIsViewOpen] = useState(false)
 
+  const isInitialMountRef = useRef(true)
 
   useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false
+      return
+    }
     setPopupButton({...popupButton,
       text,
       gotoScreen: currentSelectedScreen,

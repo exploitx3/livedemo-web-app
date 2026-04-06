@@ -56,10 +56,12 @@ const FormView = ({
 
           let newTitle = event.target.value
 
-          let newStep = { ...internalStep }
-          newStep.view.formId.title = newTitle
 
-          setInternalStep(newStep)
+          if(formTitle !== newTitle){ 
+            let newStep = { ...internalStep }
+            newStep.view.formId.title = newTitle
+            setInternalStep(newStep)
+          }
 
         }}
         value={formTitle}/>
