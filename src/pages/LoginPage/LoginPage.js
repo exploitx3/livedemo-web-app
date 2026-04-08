@@ -1,4 +1,4 @@
-import React, { Fragment, useState } from 'react'
+import React, { Fragment, useMemo, useState } from 'react'
 import Button from 'antd/es/button'
 import Icon from '../../components/Icon/Icon'
 import Layout from 'antd/es/layout'
@@ -14,7 +14,7 @@ import styled, { keyframes } from 'styled-components'
 import Colors from '../../constants/mainColors'
 import { bindActionCreators } from 'redux'
 import { connect } from 'react-redux'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import IconTextButton from '../../components/IconTextButton/IconTextButton'
 import StyledInput from '../../components/StyledInput/StyledInput'
 
@@ -26,6 +26,7 @@ import { showErrorsForResponse } from '../../utils/helperFunctions'
 import { authWithEmailAndPassword, googleAuthenticate, registerWithEmailAndPassword } from '../../actions/authActions'
 
 import axios from '../../utils/axiosInstance'
+import { getPostLoginPathFromLocation } from '../../utils/postLoginRedirect'
 
 const { Content } = Layout
 const { TabPane } = Tabs
@@ -36,8 +37,12 @@ const TAB_KEYS = {
 }
 
 const LoginPage = (props) => {
-  console.log(props)
   const location = useLocation()
+  const navigate = useNavigate()
+  const returnPath = useMemo(
+    () => getPostLoginPathFromLocation(location),
+    [location.pathname, location.search]
+  )
 
   let [emailAddress, setEmailAddress] = useState('')
   let [password, setPassword] = useState('')
@@ -66,8 +71,9 @@ const LoginPage = (props) => {
 
   function onSignWithGoogle(e) {
     setIsGoogleLoading(true)
-    // postWarm(CONFIG.LANDING_PAGE_CLIENT_TOKEN)
-    window.open(CONFIG.API_URL + '/users/auth/google-link', '_self')
+    const googleUrl =
+      `${CONFIG.API_URL}/users/auth/google-link?returnTo=${encodeURIComponent(returnPath)}`
+    window.location.assign(googleUrl)
   }
 
   function onLogin(e) {
@@ -75,9 +81,9 @@ const LoginPage = (props) => {
     // postWarm(CONFIG.LANDING_PAGE_CLIENT_TOKEN)
 
     return props.authActions.authWithEmailAndPassword(emailAddress, password)
-      .then(userData => {
-        console.log(userData)
+      .then(() => {
         setIsLoading(false)
+        navigate(returnPath, { replace: true })
       })
       .catch(error => {
         showErrorsForResponse(error)
@@ -87,13 +93,15 @@ const LoginPage = (props) => {
 
   function onRegister(e) {
     setIsLoading(true)
-    postWarm(CONFIG.LANDING_PAGE_CLIENT_TOKEN)
+    // postWarm(CONFIG.LANDING_PAGE_CLIENT_TOKEN)
 
     return props.authActions.registerWithEmailAndPassword(emailAddress, passwordReg, fullNameReg)
-      .then(userData => {
-        console.log(userData)
+      .then(() => {
         setIsLoading(false)
         return postWarm(CONFIG.LANDING_PAGE_CLIENT_TOKEN)
+      })
+      .then(() => {
+        navigate(returnPath, { replace: true })
       })
       .catch(error => {
         showErrorsForResponse(error)

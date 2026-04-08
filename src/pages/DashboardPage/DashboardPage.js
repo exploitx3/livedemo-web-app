@@ -2,7 +2,6 @@ import React, { Component, memo } from 'react'
 import WorkspacesView from './components/WorkspacesView/WorkspacesView'
 import IframeView from './components/IframeView/IframeView'
 import Header from '../../components/Header/Header'
-import InstallAppButton from '../../components/InstallAppButton/InstallAppButton'
 // //import { Button, Col, Layout, Modal } from 'antd'
 
 import Button from 'antd/es/button'
@@ -272,10 +271,65 @@ class DashboardPage extends Component {
 
                 <S.GroupTitle style={{ fontSize: '24px' }}>1. Get started</S.GroupTitle>
                 <S.InstallAppRow>
-                  <InstallAppButton onClick={() => {
-                    window.open(`https://chrome.google.com/webstore/detail/livedemo-app/${ENV.CHROME_APP_ID}`, '_blank')
-                  }}/>
+                  <S.AppButtonsContainer>
+                    <S.AppButton
+                      href={`https://chromewebstore.google.com/detail/livedemo-app/${ENV.CHROME_APP_ID}`}
+                      target="_blank"
+                      rel="noopener noreferrer">
+                      <S.AppButtonIconContainer>
+                        <S.AppButtonIcon
+                          src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/googlechrome.svg"
+                          loading="lazy"
+                          width="18"
+                          height="18"
+                          alt="Chrome icon" />
+                      </S.AppButtonIconContainer>
+                      <S.AppButtonText>Chrome</S.AppButtonText>
+                    </S.AppButton>
 
+                    <S.AppButton
+                      href="https://livedemo-cdn.s3.us-east-1.amazonaws.com/releases/LiveDemo.dmg"
+                      target="_blank"
+                      rel="noopener noreferrer">
+                      <S.AppButtonIconContainer>
+                        <S.AppButtonIcon
+                          src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/1200px-Apple_logo_black.svg.png"
+                          loading="lazy"
+                          width="18"
+                          height="18"
+                          alt="MacOS icon" />
+                      </S.AppButtonIconContainer>
+                      <S.AppButtonText>Mac</S.AppButtonText>
+                    </S.AppButton>
+                    <S.AppButton
+                      href="https://apps.microsoft.com/detail/9mvvcb7t7sll"
+                      target="_blank"
+                      rel="noopener noreferrer">
+                      <S.AppButtonIconContainer>
+                        <S.AppButtonIcon
+                          src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/microsoft.svg"
+                          loading="lazy"
+                          width="18"
+                          height="18"
+                          alt="Windows icon" />
+                      </S.AppButtonIconContainer>
+                      <S.AppButtonText>Windows</S.AppButtonText>
+                    </S.AppButton>
+                    <S.AppButton
+                      href="https://www.figma.com/community/plugin/1592001133823412557/livedemo-app"
+                      target="_blank"
+                      rel="noopener noreferrer">
+                      <S.AppButtonIconContainer>
+                        <S.AppButtonIcon
+                          src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/figma.svg"
+                          loading="lazy"
+                          width="18"
+                          height="18"
+                          alt="Figma icon" />
+                      </S.AppButtonIconContainer>
+                      <S.AppButtonText>Figma</S.AppButtonText>
+                    </S.AppButton>
+                  </S.AppButtonsContainer>
                 </S.InstallAppRow>
                 </S.GroupWrapper>
                 <S.GroupWrapper>
@@ -406,45 +460,50 @@ const S = {
     justify-content: center;
     align-items: center;
   `,
-  InstallAppWrapper: styled.div`
+  AppButtonsContainer: styled.div`
     display: flex;
-    background: #f9f9f9;
-    border-radius: 6px;
-    width: 200px;
-    transition: 0.3s ease-in-out;
-    border: 1px solid transparent;
+    flex-direction: row;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  `,
+  AppButton: styled.a`
+    text-decoration: none !important;
+    background: white;
+    border: 2px solid #111;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 14px;
+    height: 40px;
+    font-weight: 600;
+    transition: all .15s cubic-bezier(.25, .46, .45, .94);
+    box-shadow: 0 2px 4px rgba(17, 24, 39, 0.08);
+    user-select: none;
     cursor: pointer;
 
     &:hover {
-      background: #f1f1f1;
-      border: 1px solid ${mainColors.primaryColor};
-
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(17, 24, 39, 0.12);
+      border-color: ${mainColors.primaryColor};
     }
   `,
-  InstallAppText: styled.p`
-    margin: 0px;
-    font-family: ${mainColors.fontFamily};
-    color: #111;
+  AppButtonIconContainer: styled.div`
     display: flex;
-    justify-content: flex-start;
     align-items: center;
-  `,
-  ChromeIconWrapper: styled.span`
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    display: flex;
     justify-content: center;
-    align-items: center;
-
-
   `,
-  ChromeIcon: styled.img`
-    width: 40px;
-    height: 40px;
-    box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px;
-    border-radius: 50%;
-
+  AppButtonIcon: styled.img`
+    width: 18px;
+    height: 18px;
+    filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(212deg) brightness(104%) contrast(97%);
+  `,
+  AppButtonText: styled.div`
+    color: #111;
+    font-size: 14px;
+    font-weight: 600;
   `,
   CopiedWrapper: styled.div`
     display: flex;

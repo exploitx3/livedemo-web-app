@@ -1,42 +1,27 @@
-import React, { Fragment } from 'react'
+import React, { Fragment, useEffect } from 'react'
 import { bindActionCreators } from 'redux'
 import { connect } from 'react-redux'
 import { useLocation, useNavigate } from 'react-router-dom'
 import * as queryString from 'query-string/index'
 import { authWithToken } from '../../actions/authActions'
-
-const ALLOWED_PAGES = {
-  '/add-workspace/select': '/add-workspace/select',
-  '/': '/'
-}
+import { sanitizeReturnPath } from '../../utils/postLoginRedirect'
 
 const Auth = (props) => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  let token = queryString.parse(location.search).token
-  let page = queryString.parse(location.search).page
-  if(!token) {
-
-    navigate('/')
-  } else if (token && !ALLOWED_PAGES[page]) {
-
-
+  useEffect(() => {
+    const { token, page } = queryString.parse(location.search)
+    if (!token) {
+      navigate('/')
+      return
+    }
+    const safePage = sanitizeReturnPath(page != null && page !== '' ? page : '/')
     props.actions.authWithToken(token)
       .then(() => {
-        navigate('/')
+        navigate(safePage, { replace: true })
       })
-
-  } else {
-
-
-    props.actions.authWithToken(token)
-      .then(() => {
-        navigate(ALLOWED_PAGES[page])
-      })
-
-  }
-
+  }, [location.search])
 
   return (
     <Fragment>
