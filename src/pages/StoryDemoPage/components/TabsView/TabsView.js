@@ -59,16 +59,18 @@ const TabsView = ({ storyDemo, storyDemoRef, setStoryDemo, authData, tabsWidth, 
       {isLoading ? (
         <PulseLoader css={{ 'margin': '0 auto', 'width': '100%', 'height': '100%' }} color={Colors.App.spinnerColor}
           size={15} speedMultiplier={0.5} />) : (
-        <S.Tabs
-          defaultActiveKey={activeTab}
-          activeKey={activeTab}
-          onChange={(newActiveTab) => {
-            setActiveTab(newActiveTab)
-          }}
-          items={tabItems}
-          animated={false}
-          tabPosition={'top'}
-        />
+        <S.TabsShell className="TabsViewRoot">
+          <Tabs
+            activeKey={activeTab}
+            onChange={(newActiveTab) => {
+              setActiveTab(newActiveTab)
+            }}
+            items={tabItems}
+            animated={false}
+            tabPosition={'top'}
+            rootClassName="TabsViewRoot__antd"
+          />
+        </S.TabsShell>
       )
       }
 
@@ -78,51 +80,42 @@ const TabsView = ({ storyDemo, storyDemoRef, setStoryDemo, authData, tabsWidth, 
 
 
 const S = {
-  Tabs: styled(Tabs)`
-    && .ant-tabs-tab{
-     font-family: ${Colors.fontFamily};
+  /** Wraps a single Tabs instance so styles never hit other Ant Design Tabs on the page or nested inside panes. */
+  TabsShell: styled.div`
+    /* Top-level tab strip only (not nested Tabs inside Screens / Custom content) */
+    &.TabsViewRoot > .TabsViewRoot__antd.ant-tabs {
+      overflow: initial;
     }
 
-    && .ant-tabs-nav-list {
+    &.TabsViewRoot > .TabsViewRoot__antd > .ant-tabs-nav .ant-tabs-tab {
+      font-family: ${Colors.fontFamily};
+      justify-content: center;
+    }
+
+    &.TabsViewRoot > .TabsViewRoot__antd > .ant-tabs-nav .ant-tabs-nav-list {
+      width: 100%;
+    }
+
+    @media (min-width: 900px) {
+      &.TabsViewRoot > .TabsViewRoot__antd > .ant-tabs-nav {
         width: 100%;
-    }
+      }
 
-    && .ant-tabs-tab {
-        justify-content: center;
-    }
-
-   && .ant-tabs-bar {
-
-      margin: 0 0px 0 0;
-   }
-    && .ant-tabs {
-        overflow: initial;
-    }
-   @media (min-width:900px) {
-    && .ant-tabs-nav {
-        width: 100%;
-    }
-
-
-    && .ant-tabs-nav > div {
+      &.TabsViewRoot > .TabsViewRoot__antd > .ant-tabs-nav > .ant-tabs-nav-wrap {
         width: 100%;
         display: flex;
         justify-content: space-evenly;
-    }
+      }
 
-    && .ant-tabs-nav > div .ant-tabs-tab {
+      &.TabsViewRoot > .TabsViewRoot__antd > .ant-tabs-nav .ant-tabs-tab {
         font-size: 1.1em;
-
         padding: 12px 0;
         text-align: center;
         width: 50%;
         margin: 0;
-
+      }
     }
-
-   }
-
-`
+  `
 }
 
 export default TabsView

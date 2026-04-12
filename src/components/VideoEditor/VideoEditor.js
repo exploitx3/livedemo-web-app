@@ -1203,7 +1203,7 @@ const S = {
   Wrapper: styled.div`
     height: 41px;
     width: 75%;
-    margin-bottom: 50px;
+    margin: 0 auto 50px;
     background: white;
     border-radius: 8px;
 

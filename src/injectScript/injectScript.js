@@ -55,7 +55,7 @@ function setupReact() {
             opacity: ${({ $ready }) => ($ready ? 1 : 0)};
             transition: opacity 0.35s ease;
             ${({ $blur }) =>
-                $blur > 0 ? `filter: blur(${$blur}px); transform: scale(1.05);` : ''}
+                $blur > 0 ? `filter: blur(${$blur}px);` : ''}
         `,
         ContentLayer: styled.div`
             position: relative;

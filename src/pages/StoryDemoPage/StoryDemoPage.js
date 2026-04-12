@@ -2287,22 +2287,37 @@ const StoryDemoPage = ({
                 ? { background: 'transparent' }
                 : { background: outerBg.css })
             }} id={'info-column-right'} xs={18} lg={18}>
-              {outerBg.mode === 'wallpaper' ? (
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    zIndex: 0,
-                    backgroundImage: `url(${outerBg.wallpaperUrl})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    filter: outerBg.blur > 0 ? `blur(${outerBg.blur}px)` : undefined,
-                    transform: outerBg.blur > 0 ? 'scale(1.05)' : undefined,
-                    pointerEvents: 'none'
-                  }}
-                />
-              ) : null}
+              {outerBg.mode === 'wallpaper' ? (() => {
+                const blurPx = outerBg.blur > 0 ? outerBg.blur : 0
+                // Expand the blurred layer so filter bleed sits outside the clip; parent keeps square edges.
+                const blurBleed = blurPx > 0 ? Math.ceil(blurPx * 2.5) : 0
+                return (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      zIndex: 0,
+                      overflow: 'hidden',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: -blurBleed,
+                        left: -blurBleed,
+                        right: -blurBleed,
+                        bottom: -blurBleed,
+                        backgroundImage: `url(${outerBg.wallpaperUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        filter: blurPx > 0 ? `blur(${blurPx}px)` : undefined
+                      }}
+                    />
+                  </div>
+                )
+              })() : null}
               <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}>
               {isLoading ? (
                 <PulseLoader css={{'margin': '0 auto', 'width': '100%', 'height': '100%'}}
