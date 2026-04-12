@@ -10,42 +10,8 @@ import Upload from 'antd/es/upload'
 import ENV from '../../../../../config'
 import axios from 'axios'
 import {HexColorInput, HexColorPicker, RgbaColorPicker} from 'react-colorful'
-import {ColorPicker} from 'antd'
-import {AggregationColor} from 'antd/es/color-picker/color'
 import message from "antd/es/message";
 import StaticUploadIcon from "../../../../../static/images/uploadIcon.svg";
-
-function cssStringToAggregationColor(cssString) {
-  if (!cssString) {
-    return new AggregationColor('');
-  }
-
-  // Check if it's a linear gradient
-  if (cssString.startsWith('linear-gradient')) {
-    // Extract the color stops from the gradient
-    const colorStops = cssString
-      .match(/rgba?\([^)]+\)\s+\d+%|#[0-9a-fA-F]+\s+\d+%/g) || [];
-
-    const colors = colorStops.map(stop => {
-      // Parse color and percentage
-      const match = stop.match(/(rgba?\([^)]+\)|#[0-9a-fA-F]+)\s*(\d+)%/);
-      if (match) {
-        return {
-          color: match[1],
-          percent: parseInt(match[2], 10)
-        };
-      }
-      return null;
-    }).filter(Boolean);
-
-    if (colors.length > 0) {
-      return new AggregationColor(colors);
-    }
-  }
-
-  // Handle solid colors
-  return new AggregationColor(cssString);
-};
 
 /*
   tabsWidth is used to manually set the width of the element
@@ -87,8 +53,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
   let [isChecked, setIsChecked] = useState((storyDemo.custom && storyDemo.custom.theme && storyDemo.custom.theme.isActive) || false)
 
 
-  let parsedColor = (storyDemo.custom.theme && storyDemo.custom.theme.backgroundColor && cssStringToAggregationColor(storyDemo.custom.theme.backgroundColor))
-  const [backgroundColor, setBackgroundColor] = useState(parsedColor || Colors.primaryColor)
   const [textColor, setTextColor] = useState((storyDemo.custom.theme && storyDemo.custom.theme.textColor) || '#FFFFFF')
   const [stepBackgroundColor, setStepBackgroundColor] = useState(storyDemo.custom.theme && storyDemo.custom.theme.stepBackgroundColor || Colors.primaryColor)
   const [buttonBackgroundColor, setButtonBackgroundColor] = useState((storyDemo.custom.theme && storyDemo.custom.theme.buttonBackgroundColor) || Colors.primaryColor)
@@ -100,7 +64,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
   let [watermarkConfigUrl, setWatermarkConfigUrl] = useState(
     (storyDemo.custom && storyDemo.custom.theme && storyDemo.custom.theme.watermarkConfig.url) || '')
 
-    debugger
   const [overlayBackgroundColor, setOverlayBackgroundColor] = useState((storyDemo.custom.theme && storyDemo.custom.theme.overlayBackgroundColor && rgbaToObj(storyDemo.custom.theme.overlayBackgroundColor)) || rgbaToObj('rgba(0,0,0,0.5)'))
 
 
@@ -129,7 +92,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
   // function onSave(workspaceId, storyDemo, isActive, imageUrlUpdate, personName, text, authData) {
   function onSave(isChecked,
                   stepBackgroundColor,
-                  backgroundColor,
                   textColor,
                   buttonBackgroundColor,
                   buttonTextColor,
@@ -143,7 +105,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
 
     return axios.post(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyDemo._id}/custom/theme`, {
       isActive: isChecked,
-      backgroundColor: backgroundColor,
       stepBackgroundColor: stepBackgroundColor,
       textColor: textColor,
       buttonBackgroundColor: buttonBackgroundColor,
@@ -186,11 +147,9 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
             if (checked) {
               setIsOpen(true)
             }
-debugger
             setIsChecked(checked)
             onSave(checked,
               stepBackgroundColor,
-              backgroundColor.toCssString(),
               textColor,
               buttonBackgroundColor,
               buttonTextColor,
@@ -230,20 +189,6 @@ debugger
             <TH.TextWrapper style={{alignItems: 'flex-start'}}>
               <TH.TextAndButton>
 
-                <TH.TextTitle>Background Color:</TH.TextTitle>
-                <ColorPicker
-                  value={backgroundColor}
-                  allowClear
-                  // showText
-                  mode={['single', 'gradient']}
-                  onChange={color => {
-                    setBackgroundColor(color)
-                  }}/>
-              </TH.TextAndButton>
-            </TH.TextWrapper>
-            <TH.TextWrapper style={{alignItems: 'flex-start'}}>
-              <TH.TextAndButton>
-
                 <TH.TextTitle>Custom Watermark:</TH.TextTitle>
 
                 <TH.CheckBox checked={watermarkConfigIsActive} onChange={(checked, event) => {
@@ -256,7 +201,6 @@ debugger
                   onSave(
                     isChecked,
                     stepBackgroundColor,
-                    backgroundColor.toCssString(),
                     textColor,
                     buttonBackgroundColor,
                     buttonTextColor,
@@ -302,7 +246,6 @@ debugger
                            onClick={() => onSave(
                              isChecked,
                              stepBackgroundColor,
-                             backgroundColor.toCssString(),
                              textColor,
                              buttonBackgroundColor,
                              buttonTextColor,

@@ -1,7 +1,7 @@
-import React, {createRef, useEffect, useMemo, useRef, useState} from 'react'
+import React, { createRef, useEffect, useMemo, useRef, useState } from 'react'
 // import Joyride, { ACTIONS, EVENTS, STATUS } from 'react-joyride'
 import styled from 'styled-components'
-import {CaretRightOutlined, ForwardOutlined, LockFilled, ReloadOutlined} from '@ant-design/icons'
+import { CaretRightOutlined, ForwardOutlined, LockFilled, ReloadOutlined } from '@ant-design/icons'
 import Colors from '../constants/mainColors.js'
 import ScreenTransitionTypes from '../constants/ScreenTransitionTypes.js'
 import Confetti from 'react-confetti'
@@ -38,6 +38,10 @@ import RoundAudioPlayer from './injectScriptComponents/RoundAudioPlayer/RoundAud
 import RoundAudioPlayerEditor from "./injectScriptComponents/RoundAudioPlayerEditor/RoundAudioPlayerEditor.js";
 import AutoPlayToggle from "./injectScriptComponents/AutoPlayToggle/AutoPlayToggle.js";
 import Cursor from "./injectScriptComponents/Cursor/Cursor.js";
+import VideoCursor from './injectScriptComponents/VideoCursor/VideoCursor.js'
+import DebugCursor from './injectScriptComponents/DebugCursor/DebugCursor.js'
+import ScreenTypes from '../constants/ScreenTypes.js'
+import StoryTypes from '../constants/StoryTypes.js'
 
 import CloseIcon from './assets/icons/closeIcon.svg'
 import MinimizeIcon from './assets/icons/minimizeIcon.svg'
@@ -52,6 +56,10 @@ import AddAudio from "./injectScriptComponents/AddAudio/AddAudio.js";
 
 // Ensure we get the actual component (handle both default and named exports)
 const Tippy = TippyModule?.default || TippyModule
+
+
+/** Set to `true` to show the ScreenStudio-style debug cursor (mouse-driven; does not use Cursor.js). */
+const ENABLE_DEBUG_CURSOR = false
 
 const MAIN_VIEWS = {
   IMAGES: 'IMAGES',
@@ -131,22 +139,22 @@ function extractPointerTransitions(screen) {
 
 
 function WalkthroughComponent({
-                                steps,
-                                storyDemo,
-                                firstScreenId,
-                                workspaceId,
-                                storyId,
-                                isEmbed,
-                                isSessionRecordingDisabled,
-                                isEditor = false,
-                                width = window.innerWidth,
-                                height = window.innerHeight,
-                                config,
+  steps,
+  storyDemo,
+  firstScreenId,
+  workspaceId,
+  storyId,
+  isEmbed,
+  isSessionRecordingDisabled,
+  isEditor = false,
+  width = window.innerWidth,
+  height = window.innerHeight,
+  config,
 
-                                authData = {},
-                                reloadStoryDemo = () => {
-                                }
-                              }) {
+  authData = {},
+  reloadStoryDemo = () => {
+  }
+}) {
 
   // console.log('storyDemo')
   // console.log(storyDemo)
@@ -318,7 +326,7 @@ function WalkthroughComponent({
   let [videoRatioHeight, setVideoRatioHeight] = useState(window.innerHeight)
 
   let [iframeSrc, setIframeSrc] = useState('about:blank')
-  let [iframeSize, setIframeSize] = useState({width: 0, height: 0})
+  let [iframeSize, setIframeSize] = useState({ width: 0, height: 0 })
   let iframeRef = useRef(null)
   let mainRef = useRef(null)
 
@@ -511,8 +519,15 @@ function WalkthroughComponent({
 
 
   // state for selectRegions
-  let tabInfoWidth = (storyDemo && storyDemo.windowMeasures && storyDemo.windowMeasures.innerWidth) ? storyDemo.windowMeasures.innerWidth : (storyDemo.tabInfo ? storyDemo.tabInfo.width : 1366)
-  let tabInfoHeight = (storyDemo && storyDemo.windowMeasures && storyDemo.windowMeasures.innerHeight) ? storyDemo.windowMeasures.innerHeight : (storyDemo.tabInfo ? storyDemo.tabInfo.height : 664)
+  // Same denominators as fullWidth/fullHeight: viewport CSS px (windowMeasures), not chrome.tabs size.
+  let tabInfoWidth =
+    (storyDemoInternalRef.current.windowMeasures && storyDemoInternalRef.current.windowMeasures.innerWidth) ||
+    (storyDemoInternalRef.current.tabInfo && storyDemoInternalRef.current.tabInfo.width) ||
+    1366
+  let tabInfoHeight =
+    (storyDemoInternalRef.current.windowMeasures && storyDemoInternalRef.current.windowMeasures.innerHeight) ||
+    (storyDemoInternalRef.current.tabInfo && storyDemoInternalRef.current.tabInfo.height) ||
+    664
 
   let [editorShowRegions, setEditorShowRegions] = useState(true)
 
@@ -598,7 +613,6 @@ function WalkthroughComponent({
   }
 
   const scaleInProgressRef = useRef(false)
-
 
   const [voices, setVoices] = useState([])
 
@@ -711,6 +725,28 @@ function WalkthroughComponent({
   useEffect(() => {
 
     function handle(event) {
+
+      // Skip step navigation when a text editor component is focused
+      const activeEl = document.activeElement
+      const tag = activeEl && activeEl.tagName
+      const isTextInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (activeEl && activeEl.isContentEditable)
+
+      // Also check if focus is inside an iframe with a text editor active
+      let isIframeTextInput = false
+      if (tag === 'IFRAME') {
+        try {
+          const iframeActiveEl = activeEl.contentDocument && activeEl.contentDocument.activeElement
+          isIframeTextInput = !!(iframeActiveEl && (
+            iframeActiveEl.tagName === 'INPUT' ||
+            iframeActiveEl.tagName === 'TEXTAREA' ||
+            iframeActiveEl.isContentEditable
+          ))
+        } catch (e) {
+          // Cross-origin iframe — skip safely
+        }
+      }
+
+      if (isTextInput || isIframeTextInput) return
 
       if (event.keyCode === 37) {
         // Left arrow key pressed
@@ -854,13 +890,13 @@ function WalkthroughComponent({
 
               if (!res.data.content) {
 
-                return {screenId: step.screenId}
+                return { screenId: step.screenId }
               } else {
 
-                const blobContent = new Blob([res.data.content], {type: 'text/html'})
+                const blobContent = new Blob([res.data.content], { type: 'text/html' })
                 let blobUrl = URL.createObjectURL(blobContent)
 
-                return {screenId: step.screenId, blobUrl}
+                return { screenId: step.screenId, blobUrl }
 
               }
 
@@ -879,7 +915,7 @@ function WalkthroughComponent({
         }, {})
 
 
-        setStepBlobs({...storyConfig.stepBlobs, ...stepBlobsOjb})
+        setStepBlobs({ ...storyConfig.stepBlobs, ...stepBlobsOjb })
       })
 
 
@@ -891,7 +927,7 @@ function WalkthroughComponent({
 
 
         let newStepIndex = event.state.stepNumber - 1
-        let {step, screen} = getStepAndScreenByStepIndex(newStepIndex, storyDemoInternalRef.current)
+        let { step, screen } = getStepAndScreenByStepIndex(newStepIndex, storyDemoInternalRef.current)
         let screenId = getIframeLoadedScreenId(iframeRef)
         let isTourActive = storyConfig.run
 
@@ -993,11 +1029,11 @@ function WalkthroughComponent({
         let promiseChain = Promise.resolve()
 
 
-        let {step, screen} = getStepAndScreenByStepIndex(stepIndex, storyDemoInternalRef.current)
+        let { step, screen } = getStepAndScreenByStepIndex(stepIndex, storyDemoInternalRef.current)
         if (step) {
 
           if (!isInEditor) {
-            window.history.pushState({stepNumber}, '', `?step=${stepNumber}`)
+            window.history.pushState({ stepNumber }, '', `?step=${stepNumber}`)
           }
 
           let currentScreenId = getIframeLoadedScreenId(iframeRef)
@@ -1100,7 +1136,7 @@ function WalkthroughComponent({
     tooltipElemAnchorsWrapperRef.current.appendChild(anchorElem)
 
 
-    let newAnchors = {...tooltipElemAnchors}
+    let newAnchors = { ...tooltipElemAnchors }
     newAnchors[anchorId] = selectorLocation
 
     setTooltipElemAnchors(newAnchors)
@@ -1116,7 +1152,7 @@ function WalkthroughComponent({
       anchorElem.remove()
     }
 
-    let newAnchors = {...tooltipElemAnchors}
+    let newAnchors = { ...tooltipElemAnchors }
     delete newAnchors[anchorId]
 
     setTooltipElemAnchors(newAnchors)
@@ -1133,7 +1169,7 @@ function WalkthroughComponent({
     let elements = parent.querySelectorAll(`.${type}-anchor`)
 
     if (elements) {
-      let newTooltipElemAnchors = {...tooltipElemAnchors}
+      let newTooltipElemAnchors = { ...tooltipElemAnchors }
 
       elements.forEach(elem => {
         parent.removeChild(elem)
@@ -1529,7 +1565,7 @@ function WalkthroughComponent({
 
       setupStepRegions(currentStep, screen._id)
 
-      let shouldShowRegions = calculateShouldShowRegions(currentStep, {current: screen})
+      let shouldShowRegions = calculateShouldShowRegions(currentStep, { current: screen })
       setShowRegions(shouldShowRegions)
       setupTransitionRegions(screen.customTransitions, screen._id)
       setupPointerTransitions(screen.customTransitions)
@@ -1651,12 +1687,12 @@ function WalkthroughComponent({
         .then(res => {
           let screenData = res.data
 
-          const blobContent = new Blob([screenData.content], {type: 'text/html'})
+          const blobContent = new Blob([screenData.content], { type: 'text/html' })
 
           let blobUrl = URL.createObjectURL(blobContent)
           setIframeSrc(blobUrl)
 
-          let newStepBlobs = storyConfig.stepBlobs ? {...storyConfig.stepBlobs} : {...stepBlobs}
+          let newStepBlobs = storyConfig.stepBlobs ? { ...storyConfig.stepBlobs } : { ...stepBlobs }
           newStepBlobs[screenData.screenDoc._id] = blobUrl
           storyConfig.stepBlobs = newStepBlobs
 
@@ -1779,7 +1815,7 @@ function WalkthroughComponent({
         new: false,
         data: {
           index: 0,
-          regionStyle: {backgroundColor: 'rgba(16, 112, 255, 0.33)'},
+          regionStyle: { backgroundColor: 'rgba(16, 112, 255, 0.33)' },
           pixelData: {
             x: step.view.pointer.selectorLocation.positionX,
             y: step.view.pointer.selectorLocation.positionY,
@@ -1817,7 +1853,7 @@ function WalkthroughComponent({
           new: false,
           data: {
             index: 0,
-            regionStyle: {backgroundColor: 'rgba(16, 112, 255, 0.33)'},
+            regionStyle: { backgroundColor: 'rgba(16, 112, 255, 0.33)' },
             pixelData: {
               x: transition.pointer.selectorLocation.positionX,
               y: transition.pointer.selectorLocation.positionY,
@@ -1983,7 +2019,7 @@ function WalkthroughComponent({
 
     setupStepRegions(step, screenId)
 
-    let shouldShowRegions = calculateShouldShowRegions(step, {current: currentScreen})
+    let shouldShowRegions = calculateShouldShowRegions(step, { current: currentScreen })
     setShowRegions(shouldShowRegions)
     setupTransitionRegions(currentScreen.customTransitions, screenId)
     setupPointerTransitions(currentScreen.customTransitions)
@@ -2143,7 +2179,7 @@ function WalkthroughComponent({
     let stepNumber = newStepIndex + 1
 
     if (!isInEditor) {
-      window.history.pushState({stepNumber}, '', `?step=${stepNumber}`)
+      window.history.pushState({ stepNumber }, '', `?step=${stepNumber}`)
     }
 
 
@@ -2164,7 +2200,7 @@ function WalkthroughComponent({
 
     topWindow.postMessage({
       type: 'step_index_changed',
-      state: {stepNumber: stepNumber}
+      state: { stepNumber: stepNumber }
     }, '*')
 
     return processStep(currentStepIndexRef, videoRef, storyDemoInternalRef, steps)
@@ -2444,12 +2480,10 @@ function WalkthroughComponent({
   }
 
   function scaleMain(scaleValueX, left, top) {
-    debugger
     if (!mainRef.current || !mainRefRect.current || !wrapperRefRect.current) {
       console.log('scaleMain - mainRef, mainRefRect, or wrapperRefRect not set yet')
       return
     }
-
 
     top = Math.min(top, wrapperRefRect.current.height)
     left = Math.min(left, wrapperRefRect.current.width)
@@ -2568,435 +2602,419 @@ function WalkthroughComponent({
   const ZoomSpansComponent = isInEditor ? ZoomSpansEditor : ZoomSpans
   const RegionsComponent = isInEditor ? RegionsEditor : Regions
 
+  const videoCursorScreen = storyDemoInternalRef.current.screens.find((s) => s._id === step.screenId)
+  const videoCursorPositions = videoCursorScreen && videoCursorScreen.cursorPositions
+  const showVideoCursor =
+    storyDemoInternalRef.current.type === StoryTypes.desktop &&
+    step.screenType === ScreenTypes.SCREEN_VIDEO &&
+    Array.isArray(videoCursorPositions) &&
+    videoCursorPositions.length > 0 &&
+    typeof videoCursorPositions[0].frameX === 'number'
+
   return (<WS.Wrapper
-      ref={onWrapperRefSetup}
-      width={width ? width + 'px' : '100%'}
-      height={height ? height + 'px' : '100%'}
-      onMouseUp={() => {
-        setIsTooltipDragging(false)
+    ref={onWrapperRefSetup}
+    width={width ? width + 'px' : '100%'}
+    height={height ? height + 'px' : '100%'}
+    onMouseUp={() => {
+      setIsTooltipDragging(false)
+    }}
+    onMouseMove={function (event) {
+
+      // let cords = event.currentTarget.getBoundingClientRect()
+      if (isTooltipDragging.current && stepTooltipRef.current) {
+        // let newX = event.clientX
+        let newX = event.clientX - (stepTooltipRef.current.clientWidth / 2)
+        // let newY = event.clientY
+        let newY = event.clientY - (stepTooltipRef.current.clientHeight / 2)
+
+
+        setStepTooltipX(newX)
+        setStepTooltipY(newY)
+      }
+    }}
+    // style={{...additionalStyles}}
+    className="joyride-wrapper">
+
+    {renderCursorCondition ? (
+      <Cursor ref={autoCursorRef} />) : ('')}
+
+    {ENABLE_DEBUG_CURSOR ? <DebugCursor /> : null}
+
+    {!isOmniBarDisabled ? (<WS.OmniBar $width={width}>
+      <WS.OmniBar_Container className={'OmniBar__leftSide'}>
+        <WS.OmniBar__Buttons>
+          <WS.ButtonIcon className={'OmniBar__exitBtn'} onClick={() => {
+            document.exitFullscreen()
+            setIsFullScreen(false)
+
+            setTimeout(() => {
+              forceUpdate()
+            }, 250)
+          }}>
+            <img src={CloseIcon} />
+          </WS.ButtonIcon>
+          <WS.ButtonIcon className={'OmniBar__minimizeBtn'} onClick={() => {
+            document.exitFullscreen()
+            setIsFullScreen(false)
+            setTimeout(() => {
+
+              // setTimeout(() => {
+              //   setupTransitionRegions(currentScreenRef.current.customTransitions, currentScreenRef.current._id)
+              //
+              //   setupPointerTransitions(currentScreenRef.current.customTransitions)
+              //
+              //   setupStepRegions(step, currentScreenRef.current._id)
+              // }, 250)
+
+              forceUpdate()
+            }, 250)
+
+          }}>
+            <img src={MinimizeIcon} />
+          </WS.ButtonIcon>
+          <WS.ButtonIcon className={'OmniBar__maximizeBtn'} style={{ cursor: 'pointer' }}
+            onClick={onFullScreenButtonClick}>
+            <img src={MaximizeIcon} />
+          </WS.ButtonIcon>
+        </WS.OmniBar__Buttons>
+      </WS.OmniBar_Container>
+
+      <WS.OmniBar__urlWrapper className={'OmniBar__url'}>
+        <WS.OmniBar__urlWrapperLeft className={'UrlWrapper__leftSide'}>
+        </WS.OmniBar__urlWrapperLeft>
+        <WS.OmniBar__urlWrapperInner className={'UrlWrapper__urlWrapper'}>
+          <WS.UrlLock className={'UrlWrapper__lockIcon'} />
+          <WS.UrlName
+            className={'UrlWrapper__urlName'}>{storyDemoInternalRef.current.name || ''}</WS.UrlName>
+        </WS.OmniBar__urlWrapperInner>
+
+        <WS.OmniBar__urlWrapperRight className={'UrlWrapper__rightSide'}>
+          <WS.UrlReload
+            onClick={() => {
+
+              changeStep(0, stepsInternalRef.current)
+              // currentStepIndex.current = 0
+              // processStep(currentStepIndex, videoRef, flixDoc)
+            }}
+          />
+        </WS.OmniBar__urlWrapperRight>
+      </WS.OmniBar__urlWrapper>
+
+      <WS.OmniBar_Container className={'OmniBar__rightSide'}>
+
+        <WS.OmniBar__LineSpace>
+          {isInEditor ? '' : (
+            <AutoPlayToggle isAutoPlayActive={isAutoPlayActive}
+              setIsAutoPlayActive={setIsAutoPlayActive} />
+          )}
+          {!isInEditor ? '' : (
+            <WS.OmniBar__StepIndicator>
+              Step {stepIndexValue}
+            </WS.OmniBar__StepIndicator>
+          )}
+        </WS.OmniBar__LineSpace>
+      </WS.OmniBar_Container>
+
+
+    </WS.OmniBar>
+    ) : ''}
+    <WS.Main id={'main'}
+      $isOmniBarDisabled={isOmniBarDisabled}
+      ref={mainRef}
+      isScaled={isScaled}
+      onClick={() => {
+        // console.log('isScaled test')
+        // if (isScaled) {
+        //     scaleMain(1, 0, 0)
+        // }
       }}
-      onMouseMove={function (event) {
 
-        // let cords = event.currentTarget.getBoundingClientRect()
-        if (isTooltipDragging.current && stepTooltipRef.current) {
-          // let newX = event.clientX
-          let newX = event.clientX - (stepTooltipRef.current.clientWidth / 2)
-          // let newY = event.clientY
-          let newY = event.clientY - (stepTooltipRef.current.clientHeight / 2)
+    >
+      <EditText screenId={iframeScreenId} iframeRef={iframeRef} />
 
 
-          setStepTooltipX(newX)
-          setStepTooltipY(newY)
-        }
-      }}
-      // style={{...additionalStyles}}
-      className="joyride-wrapper">
-
-      {renderCursorCondition ? (
-        <Cursor ref={autoCursorRef}/>) : ('')}
-
-      {!isOmniBarDisabled ? (<WS.OmniBar $width={width}>
-          <WS.OmniBar_Container className={'OmniBar__leftSide'}>
-            <WS.OmniBar__Buttons>
-              <WS.ButtonIcon className={'OmniBar__exitBtn'} onClick={() => {
-                document.exitFullscreen()
-                setIsFullScreen(false)
-
-                setTimeout(() => {
-                  forceUpdate()
-                }, 250)
-              }}>
-                <img src={CloseIcon}/>
-              </WS.ButtonIcon>
-              <WS.ButtonIcon className={'OmniBar__minimizeBtn'} onClick={() => {
-                document.exitFullscreen()
-                setIsFullScreen(false)
-                setTimeout(() => {
-
-                  // setTimeout(() => {
-                  //   setupTransitionRegions(currentScreenRef.current.customTransitions, currentScreenRef.current._id)
-                  //
-                  //   setupPointerTransitions(currentScreenRef.current.customTransitions)
-                  //
-                  //   setupStepRegions(step, currentScreenRef.current._id)
-                  // }, 250)
-
-                  forceUpdate()
-                }, 250)
-
-              }}>
-                <img src={MinimizeIcon}/>
-              </WS.ButtonIcon>
-              <WS.ButtonIcon className={'OmniBar__maximizeBtn'} style={{cursor: 'pointer'}}
-                             onClick={onFullScreenButtonClick}>
-                <img src={MaximizeIcon}/>
-              </WS.ButtonIcon>
-            </WS.OmniBar__Buttons>
-          </WS.OmniBar_Container>
-
-          <WS.OmniBar__urlWrapper className={'OmniBar__url'}>
-            <WS.OmniBar__urlWrapperLeft className={'UrlWrapper__leftSide'}>
-            </WS.OmniBar__urlWrapperLeft>
-            <WS.OmniBar__urlWrapperInner className={'UrlWrapper__urlWrapper'}>
-              <WS.UrlLock className={'UrlWrapper__lockIcon'}/>
-              <WS.UrlName
-                className={'UrlWrapper__urlName'}>{storyDemoInternalRef.current.name || ''}</WS.UrlName>
-            </WS.OmniBar__urlWrapperInner>
-
-            <WS.OmniBar__urlWrapperRight className={'UrlWrapper__rightSide'}>
-              <WS.UrlReload
-                onClick={() => {
-
-                  changeStep(0, stepsInternalRef.current)
-                  // currentStepIndex.current = 0
-                  // processStep(currentStepIndex, videoRef, flixDoc)
-                }}
-              />
-            </WS.OmniBar__urlWrapperRight>
-          </WS.OmniBar__urlWrapper>
-
-          <WS.OmniBar_Container className={'OmniBar__rightSide'}>
-
-            <WS.OmniBar__LineSpace>
-              {isInEditor ? '' : (
-                <AutoPlayToggle isAutoPlayActive={isAutoPlayActive}
-                                setIsAutoPlayActive={setIsAutoPlayActive}/>
-              )}
-              {!isInEditor ? '' : (
-                <WS.OmniBar__StepIndicator>
-                  Step {stepIndexValue}
-                </WS.OmniBar__StepIndicator>
-              )}
-            </WS.OmniBar__LineSpace>
-          </WS.OmniBar_Container>
+      {showSpinner && (
+        <WC.LoaderWrapper>
+          <Spinner />
+        </WC.LoaderWrapper>)
+      }
 
 
-        </WS.OmniBar>
-      ) : ''}
-      <WS.Main id={'main'}
-               $isOmniBarDisabled={isOmniBarDisabled}
-               ref={mainRef}
-               isScaled={isScaled}
-               onClick={() => {
-                 // console.log('isScaled test')
-                 // if (isScaled) {
-                 //     scaleMain(1, 0, 0)
-                 // }
-               }}
-
+      <WS.VideoWrapper
+        id={'story_video_wrapper'}
+        className={'hidden'}
+        innerWidth={videoRatioWidth}
+        innerHeight={videoRatioHeight}
       >
-        <EditText screenId={iframeScreenId} iframeRef={iframeRef}/>
+        {/*<WS.SpeedUpIcon className={showSpeedupIcon ? 'show' : ''} type={"forward"}/>*/}
+        <WS.PauseIcon className={showPauseIcon ? 'show' : ''} />
+        <WS.Video
+          id={'story_video'}
+          preload={'none'}
+          playsInline={true}
+          disablePictureInPicture
+          controlsList="nodownload"
+          onClick={() => {
+            let video = videoRef.current
+            if (video) {
+
+              pauseOnClick(video)
 
 
-        {showSpinner && (
-          <WC.LoaderWrapper>
-            <Spinner/>
-          </WC.LoaderWrapper>)
-        }
-
-
-        <WS.VideoWrapper
-          id={'story_video_wrapper'}
-          className={'hidden'}
-          innerWidth={videoRatioWidth}
-          innerHeight={videoRatioHeight}
-        >
-          {/*<WS.SpeedUpIcon className={showSpeedupIcon ? 'show' : ''} type={"forward"}/>*/}
-          <WS.PauseIcon className={showPauseIcon ? 'show' : ''}/>
-          <WS.Video
-            id={'story_video'}
-            preload={'none'}
-            playsInline={true}
-            disablePictureInPicture
-            controlsList="nodownload"
-            onClick={() => {
-              let video = videoRef.current
-              if (video) {
-
-                pauseOnClick(video)
-
-
-                // video.currentTime = video.duration
-              }
-              // console.log("video skipped")
-            }}
-            muted={'true'}
-            innerWidth={innerWidth}
-            innerHeight={innerHeight}
-            ratioPercentage={(fullHeight / fullWidth) / (videoRatioHeight / videoRatioWidth)}
-            ratioPercentageX={(fullWidth / fullHeight) / (videoRatioWidth / videoRatioHeight)}
-            ratioPercentageY={(fullHeight / fullWidth) / (videoRatioHeight / videoRatioWidth)}
-            // isRatioDifferent={(videoRatioHeight/videoRatioWidth !== fullHeight/fullWidth)}
-            // style={{
-            //   aspectRatio: storyDemoInternal.current.tabInfo.width / storyDemoInternal.current.tabInfo.height
-            // }}
-
-          >
-            <source ref={videoSourceRef} src={''} type={'video/mp4'}></source>
-          </WS.Video>
-        </WS.VideoWrapper>
-        <WS.ImagesWrapper
-          id={'story_images'}
-          className={'hidden'}
-        >
-          {screenshotScreens.map(screen => {
-            let url = screen.imageUrl
-
-            return <WS.ImageContainer
-              key={screen.screenId}
-              id={screen.screenId}
-            >
-              <WS.Image src={url}
-              />
-            </WS.ImageContainer>
-          })}
-        </WS.ImagesWrapper>
-
-
-        {showTooltip ? (
-          <WS.StepsWrapper
-            id={'tooltip-wrapper'}
-            ref={stepsWrapperRef}
-            fullWidth={fullWidth}
-            fullHeight={fullHeight}
-            scalePercentageWidth={scalePercentageWidth}
-            scalePercentageHeight={scalePercentageHeight}
-            isOverlayEnabled={stepIsOverlayEnabled}
-            overlayBackgroundColor={themeOverlayBackgroundColor}
-            isPopup={step && step.view && step.view.viewType === STEP_VIEWS.POPUP}
-          >
-
-            {getStepView(storyDemoState, step, prevStep, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled, isInEditor)}
-
-
-          </WS.StepsWrapper>
-        ) : ''}
-        {showTransitions ? (
-          <WS.NavigationWrapper
-            // style={{ ...additionalStyles }}
-            ref={navWrapperRef}
-            className={'nav-wrapper'}
-            $showHotspot={true}>
-            {getTransitionsView(storyDemoState, hotspotTransitions, pointerTransitions, stepRef.current, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled)}
-
-          </WS.NavigationWrapper>
-        ) : ''}
-        <IframeComponent
-          className={'hidden'}
-          screenId={iframeScreenId}
-          iframeSrc={iframeSrc}
-          iframeRef={iframeRef}
-          iframeSize={iframeSize}
-          isFullScreen={isFullScreen}
-          omniBarHeight={omniBarHeight}
-        />
-        {confettiOnLastStep && (currentStepIndexRef.current === stepsInternalRef.current.length - 1) ? (
-          <Confetti
-
-            recycle={false}
-            width={window.innerWidth}
-            height={window.innerHeight}
-            // confettiSource={{
-            //   w: 10,
-            //   h: 10,
-            //   x: window.innerWidth / 2,
-            //   y: window.innerHeight / 2,
-            // }}
-            tweenDuration={5000}
-            numberOfPieces={500}
-            gravity={0.15}
-            run={true}
-          />
-        ) : ''}
-        {showLiveDemoWatermark ? (<WS.WatermarkWrapper
-            $isInEditor={isInEditor}
-            onClick={() => {
-              window.open("https://livedemo.ai", '_blank')
-            }}>
-            <WS.WatermarkButton>
-              <WS.Watermark__Icon $isInEditor={isInEditor} className={'Watermark__Icon'} width="94"
-                                  height="106"
-                                  viewBox="0 0 94 106" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path className={"watermark-icon-inner-layer"}
-                      d="M0.5 6.85552C0.5 3.52841 3.43103 0.963143 6.72881 1.40402L76.0839 10.6761C85.7686 11.9708 93 20.2333 93 30.0041V82.0433C93 89.997 86.9798 96.6599 79.0668 97.4639L6.55596 104.831C3.31524 105.161 0.5 102.617 0.5 99.3595V6.85552Z"
-                      fill={"#f9f9f9"} stroke="#999"/>
-                <path
-                  d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-                  fill="white"/>
-                <path
-                  d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-                  stroke={Colors.primaryColor} stroke-width="3"/>
-                <path
-                  d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-                  stroke="white" stroke-opacity="0.15" stroke-width="3"/>
-              </WS.Watermark__Icon>
-              <WS.Watermark__Text $isInEditor={isInEditor}
-                                  className={'Watermark__Text'}>LiveDemo</WS.Watermark__Text>
-            </WS.WatermarkButton>
-          </WS.WatermarkWrapper>
-        ) : (
-          <WS.WatermarkWrapper
-            $isInEditor={isInEditor}
-            onClick={() => {
-              window.open(themeWatermarkConfigUrl, '_blank')
-            }}>
-            <WS.WatermarkButton>
-
-              <WS.Watermark__Text $isInEditor={isInEditor}
-                                  className={'Watermark__Text'}>{themeWatermarkConfigText}</WS.Watermark__Text>
-              {themeWatermarkConfigImageUrl === '' ? (
-                <WS.Watermark__Icon $isInEditor={isInEditor} className={'Watermark__Icon'} width="94"
-                                    height="106"
-                                    viewBox="0 0 94 106" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path className={"watermark-icon-inner-layer"}
-                        d="M0.5 6.85552C0.5 3.52841 3.43103 0.963143 6.72881 1.40402L76.0839 10.6761C85.7686 11.9708 93 20.2333 93 30.0041V82.0433C93 89.997 86.9798 96.6599 79.0668 97.4639L6.55596 104.831C3.31524 105.161 0.5 102.617 0.5 99.3595V6.85552Z"
-                        fill={"#f9f9f9"} stroke="#999"/>
-                  <path
-                    d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-                    fill="white"/>
-                  <path
-                    d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-                    stroke={Colors.primaryColor} stroke-width="3"/>
-                  <path
-                    d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-                    stroke="white" stroke-opacity="0.15" stroke-width="3"/>
-                </WS.Watermark__Icon>) : (
-                <WS.Watermark__Image $isInEditor={isInEditor} src={themeWatermarkConfigImageUrl}
-                                     className={'Watermark__Icon'}/>)}
-            </WS.WatermarkButton>
-          </WS.WatermarkWrapper>
-        )}
-        {isAudioEnabled && stepAudio ? (
-          <WS.AudioWrapper>
-
-            {isInEditor ? (
-              <RoundAudioPlayerEditor
-                key={stepAudio && stepAudio.audioUrl}
-                stepAudio={stepAudio}
-                setStepAudio={(newStepAudio) => {
-                  let updatedStep = JSON.parse(JSON.stringify(stepsInternalRef.current[currentStepIndexState]))
-                  updatedStep.stepAudioId = newStepAudio
-
-                  stepsInternalRef.current[currentStepIndexState] = updatedStep
-                  setStepAudio(newStepAudio)
-                }}
-                voices={voices}
-                reloadStoryDemo={reloadStoryDemo}
-                isInEditor={isInEditor}
-                authData={authData}
-                workspaceId={workspaceId}
-                storyDemoId={storyDemoInternalRef.current && storyDemoInternalRef.current._id}
-                screenId={step.screenId}
-                step={stepsInternalRef.current[currentStepIndexState]}
-                currentStepIndexState={currentStepIndexState}
-              />
-            ) : (
-              <RoundAudioPlayer
-                stepAudio={stepAudio}
-                isAudioPlaying={isAudioPlaying}
-                setIsAudioPlaying={setIsAudioPlaying}
-                autoPlay={true}
-                setAudioHasPlayed={setAudioHasPlayed}
-                setAudioHasStarted={setAudioHasStarted}
-              />
-            )
+              // video.currentTime = video.duration
             }
-          </WS.AudioWrapper>
-        ) : <WS.AudioWrapper>
-          {isInEditor ? <AddAudio
-            workspaceId={workspaceId}
-            storyDemoId={storyDemoInternalRef.current && storyDemoInternalRef.current._id}
-            screenId={step && step.screenId}
-            step={stepRef.current}
-            reloadStoryDemo={reloadStoryDemo}
-          /> : ''}
-        </WS.AudioWrapper>}
+            // console.log("video skipped")
+          }}
+          muted={'true'}
+          innerWidth={innerWidth}
+          innerHeight={innerHeight}
+          ratioPercentage={(fullHeight / fullWidth) / (videoRatioHeight / videoRatioWidth)}
+          ratioPercentageX={(fullWidth / fullHeight) / (videoRatioWidth / videoRatioHeight)}
+          ratioPercentageY={(fullHeight / fullWidth) / (videoRatioHeight / videoRatioWidth)}
+        // isRatioDifferent={(videoRatioHeight/videoRatioWidth !== fullHeight/fullWidth)}
+        // style={{
+        //   aspectRatio: storyDemoInternal.current.tabInfo.width / storyDemoInternal.current.tabInfo.height
+        // }}
 
-        {isTabsEnabled ? (
-          <WS.TabsWrapper
-            $isOverlayEnabled={stepIsOverlayEnabled}
+        >
+          <source ref={videoSourceRef} src={''} type={'video/mp4'}></source>
+        </WS.Video>
+      </WS.VideoWrapper>
+      {showVideoCursor ? (
+        <VideoCursor
+          cursorPositions={videoCursorPositions}
+          videoRef={videoRef}
+          mainRef={mainRef}
+          tabInfoWidth={tabInfoWidth}
+          tabInfoHeight={tabInfoHeight}
+          active={showVideoCursor}
+        />
+      ) : null}
+      <WS.ImagesWrapper
+        id={'story_images'}
+        className={'hidden'}
+      >
+        {screenshotScreens.map(screen => {
+          let url = screen.imageUrl
 
-            onClick={() => {
-            }}>
-            <WS.TabsInner>
-              <WS.Tabs__TabWrapper>
-                {stepsInternalRef.current.map((step, index) => {
-                  let isViewed = index <= currentStepIndexRef.current
+          return <WS.ImageContainer
+            key={screen.screenId}
+            id={screen.screenId}
+          >
+            <WS.Image src={url}
+            />
+          </WS.ImageContainer>
+        })}
+      </WS.ImagesWrapper>
 
-                  return (
-                    <WS.Tabs__Tab
-                      onClick={() => {
-                        changeStep(index, stepsInternalRef.current)
-                      }}>
-                      <WS.Tabs__TabInner
-                        className={isViewed ? 'viewed' : ''}
-                        $backgroundColor={themeStepBackgroundColor}
-                      />
-                    </WS.Tabs__Tab>
-                  )
-                })}
-              </WS.Tabs__TabWrapper>
-            </WS.TabsInner>
-          </WS.TabsWrapper>
-        ) : ''}
 
-        <WS.TooltipElemAnchorsWrapper ref={tooltipElemAnchorsWrapperRef} id={'tooltip-element-visualizer'}
-                                      fullWidth={fullWidth}
-                                      fullHeight={fullHeight}
-                                      innerWidth={innerWidth}
-                                      innerHeight={innerHeight}
-                                      scalePercentageWidth={scalePercentageWidth}
-                                      scalePercentageHeight={scalePercentageHeight}
+      {showTooltip ? (
+        <WS.StepsWrapper
+          id={'tooltip-wrapper'}
+          ref={stepsWrapperRef}
+          data-zoom-ignore="true"
+          fullWidth={fullWidth}
+          fullHeight={fullHeight}
+          scalePercentageWidth={scalePercentageWidth}
+          scalePercentageHeight={scalePercentageHeight}
+          isOverlayEnabled={stepIsOverlayEnabled}
+          overlayBackgroundColor={themeOverlayBackgroundColor}
+          isPopup={step && step.view && step.view.viewType === STEP_VIEWS.POPUP}
         >
 
-        </WS.TooltipElemAnchorsWrapper>
-        {showRegions && editorShowRegions ? (
-          <RegionsComponent
-            stepRegions={stepRegions}
-            transitionRegions={transitionRegions}
-            setStepRegions={setStepRegions}
-            setTransitionRegions={setTransitionRegions}
-            currentStepIndex={(currentStepIndexRef - amountOfInitialPosts)}
-            omniBarHeight={omniBarHeight}
-            wrapperRef={wrapperRef}
-            liveDemo={storyDemoState}
-            setStepPointerInfo={setStepPointerInfo}
-            setTransitionPointerInfo={(newPointerInfo) => {
-              let newTransitionPointerInfos = [...transitionPointerInfos].map((pInfo) => {
+          {getStepView(storyDemoState, step, prevStep, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled, isInEditor)}
 
-                if (pInfo.transitionId === newPointerInfo.transitionId) {
-                  return newPointerInfo
-                }
 
-                return pInfo
-              })
+        </WS.StepsWrapper>
+      ) : ''}
+      {showTransitions ? (
+        <WS.NavigationWrapper
+          // style={{ ...additionalStyles }}
+          ref={navWrapperRef}
+          className={'nav-wrapper'}
+          $showHotspot={true}>
+          {getTransitionsView(storyDemoState, hotspotTransitions, pointerTransitions, stepRef.current, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled)}
 
-              setTransitionPointerInfos(newTransitionPointerInfos)
-            }}
-            isInEditor={isInEditor}
-            fullWidth={fullWidth}
-            fullHeight={fullHeight}
-            scalePercentageWidth={scalePercentageWidth}
-            scalePercentageHeight={scalePercentageHeight}
-            addTooltipAnchor={addTooltipAnchor}
-            removeTooltipAnchor={removeTooltipAnchor}
-            tooltipElemAnchorsWrapperRef={tooltipElemAnchorsWrapperRef}
-            forceUpdate={forceUpdate}
-            innerHeight={innerHeight}
-            innerWidth={innerWidth}
+        </WS.NavigationWrapper>
+      ) : ''}
+      <IframeComponent
+        className={'hidden'}
+        screenId={iframeScreenId}
+        iframeSrc={iframeSrc}
+        iframeRef={iframeRef}
+        iframeSize={iframeSize}
+        isFullScreen={isFullScreen}
+        omniBarHeight={omniBarHeight}
+      />
+      {confettiOnLastStep && (currentStepIndexRef.current === stepsInternalRef.current.length - 1) ? (
+        <Confetti
 
-          />
-        ) : ''}
-        {/*<RegionLite></RegionLite>*/}
-        <ZoomSpansComponent
-          wrapperRef={wrapperRef}
-          mainRef={mainRef}
+          recycle={false}
+          width={window.innerWidth}
+          height={window.innerHeight}
+          // confettiSource={{
+          //   w: 10,
+          //   h: 10,
+          //   x: window.innerWidth / 2,
+          //   y: window.innerHeight / 2,
+          // }}
+          tweenDuration={5000}
+          numberOfPieces={500}
+          gravity={0.15}
+          run={true}
+        />
+      ) : ''}
+      {showLiveDemoWatermark ? (<WS.WatermarkWrapper
+        $isInEditor={isInEditor}
+        onClick={() => {
+          window.open("https://livedemo.ai", '_blank')
+        }}>
+        <WS.WatermarkButton>
+          <WS.Watermark__Icon $isInEditor={isInEditor} className={'Watermark__Icon'} width="94"
+            height="106"
+            viewBox="0 0 94 106" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path className={"watermark-icon-inner-layer"}
+              d="M0.5 6.85552C0.5 3.52841 3.43103 0.963143 6.72881 1.40402L76.0839 10.6761C85.7686 11.9708 93 20.2333 93 30.0041V82.0433C93 89.997 86.9798 96.6599 79.0668 97.4639L6.55596 104.831C3.31524 105.161 0.5 102.617 0.5 99.3595V6.85552Z"
+              fill={"#f9f9f9"} stroke="#999" />
+            <path
+              d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+              fill="white" />
+            <path
+              d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+              stroke={Colors.primaryColor} stroke-width="3" />
+            <path
+              d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+              stroke="white" stroke-opacity="0.15" stroke-width="3" />
+          </WS.Watermark__Icon>
+          <WS.Watermark__Text $isInEditor={isInEditor}
+            className={'Watermark__Text'}>LiveDemo</WS.Watermark__Text>
+        </WS.WatermarkButton>
+      </WS.WatermarkWrapper>
+      ) : (
+        <WS.WatermarkWrapper
+          $isInEditor={isInEditor}
+          onClick={() => {
+            window.open(themeWatermarkConfigUrl, '_blank')
+          }}>
+          <WS.WatermarkButton>
+
+            <WS.Watermark__Text $isInEditor={isInEditor}
+              className={'Watermark__Text'}>{themeWatermarkConfigText}</WS.Watermark__Text>
+            {themeWatermarkConfigImageUrl === '' ? (
+              <WS.Watermark__Icon $isInEditor={isInEditor} className={'Watermark__Icon'} width="94"
+                height="106"
+                viewBox="0 0 94 106" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path className={"watermark-icon-inner-layer"}
+                  d="M0.5 6.85552C0.5 3.52841 3.43103 0.963143 6.72881 1.40402L76.0839 10.6761C85.7686 11.9708 93 20.2333 93 30.0041V82.0433C93 89.997 86.9798 96.6599 79.0668 97.4639L6.55596 104.831C3.31524 105.161 0.5 102.617 0.5 99.3595V6.85552Z"
+                  fill={"#f9f9f9"} stroke="#999" />
+                <path
+                  d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+                  fill="white" />
+                <path
+                  d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+                  stroke={Colors.primaryColor} stroke-width="3" />
+                <path
+                  d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+                  stroke="white" stroke-opacity="0.15" stroke-width="3" />
+              </WS.Watermark__Icon>) : (
+              <WS.Watermark__Image $isInEditor={isInEditor} src={themeWatermarkConfigImageUrl}
+                className={'Watermark__Icon'} />)}
+          </WS.WatermarkButton>
+        </WS.WatermarkWrapper>
+      )}
+      {isAudioEnabled && stepAudio ? (
+        <WS.AudioWrapper>
+
+          {isInEditor ? (
+            <RoundAudioPlayerEditor
+              key={stepAudio && stepAudio.audioUrl}
+              stepAudio={stepAudio}
+              setStepAudio={(newStepAudio) => {
+                let updatedStep = JSON.parse(JSON.stringify(stepsInternalRef.current[currentStepIndexState]))
+                updatedStep.stepAudioId = newStepAudio
+
+                stepsInternalRef.current[currentStepIndexState] = updatedStep
+                setStepAudio(newStepAudio)
+              }}
+              voices={voices}
+              reloadStoryDemo={reloadStoryDemo}
+              isInEditor={isInEditor}
+              authData={authData}
+              workspaceId={workspaceId}
+              storyDemoId={storyDemoInternalRef.current && storyDemoInternalRef.current._id}
+              screenId={step.screenId}
+              step={stepsInternalRef.current[currentStepIndexState]}
+              currentStepIndexState={currentStepIndexState}
+            />
+          ) : (
+            <RoundAudioPlayer
+              stepAudio={stepAudio}
+              isAudioPlaying={isAudioPlaying}
+              setIsAudioPlaying={setIsAudioPlaying}
+              autoPlay={true}
+              setAudioHasPlayed={setAudioHasPlayed}
+              setAudioHasStarted={setAudioHasStarted}
+            />
+          )
+          }
+        </WS.AudioWrapper>
+      ) : <WS.AudioWrapper>
+        {isInEditor ? <AddAudio
+          workspaceId={workspaceId}
+          storyDemoId={storyDemoInternalRef.current && storyDemoInternalRef.current._id}
+          screenId={step && step.screenId}
+          step={stepRef.current}
+          reloadStoryDemo={reloadStoryDemo}
+        /> : ''}
+      </WS.AudioWrapper>}
+
+      {isTabsEnabled ? (
+        <WS.TabsWrapper
+          $isOverlayEnabled={stepIsOverlayEnabled}
+
+          onClick={() => {
+          }}>
+          <WS.TabsInner>
+            <WS.Tabs__TabWrapper>
+              {stepsInternalRef.current.map((step, index) => {
+                let isViewed = index <= currentStepIndexRef.current
+
+                return (
+                  <WS.Tabs__Tab
+                    onClick={() => {
+                      changeStep(index, stepsInternalRef.current)
+                    }}>
+                    <WS.Tabs__TabInner
+                      className={isViewed ? 'viewed' : ''}
+                      $backgroundColor={themeStepBackgroundColor}
+                    />
+                  </WS.Tabs__Tab>
+                )
+              })}
+            </WS.Tabs__TabWrapper>
+          </WS.TabsInner>
+        </WS.TabsWrapper>
+      ) : ''}
+
+      <WS.TooltipElemAnchorsWrapper ref={tooltipElemAnchorsWrapperRef} id={'tooltip-element-visualizer'}
+        fullWidth={fullWidth}
+        fullHeight={fullHeight}
+        innerWidth={innerWidth}
+        innerHeight={innerHeight}
+        scalePercentageWidth={scalePercentageWidth}
+        scalePercentageHeight={scalePercentageHeight}
+      >
+
+      </WS.TooltipElemAnchorsWrapper>
+      {showRegions && editorShowRegions ? (
+        <RegionsComponent
           stepRegions={stepRegions}
           transitionRegions={transitionRegions}
           setStepRegions={setStepRegions}
           setTransitionRegions={setTransitionRegions}
-          currentStepIndex={currentStepIndexRef}
+          currentStepIndex={(currentStepIndexRef - amountOfInitialPosts)}
           omniBarHeight={omniBarHeight}
+          wrapperRef={wrapperRef}
           liveDemo={storyDemoState}
           setStepPointerInfo={setStepPointerInfo}
           setTransitionPointerInfo={(newPointerInfo) => {
@@ -3011,6 +3029,7 @@ function WalkthroughComponent({
 
             setTransitionPointerInfos(newTransitionPointerInfos)
           }}
+          isInEditor={isInEditor}
           fullWidth={fullWidth}
           fullHeight={fullHeight}
           scalePercentageWidth={scalePercentageWidth}
@@ -3019,23 +3038,60 @@ function WalkthroughComponent({
           removeTooltipAnchor={removeTooltipAnchor}
           tooltipElemAnchorsWrapperRef={tooltipElemAnchorsWrapperRef}
           forceUpdate={forceUpdate}
-          isFullScreen={isFullScreen}
-          isInEditor={isInEditor}
-          scaleMain={scaleMain}
-          videoRef={videoRef}
-          currentStep={stepsInternalRef.current[currentStepIndexState]}
-          currentScreen={currentScreenDoc}
-          innerWidth={innerWidth}
           innerHeight={innerHeight}
-          isScaled={isScaled}
-          isScaledRef={isScaledRef}
+          innerWidth={innerWidth}
 
-          scaleInProgressRef={scaleInProgressRef}
         />
-      </WS.Main>
+      ) : ''}
+      {/*<RegionLite></RegionLite>*/}
+      <ZoomSpansComponent
+        wrapperRef={wrapperRef}
+        mainRef={mainRef}
+        stepRegions={stepRegions}
+        transitionRegions={transitionRegions}
+        setStepRegions={setStepRegions}
+        setTransitionRegions={setTransitionRegions}
+        currentStepIndex={currentStepIndexRef}
+        omniBarHeight={omniBarHeight}
+        liveDemo={storyDemoState}
+        setStepPointerInfo={setStepPointerInfo}
+        setTransitionPointerInfo={(newPointerInfo) => {
+          let newTransitionPointerInfos = [...transitionPointerInfos].map((pInfo) => {
+
+            if (pInfo.transitionId === newPointerInfo.transitionId) {
+              return newPointerInfo
+            }
+
+            return pInfo
+          })
+
+          setTransitionPointerInfos(newTransitionPointerInfos)
+        }}
+        fullWidth={fullWidth}
+        fullHeight={fullHeight}
+        scalePercentageWidth={scalePercentageWidth}
+        scalePercentageHeight={scalePercentageHeight}
+        addTooltipAnchor={addTooltipAnchor}
+        removeTooltipAnchor={removeTooltipAnchor}
+        tooltipElemAnchorsWrapperRef={tooltipElemAnchorsWrapperRef}
+        forceUpdate={forceUpdate}
+        isFullScreen={isFullScreen}
+        isInEditor={isInEditor}
+        scaleMain={scaleMain}
+        videoRef={videoRef}
+        currentStep={stepsInternalRef.current[currentStepIndexState]}
+        currentScreen={currentScreenDoc}
+        innerWidth={innerWidth}
+        innerHeight={innerHeight}
+        isScaled={isScaled}
+        isScaledRef={isScaledRef}
+
+        scaleInProgressRef={scaleInProgressRef}
+      />
+    </WS.Main>
 
 
-    </WS.Wrapper>
+  </WS.Wrapper>
   )
 }
 
@@ -3053,14 +3109,16 @@ const WS = {
 
   Wrapper: styled.div`
 
+    //cursor: none;
+  
     overflow: hidden;
 
-    width: ${({width}) => width};
-    height: ${({height}) => height};
+    width: ${({ width }) => width};
+    height: ${({ height }) => height};
     max-width: 100%;
     max-height: 100%;
 
-    border-radius: 8px;
+    border-radius: 20px;
     box-shadow: 0 0 0 1px rgb(17 24 39 / 16%);
   }
 
@@ -3096,15 +3154,15 @@ const WS = {
     left: 0;
     width: 100%;
     height: 100%;
-      // width: ${({fullWidth}) => fullWidth}px;
-      // height: ${({fullHeight}) => fullHeight}px;
+      // width: ${({ fullWidth }) => fullWidth}px;
+      // height: ${({ fullHeight }) => fullHeight}px;
     transform-origin: top left;
       // transform: scaleX(${(props) => `${props.scalePercentageWidth}`}) scaleY(${(props) => `${props.scalePercentageHeight}`});
   `,
 
   StepsWrapper: styled.div`
-      // width: ${({fullWidth}) => fullWidth}px;
-      // height: ${({fullHeight}) => fullHeight}px;
+      // width: ${({ fullWidth }) => fullWidth}px;
+      // height: ${({ fullHeight }) => fullHeight}px;
 
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
@@ -3116,7 +3174,7 @@ const WS = {
       z-index: 998;
     }
 
-    ${({isOverlayEnabled, overlayBackgroundColor, isPopup}) => {
+    ${({ isOverlayEnabled, overlayBackgroundColor, isPopup }) => {
 
 
       if (isOverlayEnabled) {
@@ -3144,8 +3202,8 @@ const WS = {
   `,
   StepsInnerWrapper: styled.div`
     //transform-origin: top left;
-      // width: ${({fullWidth}) => fullWidth}px;
-      // height: ${({fullHeight}) => fullHeight}px;
+      // width: ${({ fullWidth }) => fullWidth}px;
+      // height: ${({ fullHeight }) => fullHeight}px;
       // transform: scaleX(${(props) => `calc(${props.scalePercentageWidth})`}) scaleY(${(props) => `calc(${props.scalePercentageWidth})`});
   `,
   StartButtonWrapper: styled.div`
@@ -3237,7 +3295,7 @@ const WS = {
       display: none;
     }
 
-      //transform: scaleX(${({ratioPercentageX}) => ratioPercentageX}) scaleY(${({ratioPercentageY}) => ratioPercentageY});
+      //transform: scaleX(${({ ratioPercentageX }) => ratioPercentageX}) scaleY(${({ ratioPercentageY }) => ratioPercentageY});
   `,
   VideoWrapper: styled.div`
     width: 100%;
@@ -3250,11 +3308,11 @@ const WS = {
     justify-content: center;
 
 
-      // padding-bottom: ${({innerWidth, innerHeight}) => ((innerHeight / innerWidth) * 100)}%;
+      // padding-bottom: ${({ innerWidth, innerHeight }) => ((innerHeight / innerWidth) * 100)}%;
   `,
   Main: styled.div`
     width: 100%;
-    height: ${({$isOmniBarDisabled}) => `calc(100% - ${$isOmniBarDisabled ? '0px' : '40px'})`};
+    height: ${({ $isOmniBarDisabled }) => `calc(100% - ${$isOmniBarDisabled ? '0px' : '40px'})`};
     // height: 100%;
     //height: 82.3%;
     //margin-top: -5%;
@@ -3310,7 +3368,7 @@ const WS = {
     && {
       opacity: ${props => props.$show ? '1' : '0'};
       //cursor: pointer;
-      cursor: ${({$isInEditor}) => $isInEditor ? 'move' : 'cursor'};
+      cursor: ${({ $isInEditor }) => $isInEditor ? 'move' : 'cursor'};
       transition: ${props => props.$isMoving ? 'none' : '0.4s ease-in-out'};
       position: absolute;
 
@@ -3329,7 +3387,7 @@ const WS = {
   NavigationWrapper: styled.div`
     //width: 100%;
     //height: 100%;
-    z-index: ${({$showHotspot}) => $showHotspot ? '3' : '-1'};
+    z-index: ${({ $showHotspot }) => $showHotspot ? '3' : '-1'};
 
     position: fixed;
     top: 0;
@@ -3379,7 +3437,7 @@ const WS = {
     //justify-content: space-between;
 
 
-    ${({$width}) => {
+    ${({ $width }) => {
       if ($width < 150) {
         return `
                     padding: 0px 5px 0px 5px;
@@ -3539,15 +3597,15 @@ const WS = {
     white-space: nowrap;
   `,
   UrlReload: styled(ReloadOutlined)`
-    width: ${({$width = 16}) => $width}px;
-    height: ${({$height = 16}) => $height}px;
+    width: ${({ $width = 16 }) => $width}px;
+    height: ${({ $height = 16 }) => $height}px;
     margin-left: 10px;
     margin-right: 10px;
 
     && svg {
       width: 100%;
       height: 100%;
-      fill: ${({$fill = '#9ca3af'}) => $fill};
+      fill: ${({ $fill = '#9ca3af' }) => $fill};
     }
 
     cursor: pointer;
@@ -3557,13 +3615,13 @@ const WS = {
     }
   `,
   UrlLock: styled(LockFilled)`
-    width: ${({$width = 14}) => $width}px;
-    height: ${({$height = 14}) => $height}px;
+    width: ${({ $width = 14 }) => $width}px;
+    height: ${({ $height = 14 }) => $height}px;
     margin-left: 10px;
     margin-right: 10px;
 
     && svg {
-      fill: ${({$fill = '#9ca3af'}) => $fill};
+      fill: ${({ $fill = '#9ca3af' }) => $fill};
       width: 100%;
       height: 100%;
     }
@@ -3586,8 +3644,8 @@ const WS = {
     //height: 16%; //75px;
     height: fit-content;
     width: fit-content;
-      // height: ${({isInEditor}) => isInEditor ? '3vw' : '5vw'};
-      //width: ${({isInEditor}) => isInEditor ? '3vw' : '5vw'};
+      // height: ${({ isInEditor }) => isInEditor ? '3vw' : '5vw'};
+      //width: ${({ isInEditor }) => isInEditor ? '3vw' : '5vw'};
 
     max-width: 240px;
     max-height: 75px;
@@ -3620,8 +3678,8 @@ const WS = {
 
       width: fit-content;
       height: fit-content;
-        // height: ${({isInEditor}) => isInEditor ? '3vw' : '5.5vw'};
-        // width: ${({isInEditor}) => isInEditor ? '10vw' : '18vw'};
+        // height: ${({ isInEditor }) => isInEditor ? '3vw' : '5.5vw'};
+        // width: ${({ isInEditor }) => isInEditor ? '10vw' : '18vw'};
     }
 
     &&:hover .watermark-icon-inner-layer {
@@ -3633,9 +3691,9 @@ const WS = {
       width: fit-content;
       padding: 8px;
 
-        // height: ${({isInEditor}) => isInEditor ? '100%' : '100%'};
-        // width: ${({isInEditor}) => isInEditor ? '8vw' : '12vw'};
-        // line-height: ${({isInEditor}) => isInEditor ? '3vw' : '5.5vw'};
+        // height: ${({ isInEditor }) => isInEditor ? '100%' : '100%'};
+        // width: ${({ isInEditor }) => isInEditor ? '8vw' : '12vw'};
+        // line-height: ${({ isInEditor }) => isInEditor ? '3vw' : '5.5vw'};
       //width: 12vw;
       //height: 100%;
       //line-height: 5.5vw;
@@ -3676,8 +3734,8 @@ const WS = {
     //width: 4.8vw;
 
     opacity: 0.75;
-    height: ${({$isInEditor}) => $isInEditor ? '3vw' : '4.8vw'};
-    width: ${({$isInEditor}) => $isInEditor ? '3vw' : '4.8vw'};
+    height: ${({ $isInEditor }) => $isInEditor ? '3vw' : '4.8vw'};
+    width: ${({ $isInEditor }) => $isInEditor ? '3vw' : '4.8vw'};
 
     //max-width: 46px;
     //min-width: 46px;
@@ -3692,8 +3750,8 @@ const WS = {
   Watermark__Image: styled.img`
 
     opacity: 0.75;
-    height: ${({$isInEditor}) => $isInEditor ? '3vw' : '4.8vw'};
-    width: ${({$isInEditor}) => $isInEditor ? '3vw' : '4.8vw'};
+    height: ${({ $isInEditor }) => $isInEditor ? '3vw' : '4.8vw'};
+    width: ${({ $isInEditor }) => $isInEditor ? '3vw' : '4.8vw'};
 
     position: relative;
     padding: 0px;
@@ -3704,7 +3762,7 @@ const WS = {
   Watermark__Text: styled.div`
     font-family: ${Colors.fontFamily};
     //font-size: 2vw;
-    font-size: ${({$isInEditor}) => $isInEditor ? '1.2vw' : '1.2vw'};
+    font-size: ${({ $isInEditor }) => $isInEditor ? '1.2vw' : '1.2vw'};
     width: 0px;
     padding: 0px;
     box-sizing: border-box;
@@ -3741,7 +3799,7 @@ const WS = {
     transition: 0.3s ease-in-out;
     opacity: 0.8;
 
-    ${({$isOverlayEnabled}) => {
+    ${({ $isOverlayEnabled }) => {
       if ($isOverlayEnabled) {
         return `
           z-index: 4 !important;
@@ -3807,13 +3865,13 @@ const WS = {
 
 
     &&.viewed {
-      background: ${({$backgroundColor}) => $backgroundColor};
+      background: ${({ $backgroundColor }) => $backgroundColor};
     }
   `,
   PauseIcon: styled(CaretRightOutlined)`
     position: absolute;
-    width: ${({$width = '25em'}) => $width};
-    height: ${({$height = '50em'}) => $height};
+    width: ${({ $width = '25em' }) => $width};
+    height: ${({ $height = '50em' }) => $height};
     z-index: 5;
     display: none;
     //display: block;
@@ -3832,11 +3890,11 @@ const WS = {
   `,
   SpeedUpIcon: styled(ForwardOutlined)`
     position: absolute;
-    width: ${({$width = '25em'}) => $width};
-    height: ${({$height = '50em'}) => $height};
+    width: ${({ $width = '25em' }) => $width};
+    height: ${({ $height = '50em' }) => $height};
     z-index: 5;
     display: none;
-    opacity: ${({$opacity = 0.7}) => $opacity};
+    opacity: ${({ $opacity = 0.7 }) => $opacity};
     transition: 0.3s ease-in;
 
     &&.show {

@@ -8,6 +8,7 @@ import Icon from '../../../../components/Icon/Icon'
 import Spinner from '../../../../components/Spinner/Spinner'
 import CustomHeader from './CustomHeader/CustomHeader'
 import Theme from './Theme/Theme'
+import Background from './Background/Background'
 import Misc from './Misc/Misc'
 import Variables from './Variables/Variables'
 
@@ -57,6 +58,12 @@ const CustomTab = ({ storyDemo, authData, tabsWidth, changeIframeStep, reloadSto
           reloadStoryDemo={reloadStoryDemo}
         />
         <Theme
+          storyDemo={storyDemo}
+          workspaceId={storyDemo.workspaceId}
+          authData={authData}
+          reloadStoryDemo={reloadStoryDemo}
+        />
+        <Background
           storyDemo={storyDemo}
           workspaceId={storyDemo.workspaceId}
           authData={authData}

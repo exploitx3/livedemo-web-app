@@ -70,10 +70,10 @@ const LoginPage = (props) => {
   }
 
   function onSignWithGoogle(e) {
-    setIsGoogleLoading(true)
     const googleUrl =
       `${CONFIG.API_URL}/users/auth/google-link?returnTo=${encodeURIComponent(returnPath)}`
     window.location.assign(googleUrl)
+
   }
 
   function onLogin(e) {

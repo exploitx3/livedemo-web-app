@@ -41,6 +41,7 @@ import 'tippy.js/animations/scale.css'
 import Confetti from 'react-confetti'
 import Tippy from '@tippyjs/react'
 import {deriveRenderSteps} from '../../utils/storyHelpers'
+import {resolveStoryDemoOuterBackground} from '../../utils/storyDemoBackground'
 // import {WalkthroughComponent} from '@georgi.apostolov/livedemo-components/dist/index'
 // import {WalkthroughComponent} from '../../livedemo-components/dist/index'
 // import WalkthroughComponent from '../../livedemo-components/components/WalkthroughComponent'
@@ -1524,6 +1525,14 @@ const StoryDemoPage = ({
 
   let [isLoading, setIsLoading] = useState(false)
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const [isAIEnhanceOpen, setIsAIEnhanceOpen] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
 
@@ -2091,6 +2100,8 @@ const StoryDemoPage = ({
 
   let noScreensForDemo = hasDemoLoaded && renderSteps && renderSteps.length === 0
 
+  const outerBg = resolveStoryDemoOuterBackground(currentStoryDemo)
+
   return (
     <React.Fragment>
       <Header
@@ -2105,7 +2116,11 @@ const StoryDemoPage = ({
         }
       />
       <S.Content>
-        <div style={{
+        {isMobile ? (
+          <S.MobileNotice>
+            <S.WorkspaceColTitle>This Editor is not optimized for mobile</S.WorkspaceColTitle>
+          </S.MobileNotice>
+        ) : <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           width: '100%',
@@ -2267,8 +2282,28 @@ const StoryDemoPage = ({
           >
             <S.ChartWorkspacesCol style={{
               minWidth: '100%',
-              background: (currentStoryDemo.custom && currentStoryDemo.custom.theme && currentStoryDemo.custom.theme.backgroundColor) || '#FFFFFF'
+              position: 'relative',
+              ...(outerBg.mode === 'wallpaper'
+                ? { background: 'transparent' }
+                : { background: outerBg.css })
             }} id={'info-column-right'} xs={18} lg={18}>
+              {outerBg.mode === 'wallpaper' ? (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 0,
+                    backgroundImage: `url(${outerBg.wallpaperUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    filter: outerBg.blur > 0 ? `blur(${outerBg.blur}px)` : undefined,
+                    transform: outerBg.blur > 0 ? 'scale(1.05)' : undefined,
+                    pointerEvents: 'none'
+                  }}
+                />
+              ) : null}
+              <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}>
               {isLoading ? (
                 <PulseLoader css={{'margin': '0 auto', 'width': '100%', 'height': '100%'}}
                              color={Colors.App.spinnerColor}
@@ -2504,9 +2539,10 @@ const StoryDemoPage = ({
                 />
               ) : (<S.ZoomPlaceholder/>)}
 
+              </div>
             </S.ChartWorkspacesCol>
           </Resizable>
-        </div>
+        </div>}
       </S.Content>
     </React.Fragment>
   )
@@ -3038,6 +3074,22 @@ const S = {
   ZoomPlaceholder: styled.div`
     height: 41px;
     margin-bottom: 50px;
+  `,
+  MobileNotice: styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    padding: 24px;
+    text-align: center;
+
+    span {
+      font-size: 1.2em;
+      color: #555;
+      font-weight: 500;
+    }
   `
 
 

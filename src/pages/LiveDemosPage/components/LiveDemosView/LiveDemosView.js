@@ -175,6 +175,7 @@ function generateLiveDemoCards(liveDemos, props) {
           <Menu>
             <Menu.Item><span onClick={() => {
 
+                  navigate(`/workspace/${liveDemo.workspaceId}/livedemo/${liveDemo._id}`)
 
             }}>Open</span></Menu.Item>
             <Menu.Item onClick={() => {

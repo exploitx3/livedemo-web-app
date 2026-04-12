@@ -1,10 +1,10 @@
-import React, {useEffect, useRef, useState} from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 // import Joyride, { ACTIONS, EVENTS, STATUS } from 'react-joyride'
 import styled from 'styled-components'
-import {topPostMessage} from '../../helpers.js'
+import { topPostMessage } from '../../helpers.js'
 
 import ZoomRegion from './components/ZoomRegion/ZoomRegion.js'
-import ScreenTypes from "../../../constants/ScreenTypes.js";
+import ScreenTypes from "../../../constants/ScreenTypes.js"
 
 const MAIN_VIEWS = {
     IMAGES: 'IMAGES',
@@ -16,21 +16,21 @@ const HOTSPOT_SIZE = 90
 
 
 function ZoomSpans({
-                       liveDemo,
-                       omniBarHeight,
-                       isInEditor,
-                       scaleMain,
-                       videoRef,
-                       currentStep,
-                       wrapperRef,
-                       mainRef,
-                       innerWidth,
-                       innerHeight,
-                       isScaled,
-                       isScaledRef,
-                       scaleInProgressRef,
-                       isFullScreen
-                   }) {
+    liveDemo,
+    omniBarHeight,
+    isInEditor,
+    scaleMain,
+    videoRef,
+    currentStep,
+    wrapperRef,
+    mainRef,
+    innerWidth,
+    innerHeight,
+    isScaled,
+    isScaledRef,
+    scaleInProgressRef,
+    isFullScreen,
+}) {
 
 
     let [internalCurrentStep, setInternalCurrentStep] = useState(currentStep)
@@ -68,7 +68,7 @@ function ZoomSpans({
     let isInEditorInternalRef = useRef(isInEditor)
 
     let spanElementRefs = useRef(initialZoomSpans.reduce((accum, iter) => {
-        accum[iter._id] = {span: iter, current: null}
+        accum[iter._id] = { span: iter, current: null }
         return accum
     }, {}))
 
@@ -186,7 +186,7 @@ function ZoomSpans({
                 }
 
                 if (!spanElementRefs.current[span._id]) {
-                    spanElementRefs.current[span._id] = {span: newSpan, current: null}
+                    spanElementRefs.current[span._id] = { span: newSpan, current: null }
                 }
 
                 return newSpan
@@ -206,7 +206,7 @@ function ZoomSpans({
             }
 
             if (!spanElementRefs.current[newSpan._id]) {
-                spanElementRefs.current[newSpan._id] = {span: newSpan, current: null}
+                spanElementRefs.current[newSpan._id] = { span: newSpan, current: null }
             } else {
                 spanElementRefs.current[newSpan._id].span.ran = false
             }
@@ -375,23 +375,16 @@ function ZoomSpans({
             boxRef.current.style.opacity = 0
             zoomSpan.showed = false
 
-
             scaleMain(1, 0, 0)
             zoomSpan.triggered = false
         }
     }
 
     function rescaleZoomSpan(zoomSpan) {
-        // scaleInProgressRef.current = true
         if (zoomSpan.triggered) {
-            // console.log('rescaleZoomSpan - ')
             console.log(JSON.stringify(zoomSpan, null, 2))
-
             scaleMain(1, 0, 0)
             zoomSpan.triggered = false
-            // setTimeout(() => {
-            //     scaleInProgressRef.current = false
-            // }, 1200)
         }
     }
 
@@ -443,130 +436,130 @@ function ZoomSpans({
         if (spanElementRefs.current[zoomSpan._id] && spanRefElement && zoomSpan.ran) {
             shouldTrigger = false
         } else {
-            spanElementRefs.current[zoomSpan._id] = {span: zoomSpan, current: ref}
+            spanElementRefs.current[zoomSpan._id] = { span: zoomSpan, current: ref }
         }
 
     }
 
     return (<ZS.RegionsWrapper
-            isScaled={isScaled}
-            onClick={(event) => {
+        isScaled={isScaled}
+        onClick={(event) => {
 
 
-            }}
-        >
-            <React.Fragment>
-                {zoomSpans.map((span, index) => {
-                    console.log('span')
-                    console.log(span)
+        }}
+    >
+        <React.Fragment>
+            {zoomSpans.map((span, index) => {
+                console.log('span')
+                console.log(span)
 
-                    let zoomSpanFromRef = zoomSpansRef.current.find(iterSpan => iterSpan._id === span._id)
-
-
-                    if (!span.width) {
-                        console.log('non')
-                    }
-
-                    let scaleWidth = innerHeight / innerWidth
-
-                    return <ZoomRegion
-                        id={span._id}
-                        key={span._id}
-                        initBoxWidth={span.width}
-                        initBoxHeight={span.height}
-                        showed={span.showed && isInEditor}
-                        x={span.offsetX}
-                        y={span.offsetY}
-                        data={span}
-                        mainRef={mainRef}
-                        isScaled={isScaled}
-                        isTriggered={zoomSpanFromRef && zoomSpanFromRef.triggered}
-                        scaleWidth={scaleWidth}
-                        editorWidth={span.editorWidth}
-                        editorHeight={span.editorHeight}
-                        omniBarHeight={omniBarHeight}
-                        onChangeHandler={onChangeHandler}
-                        scaleMain={scaleMain}
-                        innerWidth={innerWidth}
-                        innerHeight={innerHeight}
-                        onClick={() => {
-                            let shouldScale = isScaledRef.current === false
+                let zoomSpanFromRef = zoomSpansRef.current.find(iterSpan => iterSpan._id === span._id)
 
 
-                            // if is Screenshot
-                            if (currentStep.zoomSpan && shouldScale) {
-
-                                triggerScaleForZoomSpan(span)
-                            } else if (currentStep.zoomSpan && !shouldScale) {
-
-                                rescaleZoomSpan(span)
-                                rescaleZoomSpan(span)
-                            }
-
-                            // if is Video
-                            if (!currentStep.zoomSpan) {
-
-                                span.clicked = true
-                                if (shouldScale) {
-
-                                    // If user has initiated a zoom manually, the auto-zoom is disabled
-                                    userHasClickedRef.current = true
-                                    triggerScaleForZoomSpan(span)
-                                } else {
-
-                                    rescaleZoomSpan(span)
-                                }
-                            }
-                        }}
-                        onPreview={() => {
-
-                            let localInnerWidth = window.innerWidth
-                            let localInnerHeight = window.innerHeight
-
-                            let browserScaleValueW = (localInnerWidth / zoomSpan.editorWidth)
-                            let browserScaleValueH = (localInnerHeight / zoomSpan.editorHeight)
-                            let boxWidth = browserScaleValueW * zoomSpan.width
-                            let boxHeight = browserScaleValueH * zoomSpan.height
-                            let scaleValueX = localInnerWidth / boxWidth
-                            let scaleValueY = localInnerHeight / boxHeight
-                            let left = zoomSpan.offsetX * browserScaleValueW
-                            let top = Math.min(Math.max((zoomSpan.offsetY * browserScaleValueH), 0), innerHeightRef.current)
-
-
-                            scaleMain(scaleValueX, left, top)
-
-                            setTimeout(() => {
-                                scaleMain(1, 0, 0)
-                            }, 2000)
-                        }}
-                        ref={(ref) => {
-
-                            let spanRef = spanElementRefs.current[span._id].span
-                            spanElementRefs.current[span._id].current = ref
-
-
-                            // onRenderSpanElement(spanRef, ref)
-                        }}
-                    />
-                })
+                if (!span.width) {
+                    console.log('non')
                 }
 
-            </React.Fragment>
+                let scaleWidth = innerHeight / innerWidth
 
-        </ZS.RegionsWrapper>
+                return <ZoomRegion
+                    id={span._id}
+                    key={span._id}
+                    initBoxWidth={span.width}
+                    initBoxHeight={span.height}
+                    showed={span.showed && isInEditor}
+                    x={span.offsetX}
+                    y={span.offsetY}
+                    data={span}
+                    mainRef={mainRef}
+                    isScaled={isScaled}
+                    isTriggered={zoomSpanFromRef && zoomSpanFromRef.triggered}
+                    scaleWidth={scaleWidth}
+                    editorWidth={span.editorWidth}
+                    editorHeight={span.editorHeight}
+                    omniBarHeight={omniBarHeight}
+                    onChangeHandler={onChangeHandler}
+                    scaleMain={scaleMain}
+                    innerWidth={innerWidth}
+                    innerHeight={innerHeight}
+                    onClick={() => {
+                        let shouldScale = isScaledRef.current === false
+
+
+                        // if is Screenshot
+                        if (currentStep.zoomSpan && shouldScale) {
+
+                            triggerScaleForZoomSpan(span)
+                        } else if (currentStep.zoomSpan && !shouldScale) {
+
+                            rescaleZoomSpan(span)
+                            rescaleZoomSpan(span)
+                        }
+
+                        // if is Video
+                        if (!currentStep.zoomSpan) {
+
+                            span.clicked = true
+                            if (shouldScale) {
+
+                                // If user has initiated a zoom manually, the auto-zoom is disabled
+                                userHasClickedRef.current = true
+                                triggerScaleForZoomSpan(span)
+                            } else {
+
+                                rescaleZoomSpan(span)
+                            }
+                        }
+                    }}
+                    onPreview={() => {
+
+                        let localInnerWidth = window.innerWidth
+                        let localInnerHeight = window.innerHeight
+
+                        let browserScaleValueW = (localInnerWidth / zoomSpan.editorWidth)
+                        let browserScaleValueH = (localInnerHeight / zoomSpan.editorHeight)
+                        let boxWidth = browserScaleValueW * zoomSpan.width
+                        let boxHeight = browserScaleValueH * zoomSpan.height
+                        let scaleValueX = localInnerWidth / boxWidth
+                        let scaleValueY = localInnerHeight / boxHeight
+                        let left = zoomSpan.offsetX * browserScaleValueW
+                        let top = Math.min(Math.max((zoomSpan.offsetY * browserScaleValueH), 0), innerHeightRef.current)
+
+                        scaleMain(scaleValueX, left, top)
+
+                        setTimeout(() => {
+                            scaleMain(1, 0, 0)
+                        }, 2000)
+                    }}
+                    ref={(ref) => {
+
+                        let spanRef = spanElementRefs.current[span._id].span
+                        spanElementRefs.current[span._id].current = ref
+
+
+                        // onRenderSpanElement(spanRef, ref)
+                    }}
+                />
+            })
+            }
+
+        </React.Fragment>
+
+    </ZS.RegionsWrapper>
     )
 }
 
 const ZS = {
     RegionsWrapper: styled.div`
         && {
+        z-index: 1;
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-                // width: ${({fullWidth}) => fullWidth}px;
-                // height: ${({fullHeight}) => fullHeight}px;
+                // width: ${({ fullWidth }) => fullWidth}px;
+                // height: ${({ fullHeight }) => fullHeight}px;
             transform-origin: top left;
                 // transform: scaleX(${(props) => `${props.scalePercentageWidth}`}) scaleY(${(props) => `${props.scalePercentageHeight}`});
 

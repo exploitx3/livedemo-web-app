@@ -58,7 +58,7 @@ const StoryDemoCard = ({ storyDemo, onDeleteLiveDemo, authData}) => {
       key: 'open',
       label: 'Open',
       onClick: () => {
-        // Open action handler
+        navigate(`/workspace/${storyDemo.workspaceId}/storydemo/${storyDemo._id}`)
       }
     },
     {

@@ -287,6 +287,7 @@ export function deriveRenderSteps(storyDemo) {
                     step.asset = screen.asset
                     step.playbackRate = screen.playbackRate
                     step.zoomSpans = screen.zoomSpans
+                    step.cursorPositions = screen.cursorPositions
 
                     return step
                 })

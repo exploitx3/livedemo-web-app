@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {createRoot} from 'react-dom/client'
 // import {WalkthroughComponent} from '../../../livedemo-components/dist/index.js'
 // import {WalkthroughComponent} from '@georgi.apostolov/livedemo-components.js'
@@ -7,6 +7,7 @@ import elementPicker from './storyElementPicker.js'
 import ENV from '../config.json'
 import '@fontsource/lexend/latin.css'
 import './custom.css'
+import { resolveStoryDemoOuterBackground } from '../utils/storyDemoBackground'
 
 /* eslint-disable import/default */
 import styled from 'styled-components'
@@ -33,12 +34,79 @@ function setupReact() {
 
     // setupSessionRecording()
     const IS = {
-        TopWrapper: styled.div`
-            background: ${({background}) => `${background}`};
+        OuterRoot: styled.div`
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #ececec;
 
             &&&&:fullscreen {
                 background: none;
-            }`
+            }
+        `,
+        WallpaperLayer: styled.div`
+            position: absolute;
+            inset: 0;
+            background-image: url(${({ $url }) => $url});
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: ${({ $ready }) => ($ready ? 1 : 0)};
+            transition: opacity 0.35s ease;
+            ${({ $blur }) =>
+                $blur > 0 ? `filter: blur(${$blur}px); transform: scale(1.05);` : ''}
+        `,
+        ContentLayer: styled.div`
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: ${({ $paddingPx }) =>
+                $paddingPx != null && Number.isFinite($paddingPx) ? `${$paddingPx}px` : '24px'};
+            box-sizing: border-box;
+        `,
+        TopWrapper: styled.div`
+            background: ${({ background }) => `${background}`};
+
+            &&&&:fullscreen {
+                background: none;
+            }
+        `
+    }
+
+    function WallpaperChrome({ wallpaperUrl, blur, paddingPx, children }) {
+        const [bgReady, setBgReady] = useState(false)
+
+        useEffect(() => {
+            let cancelled = false
+            const img = new Image()
+            img.onload = () => {
+                if (!cancelled) {
+                    setBgReady(true)
+                }
+            }
+            img.onerror = () => {
+                if (!cancelled) {
+                    setBgReady(true)
+                }
+            }
+            img.src = wallpaperUrl
+            return () => {
+                cancelled = true
+            }
+        }, [wallpaperUrl])
+
+        return (
+            <IS.OuterRoot>
+                <IS.WallpaperLayer $url={wallpaperUrl} $blur={blur} $ready={bgReady} />
+                <IS.ContentLayer $paddingPx={paddingPx}>{children}</IS.ContentLayer>
+            </IS.OuterRoot>
+        )
     }
 
     function WrapperComponent({steps, transitions, workspaceId, storyId, storyDemo, firstScreenId}) {
@@ -90,31 +158,50 @@ function setupReact() {
     const container = document.getElementById('reactInjectTourApp')
 
     const root = createRoot(container) // createRoot(container!) if you use TypeScript
-    root.render(
-        <IS.TopWrapper
-            style={{
-                width: "100%",
-                height: "100%",
-                position: "relative",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center",
-                padding: "24px",
-                boxSizing: 'border-box'
-            }}
-            background={(storyDemo.custom && storyDemo.custom.theme && storyDemo.custom.theme.backgroundColor) || '#FFFFFF'}
+    const outerBg = resolveStoryDemoOuterBackground(storyDemo)
 
-        >
-            <WrapperComponent
-                steps={window.config.STEPS}
-                transitions={window.config.TRANSITIONS}
-                workspaceId={workspaceId}
-                storyId={storyId}
-                storyDemo={storyDemo}
-                firstScreenId={firstStepScreenId}
-            />
-        </IS.TopWrapper>)
+    const walkthrough = (
+        <WrapperComponent
+            steps={window.config.STEPS}
+            transitions={window.config.TRANSITIONS}
+            workspaceId={workspaceId}
+            storyId={storyId}
+            storyDemo={storyDemo}
+            firstScreenId={firstStepScreenId}
+        />
+    )
+
+    root.render(
+        outerBg.mode === 'wallpaper' ? (
+            <WallpaperChrome
+                wallpaperUrl={outerBg.wallpaperUrl}
+                blur={outerBg.blur}
+                paddingPx={outerBg.padding}
+            >
+                {walkthrough}
+            </WallpaperChrome>
+        ) : (
+            <IS.TopWrapper
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding:
+                        outerBg.padding != null && Number.isFinite(outerBg.padding)
+                            ? `${outerBg.padding}px`
+                            : '24px',
+                    boxSizing: 'border-box'
+                }}
+                background={outerBg.css}
+            >
+                {walkthrough}
+            </IS.TopWrapper>
+        )
+    )
 }
 
 
