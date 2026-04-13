@@ -15,6 +15,7 @@ import axios from '../../../../utils/axiosInstance'
 
 import ScreenTypes from '../../../../constants/ScreenTypes'
 import Colors from "../../../../constants/mainColors";
+import FrameToScreenToolbarButton from './FrameToScreenToolbarButton'
 
 function Tip({children, ...props}) {
 
@@ -43,7 +44,8 @@ const Toolbar = ({
                    setIsZoomEnabled,
                    iframeRef,
                    currentStep,
-                   storyDemoActions
+                   storyDemoActions,
+                   onFrameToScreenSuccess,
                  }) => {
   const [isTextEditing, setIsTextEditing] = useState(false)
 
@@ -201,7 +203,7 @@ const Toolbar = ({
     <div>
       <TB.ToolbarButtonWrapper>
 
-        <TB.ToolbarButton
+        {/* <TB.ToolbarButton
           onClick={() => {
             onEditText(workspaceId, storyDemoId, screenId, authData.token)
           }}
@@ -212,24 +214,33 @@ const Toolbar = ({
             />
           </TB.ToolbarIcon>
           <TB.ToolbarText>Edit</TB.ToolbarText>
-        </TB.ToolbarButton>
-        <TB.ToolbarButton
-          isDisabled={!addZoomVisible}
-        >
-          <TB.ToolbarIcon>
-            <TB.Toolbar__ZoomIcon/>
-          </TB.ToolbarIcon>
-          <TB.ToolbarText onClick={() => {
-            if(stepZoomSpanExists) {
-             removeZoomSpan()
-            } else {
-              addZoomSpan()
-            }
-            //export function addZoomSpan(workspaceId, storyDemoId, screenId, startTime, duration, width, height, editorWidth, offsetX, offsetY, authToken) {
-
-
-          }}>{stepZoomSpanExists ? 'Remove' : 'Add'} Zoom/Span</TB.ToolbarText>
-        </TB.ToolbarButton>
+        </TB.ToolbarButton> */}
+        {currentStep && currentStep.screenType === ScreenTypes.SCREEN_VIDEO ? (
+          <FrameToScreenToolbarButton
+            workspaceId={workspaceId}
+            storyId={storyDemoId}
+            screenId={screenId}
+            authToken={authData.token}
+            iframeRef={iframeRef}
+            onSuccess={onFrameToScreenSuccess}
+            isDisabled={!screenId}
+          />
+        ) : (
+          <TB.ToolbarButton
+            isDisabled={!addZoomVisible}
+          >
+            <TB.ToolbarIcon>
+              <TB.Toolbar__ZoomIcon/>
+            </TB.ToolbarIcon>
+            <TB.ToolbarText onClick={() => {
+              if(stepZoomSpanExists) {
+                removeZoomSpan()
+              } else {
+                addZoomSpan()
+              }
+            }}>{stepZoomSpanExists ? 'Remove' : 'Add'} Zoom/Span</TB.ToolbarText>
+          </TB.ToolbarButton>
+        )}
         <TB.ToolbarButton
           onClick={() => {
             onLibraryClick()

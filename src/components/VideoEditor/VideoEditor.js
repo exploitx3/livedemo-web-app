@@ -39,7 +39,7 @@ const VideoEditor = (props) => {
     authData,
     innerHeight,
     innerWidth,
-    storyDemoActions
+    storyDemoActions,
   } = props
 
   // console.log('videoEditro currentScreen')

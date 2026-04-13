@@ -2346,6 +2346,9 @@ const StoryDemoPage = ({
                         afterScreenUpload={afterScreenUpload}
                         iframeRef={walkthroughElementRef}
                         screenId={currentStep && currentStep.screenId}
+                        onFrameToScreenSuccess={() => {
+                          return reloadStoryDemo()
+                        }}
                       />
                     </S.OmniLeftSide>
 
