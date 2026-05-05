@@ -296,8 +296,6 @@ export const htmlSerialize = (nodes) => {
 
 const APP_IDS = [
   "dnlnaeifccbhdnbppjjgleapjadjklbe",
-  'algjcoioglkejodcjbalinoihaabacnl',
-  'imnmmglpdmhldjglnaifbfhcdfkchjme',
   'bmdppjnfoimgmgbmmdphnopadjejbdpm'
 ]
 

@@ -810,12 +810,12 @@ function WalkthroughComponent({
 
   useEffect(() => {
 
-    if (!isInEditorRef.current && !isEmbed) {
+    if (isEditor) {
 
-      storyHelpers.getVoices(workspaceId, authData.token)
-        .then(voices => {
-          setVoices(voices)
-        })
+    storyHelpers.getVoices(workspaceId, authData.token)
+      .then(voices => {
+        setVoices(voices)
+      })
     }
 
     if (isEmbed && !isInEditorRef.current && navigator.doNotTrack !== '1') {
@@ -2457,7 +2457,7 @@ function WalkthroughComponent({
       return
     }
 
-    let wrapperElemParent = wrapperRef.current.parentElement
+    let wrapperElemParent = wrapperRef.current.parentElement.parentElement
     if (!wrapperElemParent) {
       return
     }
@@ -3396,7 +3396,9 @@ const WS = {
   ImagesWrapper: styled.div`
     max-width: 100%;
     height: 100%;
-
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    overflow: hidden;
     width: 100%;
 
     //position: relative;

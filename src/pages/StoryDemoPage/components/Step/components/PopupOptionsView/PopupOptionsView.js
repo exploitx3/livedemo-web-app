@@ -11,6 +11,7 @@ import React from 'react'
 import styled from 'styled-components'
 import {MdAdsClick, MdArrowRightAlt} from 'react-icons/md'
 import CommonOptions from '../CommonOptions/CommonOptions'
+import PreviewImageSection from './PreviewImageSection'
 
 import 'antd/es/select/style'
 import PopupAlignments from "../../../../../../constants/PopupAlignments";
@@ -83,17 +84,21 @@ const PopupOptionsView = ({
                             popupType,
                             setPopupType,
                             alignment,
-                            setAlignment
+                            setAlignment,
+                            storyDemo,
+                            workspaceId,
+                            storyDemoId,
+                            screenId,
+                            authData,
                           }) => {
 
 
   function updateViewField(fieldName, value) {
 
     let newStep = JSON.parse(JSON.stringify(internalStep))
-    if(newStep.view.popup[fieldName] && newStep.view.popup[fieldName] !== value){ 
+    if (newStep.view.popup[fieldName] !== value) {
       newStep.view.popup[fieldName] = value
       setInternalStep(newStep)
-
     }
   }
 
@@ -173,6 +178,18 @@ const PopupOptionsView = ({
           <ST.CheckboxText>Show overlay</ST.CheckboxText>
         </ST.CheckboxLineMargin>
       </ST.ActionSelectorLineMargin>
+
+      {popupType === POPUP_TYPES.POPUP && (
+        <PreviewImageSection
+          internalStep={internalStep}
+          setInternalStep={setInternalStep}
+          storyDemo={storyDemo}
+          workspaceId={workspaceId}
+          storyDemoId={storyDemoId}
+          screenId={screenId}
+          authData={authData}
+        />
+      )}
 
     </ST.ViewSelectorWrapper>
 

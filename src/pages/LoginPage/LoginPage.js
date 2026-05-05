@@ -80,10 +80,15 @@ const LoginPage = (props) => {
     setIsLoading(true)
     // postWarm(CONFIG.LANDING_PAGE_CLIENT_TOKEN)
 
+    let postLoginRedirectPath = returnPath
+
     return props.authActions.authWithEmailAndPassword(emailAddress, password)
-      .then(() => {
+      .then((responseData) => {
+        if (responseData && typeof responseData.redirectPath === 'string' && responseData.redirectPath.trim() !== '') {
+          postLoginRedirectPath = responseData.redirectPath
+        }
         setIsLoading(false)
-        navigate(returnPath, { replace: true })
+        navigate(postLoginRedirectPath, { replace: true })
       })
       .catch(error => {
         showErrorsForResponse(error)
@@ -95,13 +100,18 @@ const LoginPage = (props) => {
     setIsLoading(true)
     // postWarm(CONFIG.LANDING_PAGE_CLIENT_TOKEN)
 
+    let postRegisterRedirectPath = returnPath
+
     return props.authActions.registerWithEmailAndPassword(emailAddress, passwordReg, fullNameReg)
-      .then(() => {
+      .then((responseData) => {
+        if (responseData && typeof responseData.redirectPath === 'string' && responseData.redirectPath.trim() !== '') {
+          postRegisterRedirectPath = responseData.redirectPath
+        }
         setIsLoading(false)
         return postWarm(CONFIG.LANDING_PAGE_CLIENT_TOKEN)
       })
       .then(() => {
-        navigate(returnPath, { replace: true })
+        navigate(postRegisterRedirectPath, { replace: true })
       })
       .catch(error => {
         showErrorsForResponse(error)
@@ -699,11 +709,12 @@ const S = {
   Modal: styled.div`
     width: 90vw;
     max-width: 440px;
+    max-height: 100%;
+    overflow-y: auto;
     vertical-align: middle;
     display: flex;
     flex-direction: column;
     background: #fff;
-    overflow: hidden;
     text-align: left;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
     border-radius: 16px;
@@ -718,50 +729,48 @@ const S = {
     position: relative;
   `,
   Tabs: styled(Tabs)`
-    && .ant-tabs-tab{
-     font-family: ${Colors.fontFamily};
+    && .ant-tabs-tab {
+      font-family: ${Colors.fontFamily};
+    }
+
+    && .ant-tabs-nav {
+      width: 100%;
+      margin: 0;
     }
 
     && .ant-tabs-nav-list {
-        width: 100%;
+      width: 100%;
+      display: flex;
     }
 
     && .ant-tabs-tab {
-        justify-content: center;
-    }
-
-    && .ant-tabs-bar {
-      margin: 0 0px 0 0;
-      border-bottom: 1px solid #e5e7eb;
-   }
-    && .ant-tabs {
-        overflow: initial;
-    }
-   @media (min-width:900px) {
-    && .ant-tabs-nav {
-      width: 100%;
-    }
-
-
-    && .ant-tabs-nav > div {
-      width: 100%;
+      flex: 1;
+      margin: 0 !important;
+      justify-content: center;
       display: flex;
-      justify-content: space-evenly;
-    }
-
-    && .ant-tabs-nav > div .ant-tabs-tab {
-      font-size: 1.1em;
-      padding: 16px 0;
+      align-items: center;
       text-align: center;
-      width: 50%;
-      margin: 0;
+      font-size: 1.05em;
+      padding: 14px 8px;
       font-weight: 600;
       color: #6b7280;
       transition: all 0.2s;
     }
 
-    && .ant-tabs-nav > div .ant-tabs-tab-active {
+    && .ant-tabs-tab-active {
       color: ${Colors.primaryColor};
+    }
+
+    && .ant-tabs-tab-btn {
+      text-align: center;
+    }
+
+    && .ant-tabs-bar {
+      margin: 0 0px 0 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    && .ant-tabs {
+      overflow: initial;
     }
 
     && .ant-tabs-ink-bar {
@@ -769,6 +778,11 @@ const S = {
       background: ${Colors.primaryColor};
     }
 
+    @media (min-width: 900px) {
+      && .ant-tabs-tab {
+        font-size: 1.1em;
+        padding: 16px 0;
+      }
     }
   `
 }

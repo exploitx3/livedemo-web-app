@@ -382,6 +382,7 @@ const Step = ({
         popup: {
           type: popupType || (internalStep.view.popup && internalStep.view.popup.type),
           showOverlay: (internalStep.view.popup && internalStep.view.popup.showOverlay),
+          showPreviewImage: (internalStep.view.popup && internalStep.view.popup.showPreviewImage),
           title: (internalStep.view.popup && internalStep.view.popup.title),
           description: (internalStep.view.popup && popupDescription),
           buttons: (buttons),
@@ -558,6 +559,11 @@ const Step = ({
         setPopupType={setPopupType}
         alignment={alignment}
         setAlignment={setAlignment}
+        storyDemo={storyDemo}
+        workspaceId={workspaceId}
+        storyDemoId={storyDemoId}
+        screenId={screenId}
+        authData={authData}
       />
     } else if (viewType === VIEW_TYPES.POINTER) {
 

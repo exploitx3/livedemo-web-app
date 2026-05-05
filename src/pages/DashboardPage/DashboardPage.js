@@ -293,7 +293,7 @@ class DashboardPage extends Component {
                       rel="noopener noreferrer">
                       <S.AppButtonIconContainer>
                         <S.AppButtonIcon
-                          src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/1200px-Apple_logo_black.svg.png"
+                          src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons@latest/icons/apple.svg"
                           loading="lazy"
                           width="18"
                           height="18"

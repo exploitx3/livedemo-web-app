@@ -2776,7 +2776,7 @@ const S = {
     justify-content: center;
     align-items: center;
     border: 2px solid ${Colors.primaryColor};
-    border-radius: 6px;
+    border-radius: 20px;
 
 
 

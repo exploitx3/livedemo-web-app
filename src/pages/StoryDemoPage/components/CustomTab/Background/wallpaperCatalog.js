@@ -1,12 +1,12 @@
 const THUMB_BASE = 'https://livedemo-cdn.s3.us-east-1.amazonaws.com/backgrounds/thumbnails'
-const FULL_BASE = 'https://livedemo-cdn.s3.us-east-1.amazonaws.com/backgrounds'
+const FULL_BASE = 'https://livedemo-cdn.s3.us-east-1.amazonaws.com/backgrounds/resized'
 
 function makeItems(prefix, count) {
   return Array.from({ length: count }, (_, i) => {
     const n = String(i + 1).padStart(2, '0')
     return {
       thumbUrl: `${THUMB_BASE}/${prefix}_${n}_thumb.png`,
-      fullUrl: `${FULL_BASE}/${prefix}_${n}.png`
+      fullUrl: `${FULL_BASE}/${prefix}_${n}_resized.jpg`
     }
   })
 }

@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
-import Colors from '../../../constants/mainColors.js'
 import '@fontsource/lexend/latin.css'
-import PopupButton from './components/PopupButton/PopupButton.js'
 import FormView from "../Form/FormView.js";
 import Form from "../Form/Form.js";
 import FormHubspotV2 from "../Form/FormHubspotV2.js";
 import FormHubspotV4 from "../Form/FormHubspotV4.js";
+import PopupContentView from './components/PopupContentView/PopupContentView.js'
 
 function PopupComponenet(props) {
 
@@ -29,7 +28,7 @@ function PopupComponenet(props) {
 
 
     let titleFontSize = '2.2vw'
-    let textFontSize = '1.8vw'
+    let textFontSize = '1.7vw'
     let buttonFontSize = '2vw'
 
     if (wrapperWidth <= 1040) {
@@ -39,7 +38,7 @@ function PopupComponenet(props) {
 
     } else if (wrapperWidth > 1040) {
         titleFontSize = '3.5vw'
-        textFontSize = '1.7vw'
+        textFontSize = '1.6vw'
         buttonFontSize = '2vw'
     }
     if (wrapperWidth < 540) {
@@ -87,7 +86,8 @@ function PopupComponenet(props) {
     }
 
 
-    const alignment = (step.view.popup.alignment && ALIGNMENT_MAP[step.view.popup.alignment]) ? ALIGNMENT_MAP[step.view.popup.alignment] : 'center'
+    const rawAlignment = step.view.popup.alignment || 'center'
+    const alignment = (ALIGNMENT_MAP[rawAlignment]) ? ALIGNMENT_MAP[rawAlignment] : 'center'
 
     let showForm = !!(step.view && step.view.viewType === 'popup' && step.view.popup.type === 'form' && step.view.popup && step.view.popup.formId && step.view.popup.formId.title)
 
@@ -117,25 +117,21 @@ function PopupComponenet(props) {
     function getView(step) {
 
         if (step.view.popup.type === 'popup') {
-            return <React.Fragment>
-                <P.Title alignment={alignment} titleFontSize={titleFontSize}>{popupTitle}</P.Title>
-                <P.Spacer />
-                {popupDescription === '<p></p>' ? '' :
-                    <P.Description alignment={alignment} textFontSize={textFontSize} dangerouslySetInnerHTML={{ __html: popupDescription }} />}
-                <P.Spacer />
-                <P.ButtonsWrapper alignment={alignment}>
-                    {buttons.map(popupButton => {
-                        return <PopupButton
-                            fontSize={buttonFontSize}
-                            key={popupButton.index}
-                            popupButton={popupButton}
-                            storyDemo={liveDemo}
-                            changeToScreen={changeToScreen}
-                            onNext={onNext}
-                        />
-                    })}
-                </P.ButtonsWrapper>
-            </React.Fragment>
+            return <PopupContentView
+                popupTitle={popupTitle}
+                popupDescription={popupDescription}
+                buttons={buttons}
+                alignment={alignment}
+                rawAlignment={rawAlignment}
+                titleFontSize={titleFontSize}
+                textFontSize={textFontSize}
+                buttonFontSize={buttonFontSize}
+                showPreviewImage={!!(step.view.popup.showPreviewImage) && wrapperWidth >= 540}
+                previewImageUrl={step.view.popup.previewImageUrl || ''}
+                liveDemo={liveDemo}
+                changeToScreen={changeToScreen}
+                onNext={onNext}
+            />
         } else if (step.view.popup.type === 'form' && showForm) {
             // Check if form type is hubspot
             const isHubspotForm = step.view.popup.formId &&
@@ -201,132 +197,6 @@ function getBoxShadow(themeColor) {
 }
 
 const P = {
-    Spacer: styled.div`
-        height: 4%;
-
-        @media (max-height: 235px) {
-            && {
-                display: none;
-            }
-        }
-    `,
-    ButtonsWrapper: styled.div`
-        display: flex;
-        align-items: ${({ alignment }) => alignment};
-        justify-content: start;
-        //justify-content: ${({ alignment }) => alignment};
-        flex-direction: column;
-        margin: 0px;
-        
-        width: 85%;
-        overflow-y: scroll;
-
-        max-height: 40%;
-
-        && {
-            -ms-overflow-style: none; /* Internet Explorer 10+ */
-            scrollbar-width: none; /* Firefox */
-        }
-
-        &&::-webkit-scrollbar {
-            display: none; /* Safari and Chrome */
-        }
-        padding: 1vw 0 0 0.85vw;
-        //padding: 20px 0px 0px 10px;
-    `,
-    Title: styled.p`
-        text-align: ${({ alignment }) => alignment};
-        width: 85%;
-        
-        font-size: ${({ titleFontSize }) => titleFontSize};
-        color: white;
-        font-family: ${Colors.fontFamilyApple};
-        margin: 0px;
-        //margin: 0px 0px 1rem 0px;
-        font-weight: 550;
-
-        padding-left: 10px;
-
-
-        
-        //@media (max-width: 1040px) {
-        //  font-size: 4vw;
-        //}
-        //
-        @media (max-width: 391px) {
-            max-height: 20%;
-
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;        }
-    `,
-    Description: styled.p`
-        text-align: ${({ alignment }) => alignment};
-        max-height: 40%;
-        font-size: ${({ textFontSize }) => textFontSize};
-        color: white;
-        font-family: ${Colors.fontFamilyApple};
-        margin: 0px;
-        padding-left: 10px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-
-        p:last-child {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        p:first-child {
-            white-space: break-spaces;
-        }
-        
-        p:not(:last-child) {
-            white-space: break-spaces;
-        }
-        
-        
-
-        /* Style ONLY the last <p> */
-      
-        
-        //@media (max-width: 1040px) {
-        //  font-size: 3vw;
-        //}
-        //
-        @media (max-height: 235px) {
-            && {
-                display: none;
-            }
-        }
-
-        /*
-        let textFontSize = '2vw' // + (2.70 * (1 - widthDimensionPercentage))
-      let hotspotSize = HOTSPOT_SIZE
-  
-      let reverseWidthPercentage = 1 + (1 - widthDimensionPercentage)
-  
-      if(wrapperWidth <= 1040) {
-          textFontSize = '14px'
-      } else if(wrapperWidth > 1040) {
-          textFontSize = '1.1vw'
-      }
-      if(wrapperWidth < 540) {
-          textFontSize = '2.7vw'
-      }
-  
-      if(isInEditor) {
-          textFontSize = '14px'
-      }
-  
-         */
-        width: 85%;
-
-        && p {
-            margin: 0px;
-        }
-    `,
     Wrapper: styled.div`
       width: 100%;
       height: 100%;
@@ -334,8 +204,9 @@ const P = {
       flex-direction: column;
       justify-content: center;
       align-items: center;
-
-
+      border-bottom-left-radius: 20px;
+      border-bottom-right-radius: 20px;
+      overflow: hidden;
     `,
 }
 

@@ -29,11 +29,26 @@ import Table from 'antd/es/table'
 import 'antd/es/table/style'
 
 import axios from '../../utils/axiosInstance'
+import config from '../../config.json'
 import Spinner from '../../components/Spinner/Spinner'
 import Colors from '../../constants/mainColors'
 
 const { Content, Footer, Sider } = Layout
 const { confirm } = Modal
+
+const PLAN_LENGTHS = {
+  Annually: 'Annually',
+  Monthly: 'Monthly',
+}
+
+const IS_DEV = config.ENV === 'dev'
+
+const PRODUCT_IDS = {
+  Business: {
+    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_USR38KOAAF6aFo' : 'prod_USQIjwxyXqkb4a',
+    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_USR3CHtcPZDvIx' : 'prod_USQKMjZ7qq5Zrq',
+  },
+}
 
 const subscriptionTypes = [
   // {
@@ -47,11 +62,6 @@ const subscriptionTypes = [
 
 ]
 
-const PLAN_LENGTHS = {
-  Annually: 'Annually',
-  Monthly: 'Monthly',
-}
-
 const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -64,6 +74,28 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
   const [cards, setCards] = useState([])
 
   const [planLength, setPlanLength] = useState(PLAN_LENGTHS.Annually)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+
+  async function handleCheckout(subName) {
+    const productId = PRODUCT_IDS[subName]?.[planLength]
+    if (!productId) return
+
+    setCheckoutLoading(true)
+    try {
+      const response = await axios.post(
+        '/payments/checkout-session',
+        { productId, workspaceId: currentSelectedWorkspace._id },
+        { headers: { Authorization: `Bearer ${authData.token}` } }
+      )
+
+      if (response.data.url) {
+        window.location.href = response.data.url
+      }
+    } catch (err) {
+      console.error('Checkout error:', err)
+      setCheckoutLoading(false)
+    }
+  }
 
   const [userDefaultCardId, setUserDefaultCardId] = useState('')
   const [user, setUser] = useState([])
@@ -434,10 +466,12 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
         </U.Text>
         <U.Action>
 
-          <U.ActionPurchase onClick={() => {
-            navigate(`/billing/payment/${sub.name.toLowerCase()}_${subLength.toLowerCase()}`)
-
-          }}>Purchase</U.ActionPurchase>
+          <U.ActionPurchase
+            onClick={() => handleCheckout(sub.name)}
+            disabled={checkoutLoading}
+          >
+            {checkoutLoading ? 'Loading...' : 'Purchase'}
+          </U.ActionPurchase>
         </U.Action>
 
       </U.ListItem>

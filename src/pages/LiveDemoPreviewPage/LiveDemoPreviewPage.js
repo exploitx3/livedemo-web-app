@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react'
+import React, {useEffect, useMemo, useRef, useState} from 'react'
 //import { Carousel, Form, Layout, Menu, Modal, Tabs } from 'antd'
 import Carousel from 'antd/es/carousel'
 import Form from 'antd/es/form'
@@ -209,7 +209,9 @@ const LiveDemoPreviewPage = ({collapsed, currentSelectedWorkspace, authData}) =>
   const params = useParams()
   
   let [liveDemo, setLiveDemo] = useState(null)
+  let [uploadPreviewVideoSrc, setUploadPreviewVideoSrc] = useState(null)
   let checkUploadedTimer = useRef(null)
+  let previewVideoRef = useRef(null)
 
   const liveDemoIdFromUrl = params.livedemoId
   const linkIdFromUrl = params.linkId ?? ""
@@ -287,6 +289,41 @@ const LiveDemoPreviewPage = ({collapsed, currentSelectedWorkspace, authData}) =>
 
   }, [navigate])
 
+  useEffect(() => {
+    function onUploadPreviewMessage(event) {
+      if (event.origin !== window.location.origin) {
+        return
+      }
+      const data = event.data
+      if (!data || data.type !== 'LiveDemoPreview-uploadStoryVideo') {
+        return
+      }
+      if (data.storyId !== liveDemoIdFromUrl || !data.videoBase64) {
+        return
+      }
+      setUploadPreviewVideoSrc(data.videoBase64)
+    }
+
+    window.addEventListener('message', onUploadPreviewMessage)
+    return () => window.removeEventListener('message', onUploadPreviewMessage)
+  }, [liveDemoIdFromUrl])
+
+  useEffect(() => {
+    const el = previewVideoRef.current
+    if (!el || !uploadPreviewVideoSrc) {
+      return
+    }
+    const setRate = () => {
+      el.playbackRate = 2
+    }
+    el.addEventListener('loadedmetadata', setRate)
+    el.addEventListener('play', setRate)
+    return () => {
+      el.removeEventListener('loadedmetadata', setRate)
+      el.removeEventListener('play', setRate)
+    }
+  }, [uploadPreviewVideoSrc])
+
   // function getLiveDemo(workspaceId, liveDemoId, authToken) {
   //
   //   return axios.get(`/workspaces/${workspaceId}/livedemos/${liveDemoId}?populateRequests=true`, {
@@ -335,15 +372,18 @@ const LiveDemoPreviewPage = ({collapsed, currentSelectedWorkspace, authData}) =>
   }
 
   /*
-    Loading the initial text array and then loading on random all of the RANDOM_LOADING_TEXT strings
+    Loading the initial text array and then loading on random all of the RANDOM_LOADING_TEXT strings.
+    Must be stable across re-renders or @ant-design/react-slick remounts and the carousel can render blank.
    */
-  let LOADING_TEXT_ARRAY = INITIAL_ROTATE_TEXT
-    .concat(
-      [...Array(RANDOM_LOADING_TEXT.length).keys()]
-        .map(() => Math.floor(Math.random() * RANDOM_LOADING_TEXT.length))
-        .map((randomIndex) => RANDOM_LOADING_TEXT[randomIndex])
-    )
-
+  const LOADING_TEXT_ARRAY = useMemo(
+    () =>
+      INITIAL_ROTATE_TEXT.concat(
+        [...Array(RANDOM_LOADING_TEXT.length).keys()]
+          .map(() => Math.floor(Math.random() * RANDOM_LOADING_TEXT.length))
+          .map((randomIndex) => RANDOM_LOADING_TEXT[randomIndex])
+      ),
+    []
+  )
 
   return (
     <React.Fragment>
@@ -391,10 +431,8 @@ const LiveDemoPreviewPage = ({collapsed, currentSelectedWorkspace, authData}) =>
                   dots={false}
                   autoplaySpeed={4500}
                   speed={800}
-
                   infinite={true}
                   pauseOnHover={false}
-                  lazyLoad={'progressive'}
                   slidesToShow={1}
                   slidesToScroll={1}
                 >
@@ -404,6 +442,19 @@ const LiveDemoPreviewPage = ({collapsed, currentSelectedWorkspace, authData}) =>
                   })}
                 </S.LoadingCarousel>
                 <Spinner/>
+                {uploadPreviewVideoSrc ? (
+                  <S.PreviewVideoBlock>
+                    <S.PreviewVideo
+                      ref={previewVideoRef}
+                      src={uploadPreviewVideoSrc}
+                      autoPlay
+                      muted
+                      playsInline
+                      loop
+                    />
+                    <S.PreviewVideoOverlay aria-hidden />
+                  </S.PreviewVideoBlock>
+                ) : null}
               </S.LoadingWrapper>
             </S.Wrapper>
           ) : (liveDemo && liveDemo.status === StoryStatuses.FAILED ? (
@@ -474,9 +525,39 @@ const S = {
     //  height: 70px;
     //}
   `,
+  PreviewVideoBlock: styled.div`
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    margin: 28px auto 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgb(17 24 39 / 12%);
+  `,
+  PreviewVideo: styled.video`
+    display: block;
+    width: 100%;
+    height: auto;
+    vertical-align: top;
+  `,
+  PreviewVideoOverlay: styled.div`
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.58);
+    pointer-events: none;
+    z-index: 1;
+  `,
   LoadingCarousel: styled(Carousel)`
+    width: 100%;
+    display: block;
+
     && {
       z-index: 5;
+    }
+
+    && .slick-slider,
+    && .slick-list {
+      min-height: 160px;
     }
 
     && .slick-slide {

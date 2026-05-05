@@ -30,6 +30,8 @@ const AddWorkspacePage = WithSuspense(lazy(() => import('../AddWorkspacePage/Add
 const Dashboard = WithSuspense(lazy(() => import('../DashboardPage/DashboardPage.js')))
 const BillingPage = WithSuspense(lazy(() => import('../BillingPage/BillingPage.js')))
 const PaymentPage = WithSuspense(lazy(() => import('../PaymentPage/PaymentPage.js')))
+const BillingSuccessfulPage = WithSuspense(lazy(() => import('../BillingSuccessfulPage/BillingSuccessfulPage.js')))
+const BillingFailedPage = WithSuspense(lazy(() => import('../BillingFailedPage/BillingFailedPage.js')))
 const WorkspacePage = WithSuspense(lazy(() => import('../WorkspacePage/WorkspacePage.js')))
 const StoryDemoPage = WithSuspense(lazy(() => import('../StoryDemoPage/StoryDemoPage.js')))
 const CreateWorkspace = WithSuspense(lazy(() => import('../CreateWorkspace/CreateWorkspace.js')))
@@ -148,6 +150,8 @@ class AppLayout extends Component {
                   <Route path="/settings" element={<SettingsPage/>}/>
                   <Route path="/billing" element={<BillingPage/>}/>
                   <Route path="/billing/payment/:subName/*" element={<PaymentPage/>}/>
+                  <Route path="/billing/successful" element={<BillingSuccessfulPage/>}/>
+                  <Route path="/billing/failed" element={<BillingFailedPage/>}/>
                   <Route path="/logout" element={<LogoutPage/>}/>
                   <Route path="/exit-demo" element={<ExitDemoPage/>}/>
                   {/*<Route path="/failed-authentication" element={<SlackAuthenticationFailed/>}/>*/}

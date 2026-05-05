@@ -231,35 +231,18 @@ class CheckoutForm extends React.Component {
   }
 
   setCardNumberElement(value) {
-    this.setState(() => {
-      return {
-        cardNumberLoaded: value
-      }
-    })
-    this.checkIfAllLoaded()
+    this.setState({ cardNumberLoaded: value }, this.checkIfAllLoaded)
   }
 
   setCVCElement(value) {
-    this.setState(() => {
-      return {
-        cardCVCLoaded: value
-      }
-    })
-    this.checkIfAllLoaded()
+    this.setState({ cardCVCLoaded: value }, this.checkIfAllLoaded)
   }
 
   setCardDateElement(value) {
-    this.setState(() => {
-      return {
-        cardDateLoaded: value
-      }
-    })
-    this.checkIfAllLoaded()
+    this.setState({ cardDateLoaded: value }, this.checkIfAllLoaded)
   }
 
   checkIfAllLoaded() {
-
-
     if (this.state.cardDateLoaded && this.state.cardCVCLoaded && this.state.cardNumberLoaded) {
       this.props.onAllElementsLoaded()
       return true
@@ -276,17 +259,6 @@ class CheckoutForm extends React.Component {
   }
 
   render() {
-    let hasAllElementsLoaded = this.checkIfAllLoaded()
-
-    if (!hasAllElementsLoaded) {
-      setTimeout(() => {
-        this.setCVCElement(true)
-        this.setCardNumberElement(true)
-        this.setCardDateElement(true)
-      }, 3000)
-    }
-
-
     return (
       <ErrorBoundary>
 
@@ -294,13 +266,6 @@ class CheckoutForm extends React.Component {
           <S.Wrapper>
 
             <S.Form onSubmit={this.handleSubmit}>
-              {/*<CardElement onReady={() => {*/}
-              {/*  */}
-              {/*  this.setCardDateElement(true)*/}
-              {/*  this.setCardNumberElement(true)*/}
-              {/*  this.setCVCElement(true)*/}
-
-              {/*}}/>*/}
               <S.CheckoutHeadline style={{ flexGrow: 1 }}>
                 {this.props.freeActivate ? (                <S.ActivateFreeColumn>
                   <S.ActivateFreeButton loading={this.state.isLoadingFree} onClick={this.submitActivateFree}>Activate for Free</S.ActivateFreeButton>
@@ -322,15 +287,27 @@ class CheckoutForm extends React.Component {
               </S.Label>
               <S.Label>
                 <S.Icon type={'credit-card'}/>
-                <CardNumberElement options={createOptions()} className={'ant-input stripe-element'}/>
+                <CardNumberElement
+                  options={createOptions()}
+                  className={'ant-input stripe-element'}
+                  onReady={() => this.setCardNumberElement(true)}
+                />
               </S.Label>
               <S.Label>
                 <S.Icon type={'calendar'}/>
-                <CardExpiryElement className={'ant-input stripe-element'} options={createOptions()}/>
+                <CardExpiryElement
+                  className={'ant-input stripe-element'}
+                  options={createOptions()}
+                  onReady={() => this.setCardDateElement(true)}
+                />
               </S.Label>
               <S.Label>
                 <S.Icon type={'lock'}/>
-                <CardCvcElement className={'ant-input stripe-element'} options={createOptions()}/>
+                <CardCvcElement
+                  className={'ant-input stripe-element'}
+                  options={createOptions()}
+                  onReady={() => this.setCVCElement(true)}
+                />
               </S.Label>
 
               <span>

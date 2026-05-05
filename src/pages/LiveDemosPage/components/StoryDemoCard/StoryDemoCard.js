@@ -24,11 +24,13 @@ const StoryDemoCard = ({ storyDemo, onDeleteLiveDemo, authData}) => {
   const [isImageError, setIsImageError] = useState(false)
 
   // Get image URL if available (you may need to adjust this property name based on your data structure)
-  let imageUrl = ''
-  for(let screen of storyDemo.screens) {
-    if(screen.imageUrl) {
-      imageUrl = screen.imageUrl
-      break
+  let imageUrl = storyDemo.thumbnailImageUrl || ''
+  if(!imageUrl) {
+    for(let screen of storyDemo.screens) {
+      if(screen.imageUrl) {
+        imageUrl = screen.imageUrl
+        break
+      }
     }
   }
 

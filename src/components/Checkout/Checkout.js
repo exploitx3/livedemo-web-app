@@ -29,8 +29,9 @@ const Checkout = ({
   let freeActivate = userTopWorkspaceMember?.featureFlags ? !!userTopWorkspaceMember.featureFlags.freeActivate : false
 
   useEffect(() => {
-    // Stripe is loaded via @stripe/stripe-js package
-    setHasStripeLoaded(true)
+    stripePromise.then((stripe) => {
+      setHasStripeLoaded(!!stripe)
+    })
   }, [])
 
 
@@ -105,7 +106,7 @@ const Checkout = ({
     }
   }
 
-  if (!hasStripeLoaded) {
+  if (!hasStripeLoaded && !hasStripeElementsLoaded) {
     return (<Spinner/>)
   } else {
     return <ErrorBoundary>

@@ -15,7 +15,8 @@ function PopupButton(props) {
         storyDemo,
         changeToScreen,
         onNext,
-        fontSize
+        fontSize,
+        alignment = 'center'
     } = props
 
 
@@ -49,6 +50,7 @@ function PopupButton(props) {
 
 
     return  (<B.ButtonComponent
+        alignment={alignment}
         className={'popup-button cursor-pointer'}
         backgroundColor={buttonBackgroundColor}
         onClick={onClickFunction}
@@ -86,12 +88,12 @@ const B = {
         background: ${(props) => props.backgroundColor};
         width: fit-content;
       
-        min-width: ${({fontSize}) => fontSize * 3}rem;
+        // min-width: ${({fontSize}) => fontSize * 3}rem;
         max-width: 80%;
         min-height: 35px;
         
 
-        justify-content: center;
+        justify-content: ${({alignment}) => alignment};
         display: flex;
         align-items: center;
         border-radius: 6px;

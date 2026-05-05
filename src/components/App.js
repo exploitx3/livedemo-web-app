@@ -20,6 +20,8 @@ import { isMobile } from 'react-device-detect'
 import LiveDemoPreviewPage from '../pages/LiveDemoPreviewPage/LiveDemoPreviewPage'
 import AutoRecordingPreviewPage from '../pages/AutoRecordingPreviewPage/AutoRecordingPreviewPage'
 import DesktopAuthPage from '../pages/DesktopAuthPage/DesktopAuthPage'
+import OnboardingPage from '../pages/OnboardingPage/OnboardingPage'
+import DemoDashboardPage from '../pages/DemoDashboardPage/DemoDashboardPage'
 import {enableMapSet} from "immer"
 import TopLoadingBar from "./TopLoadingBar";
 import 'antd/reset'
@@ -156,6 +158,8 @@ class App extends React.Component {
             <Route path="/livedemos/:livedemoId/links/:linkId" element={<LiveDemoPreviewPage/>}/>
 
             <Route path="/refreshToken" element={<RefreshToken/>}/>
+            <Route path="/onboarding" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <OnboardingPage/>)}/>
+            <Route path="/demo-dashboard" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <DemoDashboardPage/>)}/>
             <Route path="/login" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <AppLayout/>)}/>
             <Route path="/register" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <AppLayout/>)}/>
             <Route path="/forgot-password" element={HOC.SwitchComponentIfAuth(<ForgotPassword/>, <AppLayout/>)}/>
