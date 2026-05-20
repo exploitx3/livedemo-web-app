@@ -23,7 +23,8 @@ function PopupComponenet(props) {
         themeTextColor,
         themeButtonBackgroundColor,
         themeButtonTextColor,
-        themeOverlayBackgroundColor
+        themeOverlayBackgroundColor,
+        isOverlayEnabled
     } = props
 
 
@@ -185,7 +186,8 @@ function PopupComponenet(props) {
 
     }
 
-    return <P.Wrapper id={'popup'}>
+    return <P.Wrapper isOverlayEnabled={isOverlayEnabled}
+     overlayBackgroundColor={themeOverlayBackgroundColor} id={'popup'}>
         {getView(step)}
     </P.Wrapper>
 
@@ -207,6 +209,18 @@ const P = {
       border-bottom-left-radius: 20px;
       border-bottom-right-radius: 20px;
       overflow: hidden;
+      position: relative;
+      z-index: 4 !important;
+
+      ${({isOverlayEnabled, overlayBackgroundColor}) => {
+        if(isOverlayEnabled) {
+          return `
+            backdrop-filter: blur(8px);
+            background: ${overlayBackgroundColor};
+          `
+        }
+      }}
+
     `,
 }
 
