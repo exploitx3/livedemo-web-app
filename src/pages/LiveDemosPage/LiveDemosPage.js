@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import StoryDemosView from './components/StoryDemosView/StoryDemosView'
 import Header from '../../components/Header/Header'
 // //import { Button, Col, Layout, Modal } from 'antd'
@@ -42,7 +42,6 @@ if(chrome) {
 }
 
 function LiveDemosPage(props) {
-
   let [liveDemos, setLiveDemos] = useState([])
   let [storyDemos, setStoryDemos] = useState(null)
 
@@ -101,7 +100,7 @@ function LiveDemosPage(props) {
   }, [props.currentSelectedWorkspace])
 
 
-  function showConfirmDeleteLiveDemo(liveDemo) {
+  const showConfirmDeleteLiveDemo = useCallback(function showConfirmDeleteLiveDemo(liveDemo) {
 
     let authToken = props.authData.token
 
@@ -128,8 +127,7 @@ function LiveDemosPage(props) {
       onCancel() {
       },
     })
-
-  }
+  }, [props.authData, props.actions])
 
   return (
     <React.Fragment>
@@ -142,12 +140,10 @@ function LiveDemosPage(props) {
             <S.WorkspacesCol xs={24} lg={24}>
               <S.ColTitle>LiveDemos</S.ColTitle>
               <StoryDemosView
-                onDeleteLiveDemo={(liveDemo) => {
-
-                  showConfirmDeleteLiveDemo(liveDemo)
-              }}
+                onDeleteLiveDemo={showConfirmDeleteLiveDemo}
                 storydemos={storyDemos}
                 isChromeAppAuthorized={props.isChromeAppAuthorized}
+                noDemoLimit={props.authData?.featureFlags?.noDemoLimit === true}
               />
             </S.WorkspacesCol>
             {/*<S.WorkspacesColRight xs={24} lg={12}>*/}

@@ -9,14 +9,15 @@ import Checkbox from 'antd/es/checkbox'
 import Colors from '../../../../../../constants/mainColors'
 import React from 'react'
 import styled from 'styled-components'
-import {MdAdsClick, MdArrowRightAlt} from 'react-icons/md'
+import { MdAdsClick, MdArrowRightAlt } from 'react-icons/md'
 import CommonOptions from '../CommonOptions/CommonOptions'
 import PreviewImageSection from './PreviewImageSection'
-
+import TippyPremium from '../../../../../../components/TippyPremium/TippyPremium'
+import { useNavigate } from 'react-router-dom'
 import 'antd/es/select/style'
 import PopupAlignments from "../../../../../../constants/PopupAlignments";
 
-const {Option} = Select
+const { Option } = Select
 
 
 const VIEW_TYPE_NAMES = {
@@ -76,22 +77,24 @@ const PLACEMENT_TYPES = {
 }
 
 
-const {confirm} = Modal
+const { confirm } = Modal
 
 const PopupOptionsView = ({
-                            setInternalStep,
-                            internalStep,
-                            popupType,
-                            setPopupType,
-                            alignment,
-                            setAlignment,
-                            storyDemo,
-                            workspaceId,
-                            storyDemoId,
-                            screenId,
-                            authData,
-                          }) => {
+  setInternalStep,
+  internalStep,
+  popupType,
+  setPopupType,
+  alignment,
+  setAlignment,
+  storyDemo,
+  workspaceId,
+  storyDemoId,
+  screenId,
+  authData,
+}) => {
 
+  let navigate = useNavigate()
+  let featureFlags = authData.featureFlags
 
   function updateViewField(fieldName, value) {
 
@@ -102,7 +105,7 @@ const PopupOptionsView = ({
     }
   }
 
-
+  debugger
   return <React.Fragment>
     <ST.ViewSelectorWrapper>
       <ST.ActionSelectorLineMargin>
@@ -123,6 +126,31 @@ const PopupOptionsView = ({
           }}>
           {Object.entries(POPUP_TYPES_LIMITED).map(([key, value], index, array) => {
             let isLast = index === array.length - 1
+
+            if (featureFlags.allowForms === false && key === "FORM") {
+              return (
+                <Option
+                  disabled
+                  label={value}
+                  style={{
+                    background: 'none',
+                    borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
+                    padding: '5px 8px',
+                  }}
+                  key={key}
+                  value={key}
+                >
+                  <ST.LockedOptionRow>
+                    <ST.LockedOptionLabel>{value}</ST.LockedOptionLabel>
+                   
+                      <span style={{ display: 'contents' }}>
+                        <ST.LockedOptionUpgradeBtn onClick={() => navigate('/billing')}>Upgrade to unlock</ST.LockedOptionUpgradeBtn>
+                      </span>
+                  </ST.LockedOptionRow>
+                </Option>
+              )
+            }
+
             return <Option style={{
               background: 'none',
               color: Colors.primaryColor,
@@ -174,7 +202,7 @@ const PopupOptionsView = ({
         }}>
           <ST.Checkbox
 
-            checked={internalStep.view.popup.showOverlay || false}/>
+            checked={internalStep.view.popup.showOverlay || false} />
           <ST.CheckboxText>Show overlay</ST.CheckboxText>
         </ST.CheckboxLineMargin>
       </ST.ActionSelectorLineMargin>
@@ -396,12 +424,12 @@ const ST = {
     && .Step__DeleteButton,
     && .Step__SaveButton {
       ${(props) => {
-        if (props.isViewOpen) {
-          return 'visibility: visible'
-        } else {
-          return ''
-        }
-      }}
+      if (props.isViewOpen) {
+        return 'visibility: visible'
+      } else {
+        return ''
+      }
+    }}
     }
   `,
   ViewContainer: styled.div`
@@ -615,9 +643,34 @@ const ST = {
     margin: 0px 5px;
     font-size: 1.1em;
     color: ${Colors.primaryColor};
+  `,
+  LockedOptionRow: styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  `,
+  LockedOptionLabel: styled.span`
+    color: #bfbfbf;
+    font-size: 0.875rem;
+  `,
+  LockedOptionUpgradeBtn: styled.button`
+    background: ${Colors.primaryColor};
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: opacity 0.15s ease;
 
-
-  `
+    &:hover { opacity: 0.88; }
+    &:active { opacity: 0.75; }
+  `,
 
 }
 

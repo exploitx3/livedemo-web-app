@@ -17,7 +17,7 @@ import DemoView from '../DemoView/DemoView'
 
 const {Content} = Layout
 
-const DemosView = function ({liveDemoDocsWithMetrics, sessionsData, tableSessions, storyLines, currentViewType, paginationMeta, currentPage, currentLimit, onPaginationChange}) {
+const DemosView = function ({advanceInsights, liveDemoDocsWithMetrics, sessionsData, tableSessions, storyLines, currentViewType, paginationMeta, currentPage, currentLimit, onPaginationChange}) {
   const [selectedDemo, setSelectedDemo] = useState(null)
 
   // Format milliseconds to human-readable format using moment.js
@@ -59,7 +59,7 @@ const DemosView = function ({liveDemoDocsWithMetrics, sessionsData, tableSession
       dataIndex: 'uniqueUsers',
       key: 'uniqueUsers',
       render: (uniqueUsers) => (
-        <span>{uniqueUsers || 0}</span>
+        <span className="locked-cell-value">{uniqueUsers || 0}</span>
       ),
       sorter: (a, b) => a.uniqueUsers - b.uniqueUsers,
     },
@@ -68,7 +68,7 @@ const DemosView = function ({liveDemoDocsWithMetrics, sessionsData, tableSession
       dataIndex: 'engagementRate',
       key: 'engagementRate',
       render: (engagementRate) => (
-        <span>{engagementRate ? `${engagementRate.toFixed(1)}%` : '0%'}</span>
+        <span className="locked-cell-value">{engagementRate ? `${engagementRate.toFixed(1)}%` : '0%'}</span>
       ),
       sorter: (a, b) => a.engagementRate - b.engagementRate,
     },
@@ -77,7 +77,7 @@ const DemosView = function ({liveDemoDocsWithMetrics, sessionsData, tableSession
       dataIndex: 'completionRate',
       key: 'completionRate',
       render: (completionRate) => (
-        <span>{completionRate ? `${completionRate.toFixed(1)}%` : '0%'}</span>
+        <span className="locked-cell-value">{completionRate ? `${completionRate.toFixed(1)}%` : '0%'}</span>
       ),
       sorter: (a, b) => a.completionRate - b.completionRate,
     },
@@ -86,7 +86,7 @@ const DemosView = function ({liveDemoDocsWithMetrics, sessionsData, tableSession
       dataIndex: 'leads',
       key: 'leads',
       render: (leads) => (
-        <span>{leads || 0}</span>
+        <span className="locked-cell-value">{leads || 0}</span>
       ),
       sorter: (a, b) => a.leads - b.leads,
     },
@@ -98,6 +98,7 @@ const DemosView = function ({liveDemoDocsWithMetrics, sessionsData, tableSession
 {selectedDemo ? (
     <DemoView
       demo={selectedDemo}
+      advanceInsights={advanceInsights}
       sessionsData={sessionsData}
       tableSessions={
         (tableSessions || []).filter(session =>
@@ -111,6 +112,7 @@ const DemosView = function ({liveDemoDocsWithMetrics, sessionsData, tableSession
   ) : (
     <React.Fragment>
       <S.SessionsList__Title>Demos</S.SessionsList__Title>
+        <S.TableWrapper className={!advanceInsights ? 'locked' : ''}>
         <Table
           columns={columns}
           rowKey={(record) => record._id}
@@ -139,6 +141,7 @@ const DemosView = function ({liveDemoDocsWithMetrics, sessionsData, tableSession
             }
           }}
         />
+        </S.TableWrapper>
       </React.Fragment>
     )}
     </S.DemosViewWrapper>
@@ -146,6 +149,13 @@ const DemosView = function ({liveDemoDocsWithMetrics, sessionsData, tableSession
 }
 
 const S = {
+  TableWrapper: styled.div`
+    &.locked .locked-cell-value {
+      filter: blur(4px);
+      user-select: none;
+      pointer-events: none;
+    }
+  `,
   DemosViewWrapper: styled.div`
     padding: 20px;
     border: 2px solid #F3F4F6;

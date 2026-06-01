@@ -24,6 +24,7 @@ import { getStoryDemo, updateStoryDemo } from '../../actions/storyDemoActions'
 import { createLink, deleteLink, getLinks, updateLink } from "../../utils/storyHelpers";
 import EditLink from './components/EditLink'
 import CreateLink from './components/CreateLink'
+import TippyPremium from '../TippyPremium/TippyPremium'
 
 // const {TabPane} = Tabs // Removed - deprecated in Ant Design v6, use items prop instead
 
@@ -40,6 +41,8 @@ const SECOND_VIEWS = {
 
 
 const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPublished, authData, actions, isOpen }) => {
+
+  let featureFlags = authData.featureFlags
 
   let [isLoading, setIsLoading] = useState(false)
   let [demoHasLoaded, setDemoHasLoaded] = useState(liveDemo && liveDemo.content)
@@ -300,41 +303,50 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
               <SD.TitleText>Custom links</SD.TitleText>
               <SD.DescText>Custom links allow you to personalize your LiveDemo with variables</SD.DescText>
             </SD.LeftSide>
-            <SD.RightSide>
-              <IconTextButton
-                loading={false}
-                onClick={() => {
+            <TippyPremium
+              title="Unlock Custom Links"
+              description="Upgrade your plan to create custom links for your LiveDemos."
+              placement="top"
+              arrow={true}
+              disabled={featureFlags.allowPersonalization === true }
+            >
+              <SD.RightSide>
+                <IconTextButton
+                  loading={false}
+                  disabled={featureFlags.allowPersonalization === false}
+                  onClick={() => {
 
-                  createLink("New link",
-                    workspaceId,
-                    storyId,
-                    authData.token
-                  )
-                    .then(newLinkDoc => {
-                      setSelectedLinkCreating(newLinkDoc)
-                      setSelectedSecondView(SECOND_VIEWS.createLink)
-                      refreshLinks()
-                    })
-                }}
-                img={(<SD.LinkImg />)}
-                text={'Create'}
+                    createLink("New link",
+                      workspaceId,
+                      storyId,
+                      authData.token
+                    )
+                      .then(newLinkDoc => {
+                        setSelectedLinkCreating(newLinkDoc)
+                        setSelectedSecondView(SECOND_VIEWS.createLink)
+                        refreshLinks()
+                      })
+                  }}
+                  img={(<SD.LinkImg />)}
+                  text={'Create'}
 
-                textStyles={{
-                  fontSize: '0.9em',
-                  color: '#111',
-                  marginLeft: '5px !important'
-                }}
-                buttonStyles={{
+                  textStyles={{
+                    fontSize: '0.9em',
+                    color: '#111',
+                    marginLeft: '5px !important'
+                  }}
+                  buttonStyles={{
 
-                  padding: '0 5px',
-                  boxShadow: 'none',
-                  justifyContent: 'space-between',
-                  width: 'auto',
-                  height: '30px',
-                  borderRadius: '6px'
-                }}
-              />
-            </SD.RightSide>
+                    padding: '0 5px',
+                    boxShadow: 'none',
+                    justifyContent: 'space-between',
+                    width: 'auto',
+                    height: '30px',
+                    borderRadius: '6px'
+                  }}
+                />
+              </SD.RightSide>
+            </TippyPremium>
           </SD.Row>
           <SD.Links__Col>
             {links.length === 0 ? (
@@ -589,46 +601,57 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
       </SD.SecondLine>
       {activeTab === TAB_KEYS.links ? '' : (
         <SD.ThirdLine>
-          <SD.Row>
-            <SD.LeftSide>
-              <SD.TitleText>Video & GIF</SD.TitleText>
-              <SD.DescText>Embed a LiveDemo in Email or Video platforms</SD.DescText>
-            </SD.LeftSide>
-            <SD.RightSide>
+          <TippyPremium
+            title="Unlock Video & GIF Generation"
+            description="Upgrade your plan to generate videos and GIFs for your LiveDemos."
+            placement="left"
+            arrow={true}
+            disabled={featureFlags.showMp4GifsExport === true}
+          >
+            <SD.Row>
 
-              <IconTextButton
-                disabled={showContentGeneratingNotification}
-                loading={isGeneratingStoryContent}
-                onClick={() => {
-                  setIsGeneratingStoryContent(true)
+              <SD.LeftSide>
+                <SD.TitleText>Video & GIF</SD.TitleText>
+                <SD.DescText>Embed a LiveDemo in Email or Video platforms</SD.DescText>
+              </SD.LeftSide>
+              <SD.RightSide>
 
-                  return onGenerateVideoAndGif(authData.token)
-                    .then(() => {
-                      setIsGeneratingStoryContent(false)
-                      setShowContentGeneratingNotification(true)
-                      setStoryContent(null)
-                    })
-                }}
-                img={(<SD.VideoImg />)}
-                text={storyContent && storyContent._id ? 'Re-Generate' : 'Generate'}
+                <IconTextButton
+                  disabled={showContentGeneratingNotification || featureFlags.showMp4GifsExport === false}
+                  loading={isGeneratingStoryContent}
+                  onClick={() => {
+                    setIsGeneratingStoryContent(true)
 
-                textStyles={{
-                  fontSize: '0.9em',
-                  color: '#111',
-                  marginLeft: '5px !important'
-                }}
-                buttonStyles={{
+                    return onGenerateVideoAndGif(authData.token)
+                      .then(() => {
+                        setIsGeneratingStoryContent(false)
+                        setShowContentGeneratingNotification(true)
+                        setStoryContent(null)
+                      })
+                  }}
+                  img={(<SD.VideoImg />)}
+                  text={storyContent && storyContent._id ? 'Re-Generate' : (featureFlags.showMp4GifsExport === true ? 'Generate' : 'Upgrade to generate')}
 
-                  padding: '0 5px',
-                  boxShadow: 'none',
-                  justifyContent: 'space-between',
-                  width: 'auto',
-                  height: '30px',
-                  borderRadius: '6px'
-                }}
-              />
-            </SD.RightSide>
-          </SD.Row>
+                  textStyles={{
+                    fontSize: '0.9em',
+                    color: '#111',
+                    marginLeft: '5px !important'
+                  }}
+                  buttonStyles={{
+
+                    padding: '0 5px',
+                    boxShadow: 'none',
+                    justifyContent: 'space-between',
+                    width: 'auto',
+                    height: '30px',
+                    borderRadius: '6px'
+                  }}
+
+                />
+              </SD.RightSide>
+            </SD.Row>
+          </TippyPremium>
+
           {showContentGeneratingNotification ? (
             <SD.CopyWebsiteWrapper>
               <SD.ContentNotifyBox>

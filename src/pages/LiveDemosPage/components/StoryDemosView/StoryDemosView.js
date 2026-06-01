@@ -1,53 +1,43 @@
-import React from 'react'
-//import { Button, Card, Col, Dropdown, Icon, Menu, Skeleton } from 'antd'
+import React, { memo, useMemo } from 'react'
 
-import Button from 'antd/es/button'
 import Card from 'antd/es/card'
 import Col from 'antd/es/col'
-
-import Icon from '../../../../components/Icon/Icon'
+import Button from 'antd/es/button'
 import Skeleton from 'antd/es/skeleton'
 
-import 'antd/es/skeleton/style'
+import Icon from '../../../../components/Icon/Icon'
+
 import 'antd/es/card/style'
 import 'antd/es/dropdown/style'
-
 import 'antd/es/col/style'
+import 'antd/es/button/style' 
+import 'antd/es/skeleton/style' 
 
-import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { bindActionCreators } from 'redux'
-import { updateCurrentSelectedWorkspace } from '../../../../actions/workspacesActions'
-import { refreshToken } from '../../../../actions/authActions'
-import { getWorkspaceEncryptionKey } from '../../../../actions/secureStorageActions'
-import { connect } from 'react-redux'
 import WorkspaceStatuses from '../../../../constants/WorkspaceStatuses'
 import InstallAppButton from '../../../../components/InstallAppButton/InstallAppButton'
-import StoryDemoCard from '../StoryDemoCard/StoryDemoCard'
+import StoryDemoCardSwitch from '../StoryDemoCard/StoryDemoCardSwitch'
 import ENV from '../../../../config'
 import mainColors from '../../../../constants/mainColors'
 
+const FREE_DEMO_LIMIT = 3
 
-const StoryDemosView = (props) => {
-  const navigate = useNavigate()
-
-  function onClickAddWorkspace() {
-    navigate('/create-workspace')
-  }
+const StoryDemosView = memo((props) => {
+  
+  const cards = useMemo(
+    () => generateStoryDemoCards(props.storydemos, props),
+    [props.storydemos, props.onDeleteLiveDemo, props.isChromeAppAuthorized, props.noDemoLimit]
+  )
 
   return (
     <S.Workspaces>
-
-      <S.WorkspacesTitleWrapper>
-
-      </S.WorkspacesTitleWrapper>
+      <S.WorkspacesTitleWrapper />
       <React.Fragment>
-        {generateStoryDemoCards(props.storydemos, props)}
-
+        {cards}
       </React.Fragment>
     </S.Workspaces>
   )
-}
+})
 
 function renderWorkspaceStatus(status) {
   if (status === WorkspaceStatuses.CHANNELS_POPULATED) {
@@ -192,14 +182,20 @@ function generateStoryDemoCards(storyDemos, props) {
     }
     else {
 
+        const noDemoLimit = props.noDemoLimit === true
+
       return <S.WorkspacesContainer>
-        {storyDemos.map(storyDemo => {
-
-
-          return <StoryDemoCard storyDemo={storyDemo} onDeleteLiveDemo={props.onDeleteLiveDemo} />
-        })
-        }
-
+        {storyDemos.map((storyDemo, index) => {
+          const isHidden = !noDemoLimit && index < storyDemos.length - FREE_DEMO_LIMIT 
+          return (
+            <StoryDemoCardSwitch
+              key={storyDemo._id}
+              storyDemo={storyDemo}
+              onDeleteLiveDemo={props.onDeleteLiveDemo}
+              hidden={isHidden}
+            />
+          )
+        })}
       </S.WorkspacesContainer>
 
     }
@@ -209,24 +205,7 @@ function generateStoryDemoCards(storyDemos, props) {
 }
 
 
-function mapStateToProps(state) {
-
-  return {
-    authData: state.authReducer.authData,
-    currentSelectedWorkspace: state.workspacesReducer.currentSelectedWorkspace,
-  }
-}
-
-function mapDispatchToProps(dispatch) {
-  return {
-
-    actions: bindActionCreators({ updateCurrentSelectedWorkspace, getWorkspaceEncryptionKey, refreshToken }, dispatch)
-
-
-  }
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(StoryDemosView)
+export default StoryDemosView
 
 const S = {}
 

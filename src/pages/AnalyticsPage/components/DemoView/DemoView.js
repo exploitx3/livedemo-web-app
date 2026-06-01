@@ -10,7 +10,7 @@ import 'antd/es/breadcrumb/style'
 
 import SessionsView from '../SessionsView/SessionsView'
 
-const DemoView = ({ demo, sessionsData, tableSessions, storyLines, currentViewType, onBack }) => {
+const DemoView = ({ demo, advanceInsights, sessionsData, tableSessions, storyLines, currentViewType, onBack }) => {
 
   const metrics = [
     {
@@ -25,35 +25,40 @@ const DemoView = ({ demo, sessionsData, tableSessions, storyLines, currentViewTy
       title: 'Unique Users',
       value: demo.uniqueUsers || 0,
       unit: '',
-      tooltip: 'Number of unique visitors based on IP addresses'
+      tooltip: 'Number of unique visitors based on IP addresses',
+      hidden: true,
     },
     {
       icon: MdPercent,
       title: 'Engagement rate',
       value: demo.engagementRate ? demo.engagementRate.toFixed(1) : 0,
       unit: '%',
-      tooltip: 'Percentage of sessions where users moved from first step to second step'
+      tooltip: 'Percentage of sessions where users moved from first step to second step',
+      hidden: true,
     },
     {
       icon: MdPercent,
       title: 'Completion rate',
       value: demo.completionRate ? demo.completionRate.toFixed(1) : 0,
       unit: '%',
-      tooltip: 'Percentage of sessions where users completed the entire demo'
+      tooltip: 'Percentage of sessions where users completed the entire demo',
+      hidden: true,
     },
     {
       icon: MdExitToApp,
       title: 'Top Drop-off Step',
       value: demo.topDropOffStep !== null && demo.topDropOffStep !== undefined ? ++demo.topDropOffStep : '-',
       unit: '',
-      tooltip: 'The step number where most users dropped off during the demo'
+      tooltip: 'The step number where most users dropped off during the demo',
+      hidden: true,
     },
     {
       icon: MdDescription,
       title: 'Captured Leads',
       value: demo.leads || 0,
       unit: '',
-      tooltip: 'Total number of leads captured from this demo'
+      tooltip: 'Total number of leads captured from this demo',
+      hidden: true,
     },
   ]
 
@@ -72,7 +77,10 @@ const DemoView = ({ demo, sessionsData, tableSessions, storyLines, currentViewTy
 
       <S.MetricsContainer>
         {metrics.map((metric, index) => (
-          <S.MetricCard className={'metric-card'} key={index}>
+          <S.MetricCard
+            className={`metric-card`}
+            key={index}
+          >
             <S.MetricHeader>
               <S.IconWrapper>
                 <metric.icon size={20} />
@@ -92,7 +100,7 @@ const DemoView = ({ demo, sessionsData, tableSessions, storyLines, currentViewTy
             </S.InfoIcon>
             </S.MetricHeader>
             
-            <S.MetricValue>
+            <S.MetricValue className={!advanceInsights && metric.hidden ? 'metric-locked' : ''}>
               {metric.value}{metric.unit}
             </S.MetricValue>
           </S.MetricCard>
@@ -104,6 +112,7 @@ const DemoView = ({ demo, sessionsData, tableSessions, storyLines, currentViewTy
         tableSessions={tableSessions || []}
         storyLines={storyLines || {}}
         currentViewType={currentViewType || '7D'}
+        advanceInsights={advanceInsights}
       />
     </S.Container>
   )
@@ -150,6 +159,12 @@ const S = {
 
     @media (min-width: 768px) {
       flex-direction: row;
+    }
+
+    .metric-locked {
+      filter: blur(5px);
+      user-select: none;
+      pointer-events: none;
     }
   `,
   MetricCard: styled.div`

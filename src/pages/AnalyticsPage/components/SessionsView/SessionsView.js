@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react'
+import {useNavigate} from 'react-router-dom'
 
 import ViewSession from './../../components/ViewSession/ViewSession'
 import FilterDropdown from './components/FilterDropdown'
@@ -51,7 +52,8 @@ const TAB_KEYS = {
   leads: 'leads',
 }
 
-const SessionsView = function ({sessionsData, tableSessions, storyLines, currentViewType}) {
+const SessionsView = function ({advanceInsights, sessionsData, tableSessions, storyLines, currentViewType}) {
+  const navigate = useNavigate()
   let [expandedRowKeys, setExpandedRowKeys] = useState({})
   let [innerTableSessions, setInnerTableSession] = useState([...tableSessions])
 
@@ -82,6 +84,19 @@ const SessionsView = function ({sessionsData, tableSessions, storyLines, current
   }, [tableSessions])
 
   const expandedRowRender = (record, sessionIndex, indent, expanded) => {
+
+    if (!advanceInsights) {
+      return (
+        <S.UpgradePrompt>
+          <S.UpgradePromptText>
+            Upgrade to unlock <strong>Session Recordings</strong>
+          </S.UpgradePromptText>
+          <S.UpgradeButton onClick={() => navigate('/billing')}>
+            Upgrade
+          </S.UpgradeButton>
+        </S.UpgradePrompt>
+      )
+    }
 
     return <ViewSession
       session={record}
@@ -204,7 +219,7 @@ const SessionsView = function ({sessionsData, tableSessions, storyLines, current
       dataIndex: 'dropOffStep',
       key: 'dropOffStep',
       render: (dropOffStep) => (
-        <span>{dropOffStep === undefined || dropOffStep === null ? 'N/A' : ++dropOffStep}</span>
+        <span className={`locked-cell-value`}>{dropOffStep === undefined || dropOffStep === null ? 'N/A' : ++dropOffStep}</span>
       ),
       width: '2%'
     },
@@ -218,7 +233,7 @@ const SessionsView = function ({sessionsData, tableSessions, storyLines, current
   ]
 
   return (
-    <React.Fragment>
+    <S.SessionsListWrapper className={!advanceInsights ? 'locked' : ''}>
 
       <S.SessionsList__Title>Sessions</S.SessionsList__Title>
         <Table
@@ -252,11 +267,39 @@ const SessionsView = function ({sessionsData, tableSessions, storyLines, current
           }}
         />
 
-    </React.Fragment>
+    </S.SessionsListWrapper>
   )
 }
 
 const S = {
+  UpgradePrompt: styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 32px 16px;
+    text-align: center;
+  `,
+  UpgradePromptText: styled.p`
+    margin: 0;
+    font-size: 0.9375rem;
+    color: #374151;
+  `,
+  UpgradeButton: styled.button`
+    background: ${mainColors.primaryColor};
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+
+    &:hover { opacity: 0.88; }
+    &:active { opacity: 0.75; }
+  `,
   TabsContainer: styled.div`
     font-size: 19px;
     flex-grow: 1;
@@ -291,6 +334,12 @@ const S = {
     padding: 20px;
     border: 2px solid #F3F4F6;
     border-radius: 8px;
+
+    &.locked .locked-cell-value {
+      filter: blur(4px);
+      user-select: none;
+      pointer-events: none;
+    }
   `,
   SessionsList__Title: styled.p`
     margin: 0px 0px 20px 0px;

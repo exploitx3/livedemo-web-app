@@ -6,10 +6,9 @@ import jcb from 'payment-icons/min/flat/jcb.svg'
 import mastercard from 'payment-icons/min/flat/mastercard.svg'
 import unionpay from 'payment-icons/min/flat/unionpay.svg'
 import unknown from 'payment-icons/min/flat/default.svg'
+import CardTypes from '../constants/CardTypes.js'
 
 export const mapCardToIcon = function (cardType) {
-
-  const CardTypes = require('../constants/CardTypes.js').default
 
 
   switch (cardType) {

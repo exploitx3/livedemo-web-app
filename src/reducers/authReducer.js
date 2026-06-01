@@ -7,7 +7,6 @@ export default function authReducer(state = initialState.authReducer, action) {
   switch (action.type) {
     case UPDATE_AUTH_DATA:
 
-
       return {
         ...state,
         authData: action.authData

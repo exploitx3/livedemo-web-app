@@ -812,14 +812,14 @@ function WalkthroughComponent({
 
     if (isEditor) {
 
-    storyHelpers.getVoices(workspaceId, authData.token)
-      .then(voices => {
-        setVoices(voices)
-      })
+      storyHelpers.getVoices(workspaceId, authData.token)
+        .then(voices => {
+          setVoices(voices)
+        })
     }
 
     if (isEmbed && !isInEditorRef.current && navigator.doNotTrack !== '1') {
-      setupSessionRecording(eventsRef)
+      setupSessionRecording(eventsRef, currentStepIndexRef)
       console.log('setupSessionRecording setup')
     }
 
@@ -2298,7 +2298,7 @@ function WalkthroughComponent({
     </React.Fragment>
   }
 
-  function getStepView(storyDemoState, step, prevStep, innerWidth, innerHeight, scaleValuesRef, isScaled, isInEditor) {
+  function getStepView(storyDemoState, step, prevStep, innerWidth, innerHeight, scaleValuesRef, isScaled, isOverlayEnabled, isInEditor) {
     console.log(`getStepView ${innerWidth} x ${innerHeight}`)
 
     if (!(step && step.view)) {
@@ -2406,7 +2406,7 @@ function WalkthroughComponent({
         isInEditor={isInEditor}
         step={step}
         stepIndex={currentStepIndexRef.current}
-
+        isOverlayEnabled={isOverlayEnabled}
         themeBackgroundColor={themeStepBackgroundColor}
         themeTextColor={themeTextColor}
         themeButtonBackgroundColor={themeButtonBackgroundColor}
@@ -2822,8 +2822,7 @@ function WalkthroughComponent({
           isPopup={step && step.view && step.view.viewType === STEP_VIEWS.POPUP}
         >
 
-          {getStepView(storyDemoState, step, prevStep, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled, isInEditor)}
-
+          {getStepView(storyDemoState, step, prevStep, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled, stepIsOverlayEnabled, isInEditor)}
 
         </WS.StepsWrapper>
       ) : ''}
@@ -3159,13 +3158,25 @@ const WS = {
     transform-origin: top left;
       // transform: scaleX(${(props) => `${props.scalePercentageWidth}`}) scaleY(${(props) => `${props.scalePercentageHeight}`});
   `,
+  OverlayComponent: styled.div`
+    width: 100%;
+    height: 100%;
 
+    position: absolute;
+    top: 0;
+    left: 0;
+
+
+    backdrop-filter: blur(8px);
+    background: ${({overlayBackgroundColor}) => overlayBackgroundColor};
+    z-index:  4 !important;
+  `,
   StepsWrapper: styled.div`
       // width: ${({ fullWidth }) => fullWidth}px;
       // height: ${({ fullHeight }) => fullHeight}px;
 
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
 
     && {
       position: absolute;
@@ -3182,9 +3193,7 @@ const WS = {
         return `
           width: 100%;
           height: 100%;
-          backdrop-filter: blur(8px);
-          background: ${overlayBackgroundColor};
-          z-index: 4 !important;
+
          `
       }
 

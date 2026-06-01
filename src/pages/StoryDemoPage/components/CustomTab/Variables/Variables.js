@@ -1,4 +1,5 @@
 import React, {useState} from 'react'
+import TippyPremium from '../../../../../components/TippyPremium/TippyPremium'
 import Colors from '../../../../../constants/mainColors'
 import styled from 'styled-components'
 //import { Button, Icon, Input, Switch, Upload } from 'antd'
@@ -16,7 +17,7 @@ import {HexColorInput, HexColorPicker} from 'react-colorful'
   tabsWidth is used to manually set the width of the element
   and the top property is set manually also of MainView
  */
-const Variables = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
+const Variables = ({workspaceId, storyDemo, disabled, authData, reloadStoryDemo}) => {
   const marginTop = 116
 
   let [isSaving, setIsSaving] = useState(false)
@@ -89,20 +90,28 @@ const Variables = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
 
     <TH.ScreenHeader>
 
-      <TH.HeaderMain>
-        <TH.HeaderLeftSide
-          onClick={() => {
-            setIsOpen(!isOpen)
-          }}>
-          <TH.OpenIcon type={isOpen ? 'down' : 'right'}/>
-          <TH.HeaderTitle>Variables</TH.HeaderTitle>
-        </TH.HeaderLeftSide>
-        <TH.HeaderRightSide>
+      <TippyPremium
+        placement={"top"}
+        arrow={true}
+        title="Unlock Personalization & Variables"
+        description="Upgrade your plan to use dynamic variables and personalize your demos for each viewer."
+        disabled={!disabled}
+      >
+        <TH.HeaderMain>
+          <TH.HeaderLeftSide
+            onClick={() => {
+              setIsOpen(!isOpen)
+            }}>
+            <TH.OpenIcon type={isOpen ? 'down' : 'right'}/>
+            <TH.HeaderTitle>Variables</TH.HeaderTitle>
+          </TH.HeaderLeftSide>
+          <TH.HeaderRightSide>
 
-        </TH.HeaderRightSide>
-      </TH.HeaderMain>
+          </TH.HeaderRightSide>
+        </TH.HeaderMain>
+      </TippyPremium>
       {!isOpen ? '' : (
-        <TH.MainWrapper>
+        <TH.MainWrapper className={disabled ? 'locked' : ''}>
           <TH.Text>Variables enable you to pass dynamic values into your LiveDemo to personalize the text.</TH.Text>
           <TH.Text>Once added, you can generate custom links for the same LiveDemo with unique variable values</TH.Text>
 
@@ -234,6 +243,13 @@ const TH = {
     gap: 15px;
     margin-top: 10px;
     position: relative;
+
+    &.locked {
+      pointer-events: none;
+      user-select: none;
+      filter: blur(2px);
+      opacity: 0.6;
+    }
   `,
   Main__LeftSide: styled.span`
     margin: 0px 0px 0px 15px;

@@ -32,6 +32,7 @@ import axios from '../../utils/axiosInstance'
 import config from '../../config.json'
 import Spinner from '../../components/Spinner/Spinner'
 import Colors from '../../constants/mainColors'
+import { toast } from 'react-toastify'
 
 const { Content, Footer, Sider } = Layout
 const { confirm } = Modal
@@ -44,9 +45,13 @@ const PLAN_LENGTHS = {
 const IS_DEV = config.ENV === 'dev'
 
 const PRODUCT_IDS = {
-  Business: {
-    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_USR38KOAAF6aFo' : 'prod_USQIjwxyXqkb4a',
-    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_USR3CHtcPZDvIx' : 'prod_USQKMjZ7qq5Zrq',
+  Pro: {
+    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZkkwn0B77gSJ' : 'prod_USQIjwxyXqkb4a',
+    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZmCUin8ZKi0o' : 'prod_USQKMjZ7qq5Zrq',
+  },
+  Growth: {
+    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZluZhDivdyOl' : 'prod_USQIjwxyXqkb4a',
+    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZnkXaY05BRmV' : 'prod_USQKMjZ7qq5Zrq',
   },
 }
 
@@ -56,11 +61,58 @@ const subscriptionTypes = [
   //   price: 'Free for 2 Creators'
   // },
   {
-    name: 'Business',
-    price: 'Up to 5 Creators'
+    name: 'Pro',
+    price: `$34/month or $324/year`,
+    priceMonthly: 34,
+    priceAnnually: 324,
+  },
+  {
+    name: 'Growth',
+    price: `$49/month or $468/year`,
+    priceMonthly: 49,
+    priceAnnually: 468,
   },
 
 ]
+
+function safeCapitalize(value) {
+  if (!value || typeof value !== 'string') return ''
+  return capitalize(value)
+}
+
+function getApiErrorMessage(errorData, fallback = 'Something went wrong') {
+  const data = errorData?.response?.data
+  if (!data) return fallback
+
+  const payload = typeof data === 'string'
+    ? (() => {
+        try {
+          return JSON.parse(data)
+        } catch {
+          return { message: data }
+        }
+      })()
+    : data
+
+  return payload.errorMessage || payload.message || fallback
+}
+
+function formatSubscriptionWorkspaceNames(workspaceIds, workspaces = []) {
+  if (!Array.isArray(workspaceIds) || !workspaceIds.length) return ''
+
+  return workspaceIds
+    .map((entry) => {
+      if (entry && typeof entry === 'object' && entry.name) {
+        return safeCapitalize(entry.name)
+      }
+
+      const id = (entry?._id ?? entry)?.toString?.() ?? String(entry)
+      const workspace = workspaces.find((w) => w._id?.toString() === id)
+      return workspace?.name ? safeCapitalize(workspace.name) : null
+    })
+    .filter(Boolean)
+    .join(', ')
+}
 
 const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
   const navigate = useNavigate()
@@ -73,10 +125,22 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
   const [subLoading, setSubLoading] = useState(false)
   const [cards, setCards] = useState([])
 
-  const [planLength, setPlanLength] = useState(PLAN_LENGTHS.Annually)
+  const [planLength, setPlanLength] = useState(PLAN_LENGTHS.Monthly)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [planQuantities, setPlanQuantities] = useState(() =>
+    Object.fromEntries(subscriptionTypes.map((sub) => [sub.name, 1]))
+  )
 
-  async function handleCheckout(subName) {
+  const MAX_PLAN_QUANTITY = 99
+
+  function setPlanQuantity(planName, nextQuantity) {
+    setPlanQuantities((prev) => ({
+      ...prev,
+      [planName]: Math.min(MAX_PLAN_QUANTITY, Math.max(1, nextQuantity)),
+    }))
+  }
+
+  async function handleCheckout(subName, quantity = 1) {
     const productId = PRODUCT_IDS[subName]?.[planLength]
     if (!productId) return
 
@@ -84,7 +148,11 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
     try {
       const response = await axios.post(
         '/payments/checkout-session',
-        { productId, workspaceId: currentSelectedWorkspace._id },
+        {
+          productId,
+          workspaceId: currentSelectedWorkspace._id,
+          quantity,
+        },
         { headers: { Authorization: `Bearer ${authData.token}` } }
       )
 
@@ -125,7 +193,7 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
         setUserDefaultCardId(cardsResp.data.defaultCardId)
 
 
-        setSubscriptions(subsResp.data.subscriptions)
+        setSubscriptions(subsResp.data.subscriptions || [])
 
         setUser(userResp.data)
 
@@ -134,6 +202,8 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
       .catch(err => {
         console.log(err)
         console.log(`Couldn't get subscriptions or cards data from API`)
+        setSubscriptions([])
+        setIsLoading(false)
       })
 
   }, [])
@@ -148,7 +218,7 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           key: 'icon',
           render: (iconObj) => {
 
-            return <S.PictureWorkspace alt={'Workspace Picture'} src={''}/>
+            return <S.PictureWorkspace alt={'Workspace Picture'} src={''} />
           }
         },
         {
@@ -166,7 +236,7 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           key: 'icon',
           render: (iconObj) => {
 
-            return <S.PictureWorkspace alt={'Workspace Picture'} src={''}/>
+            return <S.PictureWorkspace alt={'Workspace Picture'} src={''} />
           }
         },
         {
@@ -212,25 +282,21 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           render: (subType) => {
 
 
-            return capitalize(subType)
+            return safeCapitalize(subType)
           }
         },
         {
           title: 'Workspace',
-          dataIndex: 'workspaceId',
-          key: 'workspaceId',
-          render: (workspaceObj) => {
-
-
-            return capitalize(workspaceObj.name)
-          }
+          dataIndex: 'workspaceIds',
+          key: 'workspaceIds',
+          render: (workspaceIds) => formatSubscriptionWorkspaceNames(workspaceIds, workspaces),
         },
         {
           title: 'Active',
           dataIndex: 'active',
           key: 'active',
           render: (active) => {
-            return active ? <Icon type={'check'}/> : null
+            return active ? <Icon type={'check'} /> : null
           }
 
         }
@@ -244,43 +310,38 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           render: (subType) => {
 
 
-            return capitalize(subType)
+            return safeCapitalize(subType)
           }
         },
         {
           title: 'Workspace',
-          dataIndex: 'workspaceId',
-          key: 'workspaceId',
-          render: (workspaceObj) => {
-
-
-            return capitalize(workspaceObj.name)
-          }
+          dataIndex: 'workspaceIds',
+          key: 'workspaceIds',
+          render: (workspaceIds) => formatSubscriptionWorkspaceNames(workspaceIds, workspaces),
         },
         {
           title: 'Active',
           dataIndex: 'active',
           key: 'active',
           render: (active) => {
-            return active ? <Icon type={'check'}/> : null
+            return active ? <Icon type={'check'} /> : null
           }
 
         },
+        // {
+        //   title: 'Expired',
+        //   dataIndex: 'expired',
+        //   key: 'expired',
+        //   render: (expired) => {
+        //     return <Checkbox defaultChecked={expired} disabled={true} />
+        //   }
+        // },
         {
-          title: 'Expired',
-          dataIndex: 'expired',
-          key: 'expired',
-          render: (expired) => {
-            return <Checkbox defaultChecked={expired} disabled={true}/>
-          }
-        },
-        {
-          title: 'Expire Date',
+          title: 'Next Renewal Date',
           dataIndex: 'expireDate',
           key: 'expireDate',
           render: (expireDate) => {
-
-            return moment(expireDate).format('L')
+            return expireDate ? moment(expireDate).format('L') : ''
           }
         },
         {
@@ -295,8 +356,8 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
               setSubLoading(true)
 
               return axios.patch(`/subscriptions/${record._id}`, {
-                  autoPay: newAutoPayValue
-                },
+                autoPay: newAutoPayValue
+              },
                 {
                   headers: { 'Authorization': `Bearer ${authData.token}` }
                 })
@@ -308,7 +369,7 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
                   setSubLoading(false)
                 })
 
-            }} defaultChecked={autoPay && record.active} disabled={!record.active}/>
+            }} defaultChecked={autoPay && record.active} disabled={!record.active} />
           }
         },
       ]
@@ -358,7 +419,7 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           render: (cardId) => {
             let isDefault = cardId === userDefaultCardId
 
-            return isDefault ? <Icon type={'check'}/> : null
+            return isDefault ? <Icon type={'check'} /> : null
           }
         }
       ]
@@ -374,7 +435,7 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
             let icon = mapCardToIcon(brand)
 
             return <S.CardInfoWrapper>
-              <S.CardImg src={icon} alt="Card Brand Image"/>
+              <S.CardImg src={icon} alt="Card Brand Image" />
               <S.CardText>{capitalize(brand)}</S.CardText>
             </S.CardInfoWrapper>
           }
@@ -406,7 +467,7 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           render: (cardId) => {
             let isDefault = cardId === userDefaultCardId
 
-            return isDefault ? <Icon type={'check'}/> : null
+            return isDefault ? <Icon type={'check'} /> : null
           }
         },
         {
@@ -428,9 +489,11 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
 
                       setCards(req.data.cards)
                     })
-                    .catch(err => {
-
-                      console.log(err)
+                    .catch((err) => {
+                      toast.error(getApiErrorMessage(err, 'Failed to delete card'), {
+                        position: 'top-right',
+                        })
+                      return Promise.reject(err)
                     })
                 },
                 onCancel() {
@@ -439,8 +502,8 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
             }
 
             return <span>
-        <a onClick={showConfirm}>Delete</a>
-          </span>
+              <a onClick={showConfirm}>Delete</a>
+            </span>
           }
         },
       ]
@@ -454,7 +517,10 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
     />
   }
 
-  function renderSub(sub, subIndex, subLength, authData) {
+  function renderSub(sub, subIndex, subLength) {
+    const quantity = planQuantities[sub.name] ?? 1
+    const annualSavings =
+      (sub.priceMonthly * 12 - sub.priceAnnually) * quantity
 
     return (
       <U.ListItem key={subIndex}>
@@ -462,18 +528,50 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           <U.NameText>{sub.name}</U.NameText>
         </U.Name>
         <U.Text>
-          {sub.price}
+          <U.PriceLine>
+            {subLength === PLAN_LENGTHS.Annually
+              ? `$${sub.priceAnnually * quantity}`
+              : `$${sub.priceMonthly * quantity}`}
+            {subLength === PLAN_LENGTHS.Annually ? `/year` : `/month`}
+          </U.PriceLine>
+          {subLength === PLAN_LENGTHS.Annually && annualSavings > 0 && (
+            <React.Fragment>
+              <span style={{ marginRight: '5px' }}>-</span>
+              <U.PriceLine style={{ marginRight: '5px' }}>Save ${annualSavings}/year</U.PriceLine>
+            </React.Fragment>
+          )}
         </U.Text>
         <U.Action>
-
+          <U.QuantityControl
+            onClick={(e) => e.stopPropagation()}
+            role="group"
+            aria-label={`Quantity for ${sub.name}`}
+          >
+            <U.QuantityButton
+              type="button"
+              aria-label="Decrease quantity"
+              disabled={quantity <= 1 || checkoutLoading}
+              onClick={() => setPlanQuantity(sub.name, quantity - 1)}
+            >
+              −
+            </U.QuantityButton>
+            <U.QuantityValue aria-live="polite">{quantity}</U.QuantityValue>
+            <U.QuantityButton
+              type="button"
+              aria-label="Increase quantity"
+              disabled={quantity >= MAX_PLAN_QUANTITY || checkoutLoading}
+              onClick={() => setPlanQuantity(sub.name, quantity + 1)}
+            >
+              +
+            </U.QuantityButton>
+          </U.QuantityControl>
           <U.ActionPurchase
-            onClick={() => handleCheckout(sub.name)}
+            onClick={() => handleCheckout(sub.name, quantity)}
             disabled={checkoutLoading}
           >
             {checkoutLoading ? 'Loading...' : 'Purchase'}
           </U.ActionPurchase>
         </U.Action>
-
       </U.ListItem>
     )
   }
@@ -482,21 +580,21 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
   return (
     <React.Fragment>
 
-      <Header title={'Billing'}/>
+      <Header title={'Billing'} />
       <S.Content>
-        {isLoading ? <Spinner/> : (
+        {isLoading ? <Spinner /> : (
           <React.Fragment>
 
             <S.FirstLine>
               <S.DashboardRow gutter={[16, 16]}>
                 <S.WorkspacesCol xs={24} lg={12}>
-                <U.TitleText>Active Plans</U.TitleText>
+                  <U.TitleText>Active Plans</U.TitleText>
 
                   {/* <h2 style={{ fontSize: '24px' }}>Active Plans</h2> */}
 
                   <React.Fragment>
-                    <Media query="(max-width: 576px)" render={() => renderSubscriptionsTable(subscriptions, true)}/>
-                    <Media query="(min-width: 577px)" render={() => renderSubscriptionsTable(subscriptions, false)}/>
+                    <Media query="(max-width: 576px)" render={() => renderSubscriptionsTable(subscriptions, true)} />
+                    <Media query="(min-width: 577px)" render={() => renderSubscriptionsTable(subscriptions, false)} />
                   </React.Fragment>
                 </S.WorkspacesCol>
                 <S.WorkspacesCol xs={24} lg={12}>
@@ -505,37 +603,58 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
                   {/* <h2 style={{ fontSize: '24px' }}>Plans</h2> */}
                   <U.FormUsers>
                     <U.TitleSection>
-                      <U.Title>
-                        <U.TitleText>Plans</U.TitleText>
-                      </U.Title>
-                      <U.TitleDesc> Purchase a plan for <U.WkspName>{currentWkspaceName}</U.WkspName> workspace </U.TitleDesc>
+                      <U.TitleRow>
+                        <U.Title>
+                          <U.TitleText>Plans</U.TitleText>
+                        </U.Title>
+                        <U.BillingToggleDiv>
+
+                          <U.BillingToggleRow>
+
+                            <U.BillingSavePill className={planLength === PLAN_LENGTHS.Annually ? 'active' : ''}>Save 20%</U.BillingSavePill>
+
+                          </U.BillingToggleRow>
+                          <U.BillingToggleRow style={{}}>
+
+                            <U.BillingToggleLabel active={planLength === PLAN_LENGTHS.Monthly}>
+                              Monthly
+                            </U.BillingToggleLabel>
+                            <U.BillingToggleTrack
+                              type="button"
+                              on={planLength === PLAN_LENGTHS.Annually}
+                              onClick={() =>
+                                setPlanLength((prev) =>
+                                  prev === PLAN_LENGTHS.Annually
+                                    ? PLAN_LENGTHS.Monthly
+                                    : PLAN_LENGTHS.Annually
+                                )
+                              }
+                              aria-label="Toggle billing period"
+                            >
+
+                              <U.BillingToggleThumb on={planLength === PLAN_LENGTHS.Annually} />
+                            </U.BillingToggleTrack>
+                            <U.BillingToggleLabel active={planLength === PLAN_LENGTHS.Annually}>
+                              Annual
+                            </U.BillingToggleLabel>
+
+                          </U.BillingToggleRow>
+                        </U.BillingToggleDiv>
+                      </U.TitleRow>
+
+                      <U.TitleDesc> Purchase a plan for <U.WkspName>{authData?.name}</U.WkspName> account </U.TitleDesc>
                       <U.UsersListHeaders>
                         <U.HeaderName style={{ width: '23%' }}>Plan</U.HeaderName>
                         <U.HeaderName style={{ width: '48%' }}>Price</U.HeaderName>
-                        <U.PlanSwitch style={{ width: '29%' }}>
-                          <U.PlanLength isSelected={planLength === PLAN_LENGTHS.Annually}
-                          onClick={() => {
-                            if(planLength !== PLAN_LENGTHS.Annually) {
 
-                              setPlanLength(PLAN_LENGTHS.Annually)
-                            }
-                          }}>Annually</U.PlanLength>
-                          <U.PlanLength isSelected={planLength === PLAN_LENGTHS.Monthly}
-                            onClick={() => {
-                              if(planLength !== PLAN_LENGTHS.Monthly) {
 
-                                setPlanLength(PLAN_LENGTHS.Monthly)
-                              }
-                            }}
-                          >Monthly</U.PlanLength>
-                        </U.PlanSwitch>
                       </U.UsersListHeaders>
                     </U.TitleSection>
                     <U.MainSection>
                       <List
                         itemLayout="horizontal"
                         dataSource={subscriptionTypes}
-                        renderItem={(sub, subIndex) => renderSub(sub, subIndex, planLength, authData)}
+                        renderItem={(sub, subIndex) => renderSub(sub, subIndex, planLength)}
                       />
                     </U.MainSection>
                   </U.FormUsers>
@@ -548,8 +667,8 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
                   <U.TitleText>Cards</U.TitleText>
                   {/* <h2 style={{ fontSize: '24px' }}>Cards</h2> */}
                   <React.Fragment>
-                    <Media query="(max-width: 576px)" render={() => renderCardsTable(cards, true)}/>
-                    <Media query="(min-width: 577px)" render={() => renderCardsTable(cards, false)}/>
+                    <Media query="(max-width: 576px)" render={() => renderCardsTable(cards, true)} />
+                    <Media query="(min-width: 577px)" render={() => renderCardsTable(cards, false)} />
                   </React.Fragment>
                 </S.WorkspacesCol>
                 <S.WorkspacesCol xs={24} lg={12}>
@@ -583,11 +702,23 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
 
 
 const U = {
-  ListItem: styled.li`
+  TitleRow: styled.div`
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    align-items: center;
+  `,
+  ListItem: styled.li`
+    display: flex;
+    // cursor: pointer;
+    flex-direction: row;
+    justify-content: space-between;
     padding: 15px;
+    &:hover {
+      p {
+        text-decoration: underline;
+      }
+    }
 `,
   ChannelIcon: styled(Icon)`
     width: 25px;
@@ -637,28 +768,94 @@ const U = {
     margin: 0px;
     
   `,
-  Text: styled.p`
+  Text: styled.div`
     width: 60%;
-    text-align: left;
     margin: 0px;
+    min-height: 50px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 20px;
     line-height: 50px;
+  `,
+  PriceLine: styled.span`
+    font-size: 16px;
+    line-height: 50px;
+    color: #111111;
   `,
   Action: styled.span`
     width: 17%;
-    text-align: left;
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
     line-height: 50px;
-
-    
   `,
-  ActionPurchase: styled.p`
+  QuantityControl: styled.div`
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  `,
+  QuantityButton: styled.button`
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #dae3f2;
+    border-radius: 6px;
+    background: #fff;
+    color: #111111;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:disabled {
+      color: #c4cacd;
+      cursor: not-allowed;
+      background: #f5f7fa;
+    }
+
+    &:not(:disabled):hover {
+      border-color: ${Colors.primaryColor};
+      color: ${Colors.primaryColor};
+    }
+  `,
+  QuantityValue: styled.span`
+    min-width: 24px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #111111;
+    line-height: 1;
+  `,
+  ActionPurchase: styled.button`
     color: #111111;
     margin: 0px;
     line-height: 50px;
+    white-space: nowrap;
+    border: none;
+    background: none;
+    padding: 0;
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
     
-    &&:hover {
+    &&:hover:not(:disabled) {
       text-decoration: underline;
       text-underline: #13c38a;
       cursor: pointer;
+    }
+
+    &:disabled {
+      color: #c4cacd;
+      cursor: not-allowed;
+      text-decoration: none;
     }
   `,
   FormUsers: styled.div`
@@ -696,7 +893,7 @@ const U = {
     margin-bottom: 20px;
   `,
   TitleDesc: styled.p`
-    font-size: 12px;
+    font-size: 14px;
     margin: 0px;
   `,
   AddUserIcon: styled(Icon)`
@@ -739,29 +936,67 @@ const U = {
     margin: 0px;
     
   `,
-  PlanSwitch: styled.span`
+  BillingToggleDiv: styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  `,
+  BillingToggleRow: styled.div`
     display: inline-flex;
     flex-direction: row;
-    height: 50px;
-    line-height: 50px;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
     font-size: 14px;
-
+    line-height: 1;
   `,
-  PlanLength: styled.p`
-    
-    color: ${(props) => {
-      return props.isSelected ? '#111111' : '#c4cacd'
-    }};
-    
-    text-decoration: ${(props) => {
-      return props.isSelected ? 'underline' : 'none'
-    }};
-    
-    &&:hover{
-      text-decoration: underline;
-      cursor: pointer;
+  BillingToggleLabel: styled.span`
+    color: ${({ active }) => (active ? '#111111' : '#c4cacd')};
+    font-weight: ${({ active }) => (active ? 600 : 400)};
+    transition: color 0.2s, font-weight 0.2s;
+    user-select: none;
+  `,
+  BillingToggleTrack: styled.button`
+    width: 44px;
+    height: 24px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    background: ${({ on }) => (on ? Colors.primaryColor : '#d1d5db')};
+    position: relative;
+    transition: background 0.25s;
+    flex-shrink: 0;
+    padding: 0;
+    line-height: 1;
+  `,
+  BillingToggleThumb: styled.span`
+    position: absolute;
+    top: 3px;
+    left: ${({ on }) => (on ? '23px' : '3px')};
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left 0.22s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  `,
+  BillingSavePill: styled.span`
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: ${Colors.primaryColor};
+    background:rgba(16, 112, 255, 0.07);
+    border: 1px solid #1070ff;
+    border-radius: 20px;
+    padding: 2px 8px;
+    &.active {
+      visibility: visible;
     }
+    visibility: hidden;
   `,
   MainSection: styled.section`
     background: #fafbfe;

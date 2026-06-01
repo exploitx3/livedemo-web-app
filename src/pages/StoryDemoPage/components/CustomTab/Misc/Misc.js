@@ -1,4 +1,6 @@
 import React, {useState} from 'react'
+import { MdInfoOutline } from 'react-icons/md'
+import TippyPremium from '../../../../../components/TippyPremium/TippyPremium'
 import Colors from '../../../../../constants/mainColors'
 import styled from 'styled-components'
 //import { Button, Icon, Input, Switch, Upload } from 'antd'
@@ -11,13 +13,15 @@ import ENV from '../../../../../config'
 import axios from 'axios'
 import {HexColorInput, HexColorPicker} from 'react-colorful'
 
-
 /*
   tabsWidth is used to manually set the width of the element
   and the top property is set manually also of MainView
  */
 const Misc = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
   const marginTop = 116
+
+  const [featureFlags, _] = useState(authData.featureFlags)
+
 
   let [isSaving, setIsSaving] = useState(false)
   let [isOpen, setIsOpen] = useState(false)
@@ -117,10 +121,26 @@ const Misc = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
                 <TH.Text>Enable/disable step navigation tabs placed at the bottom of the screen</TH.Text>
 
               </TH.TextAndButton>
-              <TH.TextTitle>Watermark</TH.TextTitle>
+              <TH.SectionTitleRow>
+                {!featureFlags.allowRemoveWatermark ? (
+                  <TippyPremium
+                    title="Upgrade to remove watermark"
+                    description="Upgrade your plan to enable or disable the watermark on your demos."
+                  >
+                    <TH.SectionTitleInner>
+                      <TH.TextTitle>Watermark</TH.TextTitle>
+                      <TH.InfoIconWrapper>
+                        <MdInfoOutline size={18} />
+                      </TH.InfoIconWrapper>
+                    </TH.SectionTitleInner>
+                  </TippyPremium>
+                ) : (
+                  <TH.TextTitle>Watermark</TH.TextTitle>
+                )}
+              </TH.SectionTitleRow>
 
               <TH.TextAndButton>
-                <TH.CheckBox disabled={true} checked={isLiveDemoWatermarkEnabled} onChange={(checked, event) => {
+                <TH.CheckBox disabled={!featureFlags.allowRemoveWatermark} checked={isLiveDemoWatermarkEnabled} onChange={(checked, event) => {
 
                   setIsLiveDemoWatermarkEnabled(checked)
                 }}/>
@@ -206,6 +226,26 @@ const TH = {
   TextTitle: styled.label`
     margin: 0px;
     font-size: 1.2em;
+  `,
+  SectionTitleRow: styled.div`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  `,
+  SectionTitleInner: styled.span`
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: default;
+  `,
+  InfoIconWrapper: styled.span`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color:rgb(18, 22, 28);
+    transition: color 0.15s ease;
+
   `,
   Text: styled.p`
     font-size: 0.85em;

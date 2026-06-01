@@ -20,6 +20,7 @@ const CustomTab = ({ storyDemo, authData, tabsWidth, changeIframeStep, reloadSto
   const marginTop = 116
   const viewName = 'insights'
 
+  const featureFlags = authData.featureFlags
   // let internalScriptStates = {}
   // for (let i = 0; i < storyDemo.scripts.length; i++) {
   //   internalScriptStates['script_' + storyDemo.scripts[i]._id] = useState(storyDemo.scripts[i].text)
@@ -75,12 +76,15 @@ const CustomTab = ({ storyDemo, authData, tabsWidth, changeIframeStep, reloadSto
           authData={authData}
           reloadStoryDemo={reloadStoryDemo}
         />
-        <Variables
-          storyDemo={storyDemo}
-          workspaceId={storyDemo.workspaceId}
-          authData={authData}
-          reloadStoryDemo={reloadStoryDemo}
-        />
+        <S.VariablesWrapper>
+          <Variables
+            disabled={featureFlags.allowPersonalization === false}
+            storyDemo={storyDemo}
+            workspaceId={storyDemo.workspaceId}
+            authData={authData}
+            reloadStoryDemo={reloadStoryDemo}
+          />
+        </S.VariablesWrapper>
       </S.MainView>
 
     </S.Wrapper>
@@ -126,6 +130,14 @@ const S = {
       background-color: ${Colors.primaryColor};
     }
 
+  `,
+  VariablesWrapper: styled.div`
+    &.locked {
+      pointer-events: none;
+      user-select: none;
+      filter: blur(2px);
+      opacity: 0.6;
+    }
   `,
   ScriptWrapper: styled.div`
 

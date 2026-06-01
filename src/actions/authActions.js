@@ -1,6 +1,6 @@
 import * as types from '../constants/actionTypes'
 import axios from '../utils/axiosInstance'
-import {chromeAppAuthenticate, chromeAppUnauthenticate} from '../utils/helperFunctions'
+import { chromeAppAuthenticate, chromeAppUnauthenticate } from '../utils/helperFunctions'
 // import 'chrome-browser-object-polyfill'
 
 function isIOS() {
@@ -21,16 +21,16 @@ let chromeRuntimeExists = false
 
 try {
   chromeRuntimeExists = isInIOS ? false : (chrome && chrome.runtime)
-} catch(err) {
+} catch (err) {
   console.log(err)
 }
 
 export function authWithEmailAndPassword(email, password) {
   return function (dispatch) {
     return axios.post('/users/password-authenticate', {
-        email: email,
-        password: password
-      })
+      email: email,
+      password: password
+    })
       .then(function (response) {
 
 
@@ -49,10 +49,10 @@ export function authWithEmailAndPassword(email, password) {
 export function registerWithEmailAndPassword(email, password, fullName) {
   return function (dispatch) {
     return axios.post('/users', {
-        email: email,
-        password: password,
-        fullName: fullName
-      })
+      email: email,
+      password: password,
+      fullName: fullName
+    })
       .then(function (response) {
 
 
@@ -72,8 +72,8 @@ export function authWithToken(token) {
   return function (dispatch) {
 
     return axios.post('/users/token-authenticate', {
-        token: token
-      })
+      token: token
+    })
       .then(function (response) {
 
         if (response.data.email) {
@@ -132,8 +132,8 @@ export function refreshToken(token) {
   return function (dispatch) {
 
     return axios.post('/users/refreshToken', {
-        token: token
-      })
+      token: token
+    })
       .then(function (response) {
 
         if (response.data.email) {
@@ -144,12 +144,12 @@ export function refreshToken(token) {
 
           }
         }
+debugger
 
-
-          dispatch({
-            type: types.UPDATE_AUTH_DATA,
-            authData: response.data
-          })
+        dispatch({
+          type: types.UPDATE_AUTH_DATA,
+          authData: response.data
+        })
 
 
         return response.data
@@ -177,18 +177,18 @@ export function demoAuthenticate(token) {
 
 
     return axios.post('/users/demo-authenticate', {
-        token: token
-      })
+      token: token
+    })
       .then(function (response) {
         sessionStorage.setItem('useDemoClient', 'true');
 
-          dispatch({
-            type: types.UPDATE_AUTH_DATA,
-            authData: {
-              ...response.data,
-              isDemo: true
-            }
-          })
+        dispatch({
+          type: types.UPDATE_AUTH_DATA,
+          authData: {
+            ...response.data,
+            isDemo: true
+          }
+        })
 
 
         return response.data
@@ -217,10 +217,10 @@ export function logout(token) {
 
     sessionStorage.removeItem('useDemoClient');
     return axios.post('/users/logout', {}, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
       .then(function (response) {
 
 

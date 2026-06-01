@@ -1,4 +1,6 @@
 import React, {useEffect, useState} from 'react'
+import Tippy from '@tippyjs/react'
+import 'tippy.js/dist/tippy.css'
 import {CSSTransition, TransitionGroup,} from 'react-transition-group'
 
 import Header from '../../components/Header/Header'
@@ -86,6 +88,8 @@ const AnalyticsPage = function ({currentSelectedWorkspace, authData}) {
   const navigate = useNavigate()
   const location = useLocation()
   const params = useParams()
+
+  const [advanceInsights, setAdvanceInsights] = useState(authData.featureFlags.advanceInsights)
 
   let [activeTab, setActiveTab] = useState(TAB_KEYS.sessions)
 
@@ -398,7 +402,25 @@ debugger
 
       <Header title={'Analytics'}/>
 
+      
       <S.Content>
+      {!advanceInsights && (
+        <S.Banner>
+          <S.BannerInner>
+            <S.BannerLeft>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" style={{ width: 18, height: 18, color: '#3b82f6', flexShrink: 0 }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+              </svg>
+              <S.BannerText>
+                You're viewing <strong>limited analytics</strong> data. Upgrade to unlock <strong>Advanced Demo Insights</strong> and <strong>Session Recordings</strong>.
+              </S.BannerText>
+            </S.BannerLeft>
+            <S.UpgradeButton onClick={() => navigate('/billing')}>
+              Upgrade
+            </S.UpgradeButton>
+          </S.BannerInner>
+        </S.Banner>
+      )}
 
         <div id={'dashboard-container'} style={{background: 'white'}}>
           <S.WorkspacesCol xs={24} lg={24}>
@@ -431,8 +453,15 @@ debugger
                     key={TAB_KEYS.sessions}
                   ></TabPane>
                   <TabPane
-                    tab={'🔥 Leads'}
+                    tab={
+                      !advanceInsights ? (
+                        <Tippy content="Upgrade to unlock" placement="top" arrow={true}>
+                          <span style={{ cursor: 'not-allowed' }}>🔥 Leads</span>
+                        </Tippy>
+                      ) : '🔥 Leads'
+                    }
                     key={TAB_KEYS.leads}
+                    disabled={!advanceInsights}
                   ></TabPane>
                 </S.Tabs>
               </S.TabsContainer>
@@ -504,6 +533,7 @@ debugger
                           </ResponsiveContainer>
                         </S.ChartWrapper>
                         <DemosView
+                          advanceInsights={advanceInsights}
                           liveDemoDocsWithMetrics={liveDemoDocsWithMetrics}
                           sessionsData={sessionsData}
                           tableSessions={tableSessions}
@@ -562,6 +592,46 @@ debugger
 }
 
 const S = {
+  Banner: styled.div`
+    background: #eff6ff;
+    border-bottom: 1px solid #bfdbfe;
+    padding: 10px 32px;
+    width: 100%;
+    box-sizing: border-box;
+  `,
+  BannerInner: styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5%;
+  `,
+  BannerLeft: styled.div`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  `,
+  BannerText: styled.span`
+    font-size: 0.8125rem;
+    color: #1e40af;
+    line-height: 1.4;
+  `,
+  UpgradeButton: styled.button`
+    background: ${mainColors.primaryColor};
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-size: 0.9125rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: opacity 0.15s ease;
+
+    &:hover { opacity: 0.88; }
+    &:active { opacity: 0.75; }
+  `,
   MdIcon: styled.i`
     display: inline-flex;
     align-items: center;
@@ -719,7 +789,7 @@ const S = {
   Content: styled(Content)`
     && {
       background: white;
-      padding: 16px;
+      // padding: 16px;
       overflow: scroll;
       overflow-x: hidden;
       border-top-left-radius: 18px;
@@ -774,7 +844,7 @@ const S = {
     && {
       display: flex;
       flex-direction: column;
-      padding: 25px;
+      padding: 35px;
     }
   `,
   WorkspacesColRight: styled(Col)`
