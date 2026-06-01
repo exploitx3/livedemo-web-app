@@ -293,23 +293,25 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
       label: 'Links',
       children: (
         <React.Fragment>
+           <TippyPremium
+              title="Unlock Custom Links"
+              description="Upgrade your plan to create custom links for your LiveDemos."
+              placement="left"
+              arrow={true}
+              disabled={featureFlags.allowPersonalization === true }
+            >
           <SD.Row style={{
             padding: 16,
             display: "flex",
             justifyContent: "space-between",
             borderBottom: `1px solid #bebebe`
           }}>
+           
             <SD.LeftSide>
               <SD.TitleText>Custom links</SD.TitleText>
               <SD.DescText>Custom links allow you to personalize your LiveDemo with variables</SD.DescText>
             </SD.LeftSide>
-            <TippyPremium
-              title="Unlock Custom Links"
-              description="Upgrade your plan to create custom links for your LiveDemos."
-              placement="top"
-              arrow={true}
-              disabled={featureFlags.allowPersonalization === true }
-            >
+            
               <SD.RightSide>
                 <IconTextButton
                   loading={false}
@@ -346,8 +348,9 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
                   }}
                 />
               </SD.RightSide>
-            </TippyPremium>
           </SD.Row>
+          </TippyPremium>
+
           <SD.Links__Col>
             {links.length === 0 ? (
               <SD.DescText>No custom links yet</SD.DescText>

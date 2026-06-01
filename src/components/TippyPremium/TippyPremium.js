@@ -5,7 +5,7 @@ import styled from 'styled-components'
 import 'tippy.js/dist/tippy.css'
 import mainColors from '../../constants/mainColors'
 
-const TippyPremium = ({ children, reference, title, description, learnMoreUrl, placement = 'top', arrow = false, disabled }) => {
+const TippyPremium = ({ children, title, description, learnMoreUrl, placement = 'top', arrow = false, disabled }) => {
   const navigate = useNavigate()
 
   const content = (
@@ -29,26 +29,6 @@ const TippyPremium = ({ children, reference, title, description, learnMoreUrl, p
     return children ?? null
   }
 
-  // When a reference element/ref is provided, attach the tooltip to it directly
-  // and render children separately (or nothing if no children given)
-  if (reference) {
-    return (
-      <>
-        <StyledTippy
-          className="tippy-premium"
-          content={content}
-          arrow={arrow}
-          interactive={true}
-          trigger="mouseenter focus"
-          maxWidth={232}
-          placement={placement}
-          reference={reference}
-        />
-        {children ?? null}
-      </>
-    )
-  }
-
   return (
     <StyledTippy
       className="tippy-premium"
@@ -59,9 +39,7 @@ const TippyPremium = ({ children, reference, title, description, learnMoreUrl, p
       maxWidth={232}
       placement={placement}
     >
-      {/* span ensures Tippy always has a real DOM node to attach to,
-          even when children is a component that doesn't forward refs */}
-      <span style={{ display: 'contents' }}>{children}</span>
+      <span>{children}</span>
     </StyledTippy>
   )
 }

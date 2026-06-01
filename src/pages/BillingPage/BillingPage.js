@@ -53,6 +53,10 @@ const PRODUCT_IDS = {
     [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZluZhDivdyOl' : 'prod_USQIjwxyXqkb4a',
     [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZnkXaY05BRmV' : 'prod_USQKMjZ7qq5Zrq',
   },
+  'Trial - Pro': {
+    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZkkwn0B77gSJ' : 'prod_USQIjwxyXqkb4a',
+    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZmCUin8ZKi0o' : 'prod_USQKMjZ7qq5Zrq',
+  },
 }
 
 const subscriptionTypes = [
@@ -72,7 +76,13 @@ const subscriptionTypes = [
     priceMonthly: 49,
     priceAnnually: 468,
   },
-
+  {
+    name: 'Trial - Pro',
+    price: `Free for 7 days, then $34/month`,
+    priceMonthly: 34,
+    priceAnnually: 324,
+    freeTrial: true,
+  },
 ]
 
 function safeCapitalize(value) {
@@ -144,6 +154,9 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
     const productId = PRODUCT_IDS[subName]?.[planLength]
     if (!productId) return
 
+    const sub = subscriptionTypes.find((s) => s.name === subName)
+    const freeTrial = sub?.freeTrial === true
+
     setCheckoutLoading(true)
     try {
       const response = await axios.post(
@@ -152,6 +165,7 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           productId,
           workspaceId: currentSelectedWorkspace._id,
           quantity,
+          ...(freeTrial && { freeTrial: true }),
         },
         { headers: { Authorization: `Bearer ${authData.token}` } }
       )
@@ -295,10 +309,12 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           title: 'Active',
           dataIndex: 'active',
           key: 'active',
-          render: (active) => {
-            return active ? <Icon type={'check'} /> : null
+          render: (active, record) => {
+            if (!active) return <U.StatusText $enabled={false}>Disabled</U.StatusText>
+            return <U.StatusText $enabled={record.autoPay}>
+              {record.autoPay ? 'Enabled' : 'Disabled'}
+            </U.StatusText>
           }
-
         }
       ]
     } else {
@@ -323,10 +339,12 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           title: 'Active',
           dataIndex: 'active',
           key: 'active',
-          render: (active) => {
-            return active ? <Icon type={'check'} /> : null
+          render: (active, record) => {
+            if (!active) return <U.StatusText $enabled={false}>Disabled</U.StatusText>
+            return <U.StatusText $enabled={record.autoPay}>
+              {record.autoPay ? 'Enabled' : 'Disabled'}
+            </U.StatusText>
           }
-
         },
         // {
         //   title: 'Expired',
@@ -345,31 +363,41 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           }
         },
         {
-          title: 'AutoPay',
+          title: 'Enable/Disable',
           dataIndex: 'autoPay',
           key: 'autoPay',
           render: (autoPay, record) => {
 
 
-            return <Checkbox onChange={(event) => {
-              let newAutoPayValue = event.target.checked
+            if (!record.active) return null
+
+            const toggleAutoPay = (newValue) => {
               setSubLoading(true)
-
-              return axios.patch(`/subscriptions/${record._id}`, {
-                autoPay: newAutoPayValue
-              },
-                {
-                  headers: { 'Authorization': `Bearer ${authData.token}` }
-                })
+              axios.patch(`/subscriptions/${record._id}`, { autoPay: newValue }, {
+                headers: { Authorization: `Bearer ${authData.token}` }
+              })
                 .then(() => {
+                  setSubscriptions(prev =>
+                    prev.map(s => s._id === record._id ? { ...s, autoPay: newValue } : s)
+                  )
                   setSubLoading(false)
                 })
-                .catch(err => {
-                  console.log(err)
-                  setSubLoading(false)
-                })
+                .catch(err => { console.log(err); setSubLoading(false) })
+            }
 
-            }} defaultChecked={autoPay && record.active} disabled={!record.active} />
+            if (autoPay) {
+              return (
+                <U.AutoPayCancelBtn disabled={subLoading} onClick={() => toggleAutoPay(false)}>
+                  Cancel
+                </U.AutoPayCancelBtn>
+              )
+            }
+
+            return (
+              <U.AutoPayActivateBtn disabled={subLoading} onClick={() => toggleAutoPay(true)}>
+                Activate
+              </U.AutoPayActivateBtn>
+            )
           }
         },
       ]
@@ -542,34 +570,36 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           )}
         </U.Text>
         <U.Action>
-          <U.QuantityControl
-            onClick={(e) => e.stopPropagation()}
-            role="group"
-            aria-label={`Quantity for ${sub.name}`}
-          >
-            <U.QuantityButton
-              type="button"
-              aria-label="Decrease quantity"
-              disabled={quantity <= 1 || checkoutLoading}
-              onClick={() => setPlanQuantity(sub.name, quantity - 1)}
+          {!sub.freeTrial && (
+            <U.QuantityControl
+              onClick={(e) => e.stopPropagation()}
+              role="group"
+              aria-label={`Quantity for ${sub.name}`}
             >
-              −
-            </U.QuantityButton>
-            <U.QuantityValue aria-live="polite">{quantity}</U.QuantityValue>
-            <U.QuantityButton
-              type="button"
-              aria-label="Increase quantity"
-              disabled={quantity >= MAX_PLAN_QUANTITY || checkoutLoading}
-              onClick={() => setPlanQuantity(sub.name, quantity + 1)}
-            >
-              +
-            </U.QuantityButton>
-          </U.QuantityControl>
+              <U.QuantityButton
+                type="button"
+                aria-label="Decrease quantity"
+                disabled={quantity <= 1 || checkoutLoading}
+                onClick={() => setPlanQuantity(sub.name, quantity - 1)}
+              >
+                −
+              </U.QuantityButton>
+              <U.QuantityValue aria-live="polite">{quantity}</U.QuantityValue>
+              <U.QuantityButton
+                type="button"
+                aria-label="Increase quantity"
+                disabled={quantity >= MAX_PLAN_QUANTITY || checkoutLoading}
+                onClick={() => setPlanQuantity(sub.name, quantity + 1)}
+              >
+                +
+              </U.QuantityButton>
+            </U.QuantityControl>
+          )}
           <U.ActionPurchase
-            onClick={() => handleCheckout(sub.name, quantity)}
+            onClick={() => handleCheckout(sub.name, sub.freeTrial ? 1 : quantity)}
             disabled={checkoutLoading}
           >
-            {checkoutLoading ? 'Loading...' : 'Purchase'}
+            {checkoutLoading ? 'Loading...' : sub.freeTrial ? 'Start Free Trial' : 'Purchase'}
           </U.ActionPurchase>
         </U.Action>
       </U.ListItem>
@@ -589,13 +619,17 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
               <S.DashboardRow gutter={[16, 16]}>
                 <S.WorkspacesCol xs={24} lg={12}>
                   <U.TitleText>Active Plans</U.TitleText>
-
+                  
+             
                   {/* <h2 style={{ fontSize: '24px' }}>Active Plans</h2> */}
 
                   <React.Fragment>
                     <Media query="(max-width: 576px)" render={() => renderSubscriptionsTable(subscriptions, true)} />
                     <Media query="(min-width: 577px)" render={() => renderSubscriptionsTable(subscriptions, false)} />
                   </React.Fragment>
+                  <U.InfoText style={{ marginBottom: 62, display: 'block' }}>
+                    - If your plan is cancelled before the next renewal date, you will not be charged.
+                  </U.InfoText>
                 </S.WorkspacesCol>
                 <S.WorkspacesCol xs={24} lg={12}>
                   <U.TitleText>Plans</U.TitleText>
@@ -702,6 +736,41 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
 
 
 const U = {
+  StatusText: styled.span`
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: ${p => p.$enabled ? '#16a34a' : '#6b7280'};
+  `,
+  AutoPayCancelBtn: styled.button`
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+
+    &:hover { opacity: 0.85; }
+    &:active { opacity: 0.7; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  `,
+  AutoPayActivateBtn: styled.button`
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+
+    &:hover { opacity: 0.85; }
+    &:active { opacity: 0.7; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  `,
   TitleRow: styled.div`
     display: flex;
     flex-direction: row;
@@ -891,6 +960,12 @@ const U = {
     margin: 0px 15px 0px 0px;
     text-align: center;
     margin-bottom: 20px;
+  `,
+  InfoText: styled.p`
+    margin: 20px 0px;
+    font-size: 14px;
+    // color: #6b7280;
+    line-height: 2.4;
   `,
   TitleDesc: styled.p`
     font-size: 14px;
