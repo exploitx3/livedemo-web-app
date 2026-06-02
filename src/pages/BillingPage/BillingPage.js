@@ -46,16 +46,16 @@ const IS_DEV = config.ENV === 'dev'
 
 const PRODUCT_IDS = {
   Pro: {
-    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZkkwn0B77gSJ' : 'prod_USQIjwxyXqkb4a',
-    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZmCUin8ZKi0o' : 'prod_USQKMjZ7qq5Zrq',
+    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZkkwn0B77gSJ' : 'prod_UXbDm4HqbawhNo',
+    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZmCUin8ZKi0o' : 'prod_UXbDRK1gGrfWEh',
   },
   Growth: {
-    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZluZhDivdyOl' : 'prod_USQIjwxyXqkb4a',
-    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZnkXaY05BRmV' : 'prod_USQKMjZ7qq5Zrq',
+    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZluZhDivdyOl' : 'prod_UXbECZgFqrpCzI',
+    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZnkXaY05BRmV' : 'prod_UXbEreuawwjJ1v',
   },
   'Trial - Pro': {
-    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZkkwn0B77gSJ' : 'prod_USQIjwxyXqkb4a',
-    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZmCUin8ZKi0o' : 'prod_USQKMjZ7qq5Zrq',
+    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZkkwn0B77gSJ' : 'prod_UXbDm4HqbawhNo',
+    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZmCUin8ZKi0o' : 'prod_UXbDRK1gGrfWEh',
   },
 }
 
@@ -96,12 +96,12 @@ function getApiErrorMessage(errorData, fallback = 'Something went wrong') {
 
   const payload = typeof data === 'string'
     ? (() => {
-        try {
-          return JSON.parse(data)
-        } catch {
-          return { message: data }
-        }
-      })()
+      try {
+        return JSON.parse(data)
+      } catch {
+        return { message: data }
+      }
+    })()
     : data
 
   return payload.errorMessage || payload.message || fallback
@@ -129,6 +129,8 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
   const location = useLocation()
   const params = useParams()
   const [changePasswordEmailSent, setChangePasswordEmailSent] = useState(false)
+
+  const featureFlags = authData.featureFlags || {}
 
   // const [charges, setCharges] = useState([])
   const [subscriptions, setSubscriptions] = useState([])
@@ -520,7 +522,7 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
                     .catch((err) => {
                       toast.error(getApiErrorMessage(err, 'Failed to delete card'), {
                         position: 'top-right',
-                        })
+                      })
                       return Promise.reject(err)
                     })
                 },
@@ -545,7 +547,45 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
     />
   }
 
-  function renderSub(sub, subIndex, subLength) {
+  function renderSub(sub, subIndex, subLength, featureFlags) {
+
+    if (sub.freeTrial && featureFlags.freeActivate) {
+
+      const quantity = 1
+      const annualSavings =
+        (sub.priceMonthly * 12 - sub.priceAnnually) * quantity
+
+      return (
+        <U.ListItem key={subIndex}>
+          <U.Name>
+            <U.NameText>{sub.name}</U.NameText>
+          </U.Name>
+          <U.Text>
+            <U.PriceLine>
+              <s>{`$${sub.priceMonthly * quantity}`}</s>
+              <span>{`  - free for 7 days`}</span>
+            </U.PriceLine>
+            {subLength === PLAN_LENGTHS.Annually && annualSavings > 0 && (
+              <React.Fragment>
+                <span style={{ marginRight: '5px' }}>-</span>
+                <U.PriceLine style={{ marginRight: '5px' }}>Save ${annualSavings}/year</U.PriceLine>
+              </React.Fragment>
+            )}
+          </U.Text>
+          <U.Action>
+            <U.ActionPurchase
+              onClick={() => handleCheckout(sub.name, 1)}
+              disabled={checkoutLoading}
+            >
+              {checkoutLoading ? 'Loading...' : 'Start Free Trial'}
+            </U.ActionPurchase>
+          </U.Action>
+        </U.ListItem>
+      )
+    } else if (sub.freeTrial && !featureFlags.freeActivate) {
+      return null
+    }
+
     const quantity = planQuantities[sub.name] ?? 1
     const annualSavings =
       (sub.priceMonthly * 12 - sub.priceAnnually) * quantity
@@ -570,36 +610,34 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           )}
         </U.Text>
         <U.Action>
-          {!sub.freeTrial && (
-            <U.QuantityControl
-              onClick={(e) => e.stopPropagation()}
-              role="group"
-              aria-label={`Quantity for ${sub.name}`}
+          <U.QuantityControl
+            onClick={(e) => e.stopPropagation()}
+            role="group"
+            aria-label={`Quantity for ${sub.name}`}
+          >
+            <U.QuantityButton
+              type="button"
+              aria-label="Decrease quantity"
+              disabled={quantity <= 1 || checkoutLoading}
+              onClick={() => setPlanQuantity(sub.name, quantity - 1)}
             >
-              <U.QuantityButton
-                type="button"
-                aria-label="Decrease quantity"
-                disabled={quantity <= 1 || checkoutLoading}
-                onClick={() => setPlanQuantity(sub.name, quantity - 1)}
-              >
-                −
-              </U.QuantityButton>
-              <U.QuantityValue aria-live="polite">{quantity}</U.QuantityValue>
-              <U.QuantityButton
-                type="button"
-                aria-label="Increase quantity"
-                disabled={quantity >= MAX_PLAN_QUANTITY || checkoutLoading}
-                onClick={() => setPlanQuantity(sub.name, quantity + 1)}
-              >
-                +
-              </U.QuantityButton>
-            </U.QuantityControl>
-          )}
+              −
+            </U.QuantityButton>
+            <U.QuantityValue aria-live="polite">{quantity}</U.QuantityValue>
+            <U.QuantityButton
+              type="button"
+              aria-label="Increase quantity"
+              disabled={quantity >= MAX_PLAN_QUANTITY || checkoutLoading}
+              onClick={() => setPlanQuantity(sub.name, quantity + 1)}
+            >
+              +
+            </U.QuantityButton>
+          </U.QuantityControl>
           <U.ActionPurchase
-            onClick={() => handleCheckout(sub.name, sub.freeTrial ? 1 : quantity)}
+            onClick={() => handleCheckout(sub.name, quantity)}
             disabled={checkoutLoading}
           >
-            {checkoutLoading ? 'Loading...' : sub.freeTrial ? 'Start Free Trial' : 'Purchase'}
+            {checkoutLoading ? 'Loading...' : 'Purchase'}
           </U.ActionPurchase>
         </U.Action>
       </U.ListItem>
@@ -619,8 +657,8 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
               <S.DashboardRow gutter={[16, 16]}>
                 <S.WorkspacesCol xs={24} lg={12}>
                   <U.TitleText>Active Plans</U.TitleText>
-                  
-             
+
+
                   {/* <h2 style={{ fontSize: '24px' }}>Active Plans</h2> */}
 
                   <React.Fragment>
@@ -688,7 +726,7 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
                       <List
                         itemLayout="horizontal"
                         dataSource={subscriptionTypes}
-                        renderItem={(sub, subIndex) => renderSub(sub, subIndex, planLength)}
+                        renderItem={(sub, subIndex) => renderSub(sub, subIndex, planLength, featureFlags)}
                       />
                     </U.MainSection>
                   </U.FormUsers>
