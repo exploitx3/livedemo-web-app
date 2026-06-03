@@ -9,7 +9,7 @@ import Switch from 'antd/es/switch'
 import Upload from 'antd/es/upload'
 import ENV from '../../../../../config'
 import axios from 'axios'
-import {HexColorInput, HexColorPicker, RgbaColorPicker} from 'react-colorful'
+import {HexColorInput, HexColorPicker} from 'react-colorful'
 import message from "antd/es/message";
 import StaticUploadIcon from "../../../../../static/images/uploadIcon.svg";
 
@@ -17,32 +17,6 @@ import StaticUploadIcon from "../../../../../static/images/uploadIcon.svg";
   tabsWidth is used to manually set the width of the element
   and the top property is set manually also of MainView
  */
-
-function rgbaToObj(rgbaString) {
-  const colors = [
-    'r',
-    'g',
-    'b',
-    'a'
-  ]
-  let colorArr = rgbaString.slice(
-    rgbaString.indexOf("(") + 1,
-    rgbaString.indexOf(")")
-  ).split(",").map(c => parseFloat(c.trim()));
-
-  return colorArr.reduce((accum, color, index) => {
-
-    accum[colors[index]] = color
-
-    return accum
-  }, {})
-}
-
-
-function objToRgb(rgbObj) {
-
-  return `rgba(${rgbObj.r}, ${rgbObj.g}, ${rgbObj.b}, ${rgbObj.a})`
-}
 
 
 const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
@@ -64,7 +38,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
   let [watermarkConfigUrl, setWatermarkConfigUrl] = useState(
     (storyDemo.custom && storyDemo.custom.theme && storyDemo.custom.theme.watermarkConfig.url) || '')
 
-  const [overlayBackgroundColor, setOverlayBackgroundColor] = useState((storyDemo.custom.theme && storyDemo.custom.theme.overlayBackgroundColor && rgbaToObj(storyDemo.custom.theme.overlayBackgroundColor)) || rgbaToObj('rgba(0,0,0,0.5)'))
 
 
 
@@ -95,7 +68,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
                   textColor,
                   buttonBackgroundColor,
                   buttonTextColor,
-                  overlayBackgroundColor,
                   watermarkConfigIsActive,
                   watermarkConfigText,
                   watermarkConfigUrl
@@ -109,7 +81,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
       textColor: textColor,
       buttonBackgroundColor: buttonBackgroundColor,
       buttonTextColor: buttonTextColor,
-      overlayBackgroundColor: overlayBackgroundColor,
       watermarkConfig: {
         isActive: watermarkConfigIsActive,
         text: watermarkConfigText,
@@ -153,7 +124,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
               textColor,
               buttonBackgroundColor,
               buttonTextColor,
-              objToRgb(overlayBackgroundColor),
               watermarkConfigIsActive,
               watermarkConfigText,
               watermarkConfigUrl
@@ -179,13 +149,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
               <TH.ColorPicker color={buttonBackgroundColor} onChange={setButtonBackgroundColor}/>
               <TH.ColorInput color={buttonBackgroundColor} onChange={setButtonBackgroundColor}/>
             </TH.TextWrapper>
-            <TH.TextWrapper>
-              <TH.TextTitle>Overlay Background Color:</TH.TextTitle>
-              <TH.ColorPickerRGB color={overlayBackgroundColor} onChange={(colorObj) => {
-
-                setOverlayBackgroundColor(colorObj)
-              }}/>
-            </TH.TextWrapper>
             <TH.TextWrapper style={{alignItems: 'flex-start'}}>
               <TH.TextAndButton>
 
@@ -204,7 +167,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
                     textColor,
                     buttonBackgroundColor,
                     buttonTextColor,
-                    objToRgb(overlayBackgroundColor),
                     checked,
                     watermarkConfigText,
                     watermarkConfigUrl
@@ -249,7 +211,6 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
                              textColor,
                              buttonBackgroundColor,
                              buttonTextColor,
-                             objToRgb(overlayBackgroundColor),
                              watermarkConfigIsActive,
                              watermarkConfigText,
                              watermarkConfigUrl
@@ -282,13 +243,6 @@ const TH = {
   `,
 
 
-  ColorPickerRGB: styled(RgbaColorPicker)`
-    && {
-      width: 125px;
-      height: 125px;
-    }
-
-  `,
   ColorInput: styled(HexColorInput)`
     && {
       width: 125px;

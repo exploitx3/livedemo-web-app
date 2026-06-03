@@ -347,8 +347,6 @@ function WalkthroughComponent({
   const themeTextColor = (storyDemoInternalRef.current.custom && storyDemoInternalRef.current.custom.theme && storyDemoInternalRef.current.custom.theme.textColor) || '#FFFFFF'
   const themeButtonBackgroundColor = (storyDemoInternalRef.current.custom && storyDemoInternalRef.current.custom.theme && storyDemoInternalRef.current.custom.theme.buttonBackgroundColor) || Colors.primaryColor
   const themeButtonTextColor = (storyDemoInternalRef.current.custom && storyDemoInternalRef.current.custom.theme && storyDemoInternalRef.current.custom.theme.buttonTextColor) || '#FFFFFF'
-  const themeOverlayBackgroundColor = (storyDemoInternalRef.current.custom && storyDemoInternalRef.current.custom.theme && storyDemoInternalRef.current.custom.theme.overlayBackgroundColor) ||
-    'rgba(0,0,0,0)'
   const themeWatermarkConfigIsActive = (storyDemoInternalRef.current.custom &&
     storyDemoInternalRef.current.custom.theme &&
     storyDemoInternalRef.current.custom.theme.watermarkConfig &&
@@ -2386,7 +2384,6 @@ function WalkthroughComponent({
         themeTextColor={themeTextColor}
         themeButtonBackgroundColor={themeButtonBackgroundColor}
         themeButtonTextColor={themeButtonTextColor}
-        themeOverlayBackgroundColor={themeOverlayBackgroundColor}
         tooltipWrapperRef={stepsWrapperRef}
         forceUpdateVar={updateStateVar}
 
@@ -2411,7 +2408,6 @@ function WalkthroughComponent({
         themeTextColor={themeTextColor}
         themeButtonBackgroundColor={themeButtonBackgroundColor}
         themeButtonTextColor={themeButtonTextColor}
-        themeOverlayBackgroundColor={themeOverlayBackgroundColor}
 
         liveDemo={storyDemoState}
         size={stepsInternalRef.current.length}
@@ -2818,7 +2814,7 @@ function WalkthroughComponent({
           scalePercentageWidth={scalePercentageWidth}
           scalePercentageHeight={scalePercentageHeight}
           isOverlayEnabled={stepIsOverlayEnabled}
-          overlayBackgroundColor={themeOverlayBackgroundColor}
+          overlayBackgroundColor={(step && step.view && step.view.popup && step.view.popup.overlayBackgroundColor) || 'rgba(0,0,0,0.65)'}
           isPopup={step && step.view && step.view.viewType === STEP_VIEWS.POPUP}
         >
 

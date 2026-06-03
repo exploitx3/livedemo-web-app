@@ -23,9 +23,10 @@ function PopupComponenet(props) {
         themeTextColor,
         themeButtonBackgroundColor,
         themeButtonTextColor,
-        themeOverlayBackgroundColor,
         isOverlayEnabled
     } = props
+
+    const overlayBackgroundColor = (step && step.view && step.view.popup && step.view.popup.overlayBackgroundColor) || 'rgba(0,0,0,0.65)'
 
 
     let titleFontSize = '2.2vw'
@@ -153,7 +154,6 @@ function PopupComponenet(props) {
                         themeTextColor={themeTextColor}
                         themeButtonBackgroundColor={themeButtonBackgroundColor}
                         themeButtonTextColor={themeButtonTextColor}
-                        themeOverlayBackgroundColor={themeOverlayBackgroundColor}
                     /> :
                         <FormHubspotV2
                             step={step}
@@ -163,7 +163,6 @@ function PopupComponenet(props) {
                             themeTextColor={themeTextColor}
                             themeButtonBackgroundColor={themeButtonBackgroundColor}
                             themeButtonTextColor={themeButtonTextColor}
-                            themeOverlayBackgroundColor={themeOverlayBackgroundColor}
                         />}
                 </React.Fragment>
             } else {
@@ -177,7 +176,6 @@ function PopupComponenet(props) {
                         themeTextColor={themeTextColor}
                         themeButtonBackgroundColor={themeButtonBackgroundColor}
                         themeButtonTextColor={themeButtonTextColor}
-                        themeOverlayBackgroundColor={themeOverlayBackgroundColor}
                     />
                 </React.Fragment>
             }
@@ -187,7 +185,7 @@ function PopupComponenet(props) {
     }
 
     return <P.Wrapper isOverlayEnabled={isOverlayEnabled}
-     overlayBackgroundColor={themeOverlayBackgroundColor} id={'popup'}>
+     overlayBackgroundColor={overlayBackgroundColor} id={'popup'}>
         {getView(step)}
     </P.Wrapper>
 

@@ -9,6 +9,7 @@ import Checkbox from 'antd/es/checkbox'
 import Colors from '../../../../../../constants/mainColors'
 import React from 'react'
 import styled from 'styled-components'
+import { RgbaColorPicker } from 'react-colorful'
 import { MdAdsClick, MdArrowRightAlt } from 'react-icons/md'
 import CommonOptions from '../CommonOptions/CommonOptions'
 import PreviewImageSection from './PreviewImageSection'
@@ -79,6 +80,21 @@ const PLACEMENT_TYPES = {
 
 const { confirm } = Modal
 
+function rgbaToObj(rgbaString) {
+  const keys = ['r', 'g', 'b', 'a']
+  const values = rgbaString
+    .slice(rgbaString.indexOf('(') + 1, rgbaString.indexOf(')'))
+    .split(',')
+    .map(c => parseFloat(c.trim()))
+  return keys.reduce((acc, key, i) => { acc[key] = values[i]; return acc }, {})
+}
+
+function objToRgba(rgbObj) {
+  return `rgba(${rgbObj.r}, ${rgbObj.g}, ${rgbObj.b}, ${rgbObj.a})`
+}
+
+const DEFAULT_OVERLAY_COLOR = { r: 0, g: 0, b: 0, a: 0.65 }
+
 const PopupOptionsView = ({
   setInternalStep,
   internalStep,
@@ -105,7 +121,10 @@ const PopupOptionsView = ({
     }
   }
 
-  debugger
+  const overlayColorObj = (internalStep.view.popup && internalStep.view.popup.overlayBackgroundColor)
+    ? rgbaToObj(internalStep.view.popup.overlayBackgroundColor)
+    : DEFAULT_OVERLAY_COLOR
+
   return <React.Fragment>
     <ST.ViewSelectorWrapper>
       <ST.ActionSelectorLineMargin>
@@ -201,11 +220,22 @@ const PopupOptionsView = ({
           updateViewField('showOverlay', !internalStep.view.popup.showOverlay)
         }}>
           <ST.Checkbox
-
             checked={internalStep.view.popup.showOverlay || false} />
           <ST.CheckboxText>Show overlay</ST.CheckboxText>
         </ST.CheckboxLineMargin>
       </ST.ActionSelectorLineMargin>
+
+      {internalStep.view.popup.showOverlay && (
+        <ST.ActionSelectorLineMargin style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+          <ST.ActionSelectorText>Overlay Color:</ST.ActionSelectorText>
+          <ST.OverlayColorPicker
+            color={overlayColorObj}
+            onChange={(colorObj) => {
+              updateViewField('overlayBackgroundColor', objToRgba(colorObj))
+            }}
+          />
+        </ST.ActionSelectorLineMargin>
+      )}
 
       {popupType === POPUP_TYPES.POPUP && (
         <PreviewImageSection
@@ -227,6 +257,12 @@ const PopupOptionsView = ({
 
 
 const ST = {
+  OverlayColorPicker: styled(RgbaColorPicker)`
+    && {
+      width: 125px;
+      height: 125px;
+    }
+  `,
   NextButtonTextInput: styled(Input)`
     && {
       width: 45%;

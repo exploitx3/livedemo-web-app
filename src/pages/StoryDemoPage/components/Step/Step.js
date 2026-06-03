@@ -120,7 +120,7 @@ const Step = ({
 
   let { index, view, action } = stepObj
 
-  let [isViewOpen, setIsViewOpen] = useState(false)
+  let [isViewOpen, setIsViewOpen] = useState(true)
   let [openView, setOpenView] = useState(OPEN_VIEWS.TEXT_VIEW)
 
   let [viewType, setViewType] = useState(stepObj.view.viewType)
@@ -250,7 +250,6 @@ const Step = ({
 
   function saveStep(stepUpdateObj, storyDemoId, screenId, workspaceId, stepId, authToken) {
     setIsUpdating(true)
-    debugger
 
     return actions.updateStep(stepUpdateObj, storyDemoId, screenId, workspaceId, stepId, authToken)
       .then((newStepData) => {
@@ -382,6 +381,7 @@ const Step = ({
         popup: {
           type: popupType || (internalStep.view.popup && internalStep.view.popup.type),
           showOverlay: (internalStep.view.popup && internalStep.view.popup.showOverlay),
+          overlayBackgroundColor: (internalStep.view.popup && internalStep.view.popup.overlayBackgroundColor),
           showPreviewImage: (internalStep.view.popup && internalStep.view.popup.showPreviewImage),
           title: (internalStep.view.popup && internalStep.view.popup.title),
           description: (internalStep.view.popup && popupDescription),
@@ -599,14 +599,17 @@ const Step = ({
         <ST.ViewHeader>
           <ST.HeaderMain onClick={() => {
 
-            if (isViewOpen) {
+            // if (isViewOpen) {
 
-              setIsViewOpen(false)
-            } else {
+              // setIsViewOpen(false)
+            // } else {
 
-              setIsViewOpen(true)
-              changeStep(calculatedStepIndex)
-            }
+              // setIsViewOpen(true)
+              // changeStep(calculatedStepIndex)
+            // }
+
+            changeStep(calculatedStepIndex)
+
 
           }}>
             {viewType === VIEW_TYPE_NAMES.POINTER ? <img src={PointerIcon} /> : <img src={PostIcon} />}

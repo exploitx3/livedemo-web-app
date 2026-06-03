@@ -36,8 +36,8 @@ const CheckoutSuccessful = ({ setShowTransition, authData, actions }) => {
             <S.Sign className="sign"><span></span></S.Sign>
           </S.Header>
         </S.HeaderWrapper>
-        <S.TopText>Payment Successful</S.TopText>
-        <S.BottomText>You have successfully purchased a plan</S.BottomText>
+        <S.TopText>Activation Successful</S.TopText>
+        <S.BottomText>You have successfully activated your plan</S.BottomText>
 
         <S.Button onClick={() => {
 
