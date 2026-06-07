@@ -619,6 +619,7 @@ const ScreenScreenshot = ({
                 //   screenHeight: newScreen.height
                 // }, '*')
                 setAddStepIsLoading(false)
+                changeStep(calculatedStepIndex + 1)  // navigate to new step
 
               })
           }}
@@ -659,6 +660,8 @@ const ScreenScreenshot = ({
                 //   screenHeight: newScreen.height
                 // }, '*')
                 setAddStepIsLoading(false)
+                changeStep(calculatedStepIndex + 1)  // navigate to new step
+
 
               })
           }}
@@ -700,6 +703,8 @@ const ScreenScreenshot = ({
                 // }, '*')
 
                 setAddStepIsLoading(false)
+                changeStep(calculatedStepIndex + 1)  // navigate to new step
+
 
               })
           }}

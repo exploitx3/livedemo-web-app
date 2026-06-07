@@ -3054,7 +3054,7 @@ const S = {
     && h1,
     && p {
       margin: 0;
-      font-family: ${Colors.fontFamily};
+      font-family: ${Colors.fontFamilyLexend};
     }
 
     //margin-right: 85px;

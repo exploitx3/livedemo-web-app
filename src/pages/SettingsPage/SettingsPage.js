@@ -29,7 +29,6 @@ import axios from '../../utils/axiosInstance'
 import { bindActionCreators } from "redux";
 import { updateAllWorkspacesForUser, updateCurrentSelectedWorkspace } from "../../actions/workspacesActions";
 import ENV from '../../config.json'
-const { Option } = Select
 const { Content, Footer, Sider } = Layout
 const { confirm, info } = Modal
 
@@ -47,9 +46,6 @@ const SettingsPage = ({ authData, currentSelectedWorkspace, actions }) => {
 
   let [newEmail, setNewEmail] = useState('')
   let [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
-  let [pendingAdminId, setPendingAdminId] = useState(null)
-  let [isAdminSaving, setIsAdminSaving] = useState(false)
-  let [adminSaveStatus, setAdminSaveStatus] = useState(null)
 
   useEffect(() => {
 
@@ -188,54 +184,16 @@ const SettingsPage = ({ authData, currentSelectedWorkspace, actions }) => {
                       </F.InputLine>
                       <F.AdminSection>
                         <F.InputLabel>Admin User</F.InputLabel>
-                        {authData.id !== selectedWorkspace.adminUser._id ? (
-                          <F.AdminReadOnly>
-                            <F.AdminReadOnlyAvatar>
-                              {selectedWorkspace.adminUser.name ? selectedWorkspace.adminUser.name[0].toUpperCase() : '?'}
-                            </F.AdminReadOnlyAvatar>
-                            <F.AdminReadOnlyInfo>
-                              <F.AdminReadOnlyName>{selectedWorkspace.adminUser.name}</F.AdminReadOnlyName>
-                              <F.AdminReadOnlyEmail>{selectedWorkspace.adminUser.email}</F.AdminReadOnlyEmail>
-                            </F.AdminReadOnlyInfo>
-                            <F.AdminReadOnlyBadge>Admin</F.AdminReadOnlyBadge>
-                          </F.AdminReadOnly>
-                        ) : (
-                          <>
-                            <F.AdminSelect
-                              value={pendingAdminId || selectedWorkspace.adminUser._id}
-                              onChange={(userId) => {
-                                setPendingAdminId(userId)
-                                setAdminSaveStatus(null)
-                              }}
-                              dropdownStyle={{
-                                background: Colors.App.sidebarColor,
-                                border: `1px solid ${Colors.primaryColor}`
-                              }}
-                            >
-                              {selectedWorkspace.users.map((user) => (
-                                <Option key={user._id} value={user._id}>
-                                  <F.AdminOptionInner>
-                                    <F.AdminOptionAvatar>
-                                      {user.name ? user.name[0].toUpperCase() : '?'}
-                                    </F.AdminOptionAvatar>
-                                    <span>{user.name}</span>
-                                    <F.AdminOptionEmail>{user.email}</F.AdminOptionEmail>
-                                  </F.AdminOptionInner>
-                                </Option>
-                              ))}
-                            </F.AdminSelect>
-                            {pendingAdminId && pendingAdminId !== selectedWorkspace.adminUser._id && (
-                              <F.AdminTransferWarning>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                                  <line x1="12" y1="9" x2="12" y2="13" />
-                                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                                </svg>
-                                You will lose admin rights after saving
-                              </F.AdminTransferWarning>
-                            )}
-                          </>
-                        )}
+                        <F.AdminReadOnly>
+                          <F.AdminReadOnlyAvatar>
+                            {selectedWorkspace.adminUser.name ? selectedWorkspace.adminUser.name[0].toUpperCase() : '?'}
+                          </F.AdminReadOnlyAvatar>
+                          <F.AdminReadOnlyInfo>
+                            <F.AdminReadOnlyName>{selectedWorkspace.adminUser.name}</F.AdminReadOnlyName>
+                            <F.AdminReadOnlyEmail>{selectedWorkspace.adminUser.email}</F.AdminReadOnlyEmail>
+                          </F.AdminReadOnlyInfo>
+                          <F.AdminReadOnlyBadge>Admin</F.AdminReadOnlyBadge>
+                        </F.AdminReadOnly>
                       </F.AdminSection>
                       <F.LastLine>
                         <F.SaveButton onClick={() => {
@@ -253,36 +211,6 @@ const SettingsPage = ({ authData, currentSelectedWorkspace, actions }) => {
                           <F.SaveButton__Image type="save" />
                           <F.SaveButton__Text>Save</F.SaveButton__Text>
                         </F.SaveButton>
-                        {pendingAdminId && pendingAdminId !== selectedWorkspace.adminUser._id && (
-                          <>
-                            <F.AdminSaveBtn
-                              disabled={isAdminSaving}
-                              onClick={() => {
-                                setIsAdminSaving(true)
-                                setAdminSaveStatus(null)
-                                updateWorkspace(selectedWorkspace, { adminUser: pendingAdminId }, authData.token)
-                                  .then(() => actions.updateAllWorkspacesForUser(authData.token))
-                                  .then(() => actions.updateCurrentSelectedWorkspace(authData.token, currentSelectedWorkspace._id))
-                                  .then(() => {
-                                    setPendingAdminId(null)
-                                    setAdminSaveStatus('success')
-                                    setIsAdminSaving(false)
-                                  })
-                                  .catch(() => {
-                                    setAdminSaveStatus('error')
-                                    setIsAdminSaving(false)
-                                  })
-                              }}
-                            >
-                              {isAdminSaving ? <F.AdminSpinner /> : 'Transfer Admin'}
-                            </F.AdminSaveBtn>
-                            <F.AdminCancelBtn onClick={() => { setPendingAdminId(null); setAdminSaveStatus(null) }}>
-                              Cancel
-                            </F.AdminCancelBtn>
-                          </>
-                        )}
-                        {adminSaveStatus === 'success' && <F.AdminSuccessMsg>Admin transferred successfully</F.AdminSuccessMsg>}
-                        {adminSaveStatus === 'error' && <F.AdminErrorMsg>Failed to transfer admin</F.AdminErrorMsg>}
                       </F.LastLine>
                     </F.MainSection>
                   </F.Form>
@@ -822,147 +750,6 @@ const F = {
     border-radius: 20px;
     padding: 3px 10px;
     flex-shrink: 0;
-    font-family: ${Colors.fontFamily};
-  `,
-  AdminSelect: styled(Select)`
-    width: 100%;
-
-    && .ant-select-selection {
-      border: 1.5px solid #d0d9e8;
-      border-radius: 10px;
-      background: white;
-      box-shadow: none;
-      height: 44px;
-      display: flex;
-      align-items: center;
-    }
-
-    && .ant-select-selection:hover,
-    && .ant-select-selection:focus {
-      border-color: ${Colors.primaryColor};
-      box-shadow: 0 0 0 3px rgba(16, 112, 255, 0.1);
-    }
-
-    && .ant-select-selection__rendered {
-      line-height: 42px;
-      margin: 0 12px;
-    }
-
-    && .ant-select-arrow {
-      color: ${Colors.primaryColor};
-    }
-  `,
-  AdminOptionInner: styled.span`
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  `,
-  AdminOptionAvatar: styled.span`
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: ${Colors.primaryColor};
-    color: white;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 600;
-    flex-shrink: 0;
-    font-family: ${Colors.fontFamily};
-  `,
-  AdminOptionEmail: styled.span`
-    font-size: 11px;
-    color: #8a94a6;
-    margin-left: auto;
-    font-family: ${Colors.fontFamily};
-  `,
-  AdminTransferWarning: styled.div`
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: #fffbeb;
-    border: 1px solid #fcd34d;
-    border-radius: 8px;
-    font-size: 12px;
-    color: #92400e;
-    font-family: ${Colors.fontFamily};
-
-    svg { flex-shrink: 0; stroke: #d97706; }
-  `,
-  AdminSaveRow: styled.div`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  AdminSaveBtn: styled.button`
-    height: 38px;
-    padding: 0 18px;
-    background: ${Colors.primaryColor};
-    color: white;
-    border: none;
-    border-radius: 9px;
-    font-size: 13px;
-    font-weight: 600;
-    font-family: ${Colors.fontFamily};
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: opacity 0.15s, transform 0.1s;
-
-    &:hover:not(:disabled) {
-      opacity: 0.88;
-      transform: translateY(-1px);
-    }
-
-    &:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-      transform: none;
-    }
-  `,
-  AdminCancelBtn: styled.button`
-    height: 38px;
-    padding: 0 16px;
-    background: transparent;
-    border: 1.5px solid #d0d9e8;
-    border-radius: 9px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #4a5568;
-    font-family: ${Colors.fontFamily};
-    cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
-
-    &:hover {
-      border-color: ${Colors.primaryColor};
-      color: ${Colors.primaryColor};
-    }
-  `,
-  AdminSpinner: styled.span`
-    width: 13px;
-    height: 13px;
-    border: 2px solid rgba(255,255,255,0.35);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: adminSpin 0.7s linear infinite;
-
-    @keyframes adminSpin {
-      to { transform: rotate(360deg); }
-    }
-  `,
-  AdminSuccessMsg: styled.p`
-    margin: 0;
-    font-size: 12px;
-    color: #38a169;
-    font-family: ${Colors.fontFamily};
-  `,
-  AdminErrorMsg: styled.p`
-    margin: 0;
-    font-size: 12px;
-    color: #e53e3e;
     font-family: ${Colors.fontFamily};
   `,
 }

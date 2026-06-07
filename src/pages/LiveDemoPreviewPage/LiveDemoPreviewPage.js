@@ -579,7 +579,7 @@ const S = {
     font-size: 1.7em;
     font-weight: 500;
     color: #111;
-    font-family: ${mainColors.fontFamily};
+    font-family: ${mainColors.fontFamilyLexend};
     padding-bottom: 30px;
     text-align: center;
 
@@ -644,7 +644,7 @@ const S = {
     font-size: 1.7em;
     font-weight: 500;
     color: #111;
-    font-family: ${mainColors.fontFamily};
+    font-family: ${mainColors.fontFamilyLexend};
     padding-bottom: 30px;
   `
 

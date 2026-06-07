@@ -58,7 +58,7 @@ function TooltipComponentEditor(props) {
   let textFontSize = '2vw' // + (2.70 * (1 - widthDimensionPercentage))
 
   if(wrapperWidth <= 1040) {
-    textFontSize = '14px'
+    textFontSize = '15px'
   } else if(wrapperWidth > 1040) {
     textFontSize = '1.1vw'
   }
@@ -67,7 +67,7 @@ function TooltipComponentEditor(props) {
   }
 
   if(isInEditor) {
-    textFontSize = '14px'
+    textFontSize = '15px'
   }
 
   let width = iframeSize && iframeSize.width ? iframeSize.width : '100%'

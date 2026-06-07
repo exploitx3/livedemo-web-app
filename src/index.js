@@ -12,6 +12,7 @@ import './favicon.ico' // Tell webpack to load favicon.ico
 
 import './static/fonts/fonts.scss'
 import './static/base.scss'
+import '@fontsource/roboto-mono';
 
 import "@fontsource/lexend/latin.css"
 

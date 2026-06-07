@@ -280,7 +280,7 @@ const TC = {
     max-height: 200px;
     display: block;
     font-size: 1.4vw;
-
+    
     padding: 5px 20px;
 
     @media (min-width: 1200px) {
@@ -589,16 +589,22 @@ const TC = {
 
   TooltipContent: styled.span`
     && p {
-      font-weight: 550;
-      font-family: ${Colors.fontFamily};
+      font-weight: 500;
+      font-family: ${Colors.fontFamilyRobotoMono};
       overflow-wrap: break-word;
       margin: 0px;
 
+      font-style: normal;
+      font-display: swap;
+      letter-spacing: 0.01em;
+      
       max-width: 250px;
       width: max-content;
 
 
       font-size: ${({$textFontSize}) => $textFontSize};
+
+
 
       //@media (max-width: 1040px) {
       //  font-size: 14px;

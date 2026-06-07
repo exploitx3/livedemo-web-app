@@ -476,6 +476,16 @@ const HT = {
       left: 0;
       transform: translate(${(props) => props.frameX}px, ${(props) => props.frameY}px);
       transform-origin: center;
+
+
+
+      .tippy-box {
+        -webkit-font-smoothing: antialiased !important;
+        -webkit-backface-visibility: hidden !important;
+        backface-visibility: hidden !important;
+        transform: translate3d(0, 0, 0) !important;
+    }
+    
     }
   `,
 

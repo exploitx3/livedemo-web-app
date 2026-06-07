@@ -6,6 +6,8 @@ import WalkthroughComponent from './WalkthroughComponent.js'
 import elementPicker from './storyElementPicker.js'
 import ENV from '../config.json'
 import '@fontsource/lexend/latin.css'
+import '@fontsource/roboto-mono';
+
 import './custom.css'
 import { resolveStoryDemoOuterBackground } from '../utils/storyDemoBackground'
 

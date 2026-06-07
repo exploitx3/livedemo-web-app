@@ -263,7 +263,7 @@ const S = {
       && h1,
       && p {
         margin: 0;
-        font-family: ${mainColors.fontFamily};
+        font-family: ${mainColors.fontFamilyLexend};
 
       }
 

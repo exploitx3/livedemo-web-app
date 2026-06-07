@@ -42,6 +42,7 @@ export default {
   primaryText: '#1d1d1d',
   secondaryText: '#333',
   thirdText: 'rgba(37.994, 36.843, 36.843, 1)',
-  fontFamily: "'Lexend', -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif",
-  fontFamilyApple: "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif"
+  fontFamily: "'Roboto Mono', -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif",
+  fontFamilyLexend: "'Lexend', -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif",
+  fontFamilyRobotoMono: "Roboto Mono, system-ui, sans-serif"
 }

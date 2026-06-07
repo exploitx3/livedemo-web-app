@@ -99,6 +99,7 @@ const S = {
     @media (min-width: 900px) {
       &.TabsViewRoot > .TabsViewRoot__antd > .ant-tabs-nav {
         width: 100%;
+        margin-bottom: 0;
       }
 
       &.TabsViewRoot > .TabsViewRoot__antd > .ant-tabs-nav > .ant-tabs-nav-wrap {

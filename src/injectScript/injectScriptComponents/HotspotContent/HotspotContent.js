@@ -110,7 +110,7 @@ function HotspotContent({
 
     let reverseWidthPercentage = 1 + (1 - widthDimensionPercentage)
 
-    textFontSize = '14px'
+    textFontSize = '15px'
 
     // if(wrapperWidth <= 1040) {
     //     textFontSize = '14px'
@@ -524,6 +524,7 @@ const HT = {
 
         }
 
+
         //&& .tippy-content {
         //  max-width: 250px;
         //  width: max-content;
@@ -543,6 +544,7 @@ const HT = {
         height: 100%;
         font-weight: 550;
         font-family: ${Colors.fontFamily};
+        
 
         //max-width: 250px;
         max-width: 29vw;
@@ -570,6 +572,15 @@ const HT = {
             transform: translate(${(props) => props.frameX}px, ${(props) => props.frameY}px) scale(${(props) => props.scale});
             transform-origin: center;
             //transform-origin: 0px 0px;
+
+
+            .tippy-box {
+                -webkit-font-smoothing: antialiased !important;
+                -webkit-backface-visibility: hidden !important;
+                backface-visibility: hidden !important;
+                transform: translate3d(0, 0, 0) !important;
+            }
+            
 
             // .tippy-box {
                 //     transform: scale(${(props) => `${props.scale}`});        

@@ -60,7 +60,7 @@ function TooltipComponent(props) {
   let textFontSize = '2vw' // + (2.70 * (1 - widthDimensionPercentage))
 
   if(wrapperWidth <= 1040) {
-    textFontSize = '14px'
+    textFontSize = '15px'
   } else if(wrapperWidth > 1040) {
     textFontSize = '1.1vw'
   }
@@ -69,7 +69,7 @@ function TooltipComponent(props) {
   }
 
   if(isInEditor) {
-    textFontSize = '14px'
+    textFontSize = '15px'
   }
 
   let width = iframeSize && iframeSize.width ? iframeSize.width : '100%'
@@ -543,6 +543,10 @@ const TC = {
     font-family: ${Colors.fontFamilyApple};
 
     visibility: ${({visible}) => visible ? 'visible' : 'hidden'};
+
+    will-change: transform, visibility, opacity;
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
 
     //
     //
