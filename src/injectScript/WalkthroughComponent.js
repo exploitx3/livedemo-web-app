@@ -716,6 +716,7 @@ function WalkthroughComponent({
 
     setStepsInternal(steps)
     setStep(steps[currentStepIndexState])
+    processStep(currentStepIndexRef, videoRef, storyDemoInternalRef, stepsInternalRef.current)
 
   }, [steps])
 
@@ -957,8 +958,6 @@ function WalkthroughComponent({
     })
 
     window.addEventListener('message', function (event) {
-
-      // console.log(event)
 
       if (event.data && event.data.type === 'initEditor') {
         // console.log('initEditor set')
@@ -1425,6 +1424,10 @@ function WalkthroughComponent({
       }
 
       async function onEnded() {
+        if (isInEditorRef.current) {
+          return
+        }
+
 
         let isStillOnSamePage = savedCurrentStepIndex === currentStepIndex.current
 
@@ -1445,25 +1448,28 @@ function WalkthroughComponent({
             }
           }
         }
+
+
       }
 
-      if (!isInEditorRef.current) {
 
-        video.ontimeupdate = (e) => {
-          // console.log(event)
+      video.ontimeupdate = (e) => {
+        // console.log(event)
 
 
-          let timestampInSeconds = video.currentTime
+        let timestampInSeconds = video.currentTime
 
-          // console.log('timestampInSeconds')
-          // console.log(timestampInSeconds)
+        // console.log('timestampInSeconds')
+        // console.log(timestampInSeconds)
 
-          if (video.currentTime >= endTime) {
-            video.pause()
+        if (video.currentTime >= endTime) {
+          video.pause()
+          if (!isInEditorRef.current) {
             onEnded()
           }
         }
       }
+
 
 
       video.onended = function () {
@@ -3164,7 +3170,7 @@ const WS = {
 
 
     backdrop-filter: blur(8px);
-    background: ${({overlayBackgroundColor}) => overlayBackgroundColor};
+    background: ${({ overlayBackgroundColor }) => overlayBackgroundColor};
     z-index:  4 !important;
   `,
   StepsWrapper: styled.div`

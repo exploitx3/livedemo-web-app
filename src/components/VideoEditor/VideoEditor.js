@@ -1,19 +1,19 @@
-import React, {useEffect, useRef, useState} from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 import Colors from '../../constants/mainColors'
-import {MdOutlineZoomIn, MdPause} from 'react-icons/md'
+import { MdOutlineZoomIn, MdPause } from 'react-icons/md'
 import Tippy from '@tippyjs/react'
 import 'tippy.js/dist/tippy.css' // optional
 // import 'tippy.js/animations/shift-away.css'
 import 'tippy.js/animations/scale.css'
-import {followCursor} from 'tippy.js'
+import { followCursor } from 'tippy.js'
 import axios from '../../utils/axiosInstance'
 import * as ENV from '../../config'
 import * as storyDemoActionsImport from '../../actions/storyDemoActions'
 
 import ZoomSpan from './components/ZoomSpan/ZoomSpan'
-import {connect} from 'react-redux'
-import {bindActionCreators} from "redux";
+import { connect } from 'react-redux'
+import { bindActionCreators } from "redux";
 
 
 const HANDLER_TYPES = {
@@ -22,7 +22,7 @@ const HANDLER_TYPES = {
   TRACKER: 'TRACKER',
 }
 
-function Tip({children, ...props}) {
+function Tip({ children, ...props }) {
 
   return <S.Tippy {...props}>{children}</S.Tippy>
 }
@@ -111,7 +111,7 @@ const VideoEditor = (props) => {
 
   useEffect(() => {
 
-    if(!videoInternalRef.current) {
+    if (!videoInternalRef.current) {
       return
     }
 
@@ -418,7 +418,7 @@ const VideoEditor = (props) => {
   }, [])
 
 
-  function onChangeVideoSpeed() {
+  function onChangeVideoSpeed(videoSpeed) {
     let newVideoSpeed = videoSpeed + 0.5
     if (newVideoSpeed > 3) {
       newVideoSpeed = 0.5
@@ -661,7 +661,15 @@ const VideoEditor = (props) => {
 
   function screenVideoTrackerChange(workspaceId, storyDemoId, screenId, updateObj, authToken) {
 
-    return storyDemoActions.updateScreen(workspaceId, storyDemoId, screenId, updateObj.startTime, updateObj.endTime, updateObj.playbackRate, authToken)
+    return storyDemoActions.updateScreen(
+      {
+        ...updateObj,
+      },
+      workspaceId,
+      storyDemoId, 
+      screenId,
+      authToken
+    )
   }
 
   let videoDurationExists = videoDurationRef.current !== 0
@@ -671,7 +679,7 @@ const VideoEditor = (props) => {
       <S.VideoWrapper>
         {!isPlaying ? (
           <S.Button
-            style={{marginRight: 5}}
+            style={{ marginRight: 5 }}
             onClick={() => {
 
               setIsPlaying(true)
@@ -690,22 +698,22 @@ const VideoEditor = (props) => {
               <g clip-path="url(#clip0_0_3)">
                 <path
                   d="M4.69159 2.94011C4.39202 2.74947 4 2.96466 4 3.31975V8.68025C4 9.03534 4.39202 9.25053 4.69159 9.05989L8.90341 6.37965C9.18128 6.20282 9.18129 5.79718 8.90341 5.62035L4.69159 2.94011Z"
-                  fill="black"/>
+                  fill="black" />
               </g>
               <defs>
                 <clipPath id="clip0_0_3">
-                  <rect width="12" height="12" fill="white"/>
+                  <rect width="12" height="12" fill="white" />
                 </clipPath>
               </defs>
             </svg>
           </S.Button>
         ) : (
           <S.PauseButton
-            style={{marginRight: 5}}
+            style={{ marginRight: 5 }}
             onClick={() => {
               videoInternalRef.current.pause()
               setIsPlaying(false)
-            }}/>
+            }} />
         )}
 
 
@@ -766,10 +774,10 @@ const VideoEditor = (props) => {
                   )
 
                 }}
-                // style={{
-                //   width: span.width,
-                //   marginLeft: span.marginLeft
-                // }}
+              // style={{
+              //   width: span.width,
+              //   marginLeft: span.marginLeft
+              // }}
               />
             })}
 
@@ -860,7 +868,7 @@ const VideoEditor = (props) => {
 
                 }
                 }>
-                <MdOutlineZoomIn/>
+                <MdOutlineZoomIn />
               </S.AddZoomButton>
             }
             hideOnClick={'toggle'}
@@ -882,46 +890,46 @@ const VideoEditor = (props) => {
                 ref={leftHandleRef}
                 onMouseDown={resizeAdd(HANDLER_TYPES.LEFT)}
               >
-                <S.HandleLine/>
+                <S.HandleLine />
               </S.LeftHandle>
               <S.TimilineTracker
                 ref={trackerRef}
                 onMouseDown={resizeAdd(HANDLER_TYPES.TRACKER)}
-                // onMouseDown={resizeAdd(HANDLER_TYPES.TRACKER)}
+              // onMouseDown={resizeAdd(HANDLER_TYPES.TRACKER)}
               >
                 <S.TrackerCursor>
                   <svg className="cursor-hd-icon" width="12" height="18" viewBox="0 0 12 18" fill="none"
-                       xmlns="http://www.w3.org/2000/svg">
+                    xmlns="http://www.w3.org/2000/svg">
                     <mask id="path-1-inside-1_1578_341598" fill="white">
                       <path
                         d="M0 3C0 1.34314 1.34315 0 3 0H9C10.6569 0 12 1.34315 12 3V11.8287C12 12.7494 11.5772 13.6191 10.8531 14.1879L6 18L1.14686 14.1879C0.422795 13.6191 0 12.7494 0 11.8287V3Z"></path>
                     </mask>
                     <path className="icon-bg"
-                          d="M0 3C0 1.34314 1.34315 0 3 0H9C10.6569 0 12 1.34315 12 3V11.8287C12 12.7494 11.5772 13.6191 10.8531 14.1879L6 18L1.14686 14.1879C0.422795 13.6191 0 12.7494 0 11.8287V3Z"></path>
+                      d="M0 3C0 1.34314 1.34315 0 3 0H9C10.6569 0 12 1.34315 12 3V11.8287C12 12.7494 11.5772 13.6191 10.8531 14.1879L6 18L1.14686 14.1879C0.422795 13.6191 0 12.7494 0 11.8287V3Z"></path>
                     <path className="icon-border"
-                          d="M6 18L4.76457 19.5728L6 20.5432L7.23543 19.5728L6 18ZM1.14686 14.1879L-0.0885728 15.7607L1.14686 14.1879ZM10.8531 14.1879L12.0886 15.7607L10.8531 14.1879ZM3 2H9V-2H3V2ZM10 3V11.8287H14V3H10ZM2 11.8287V3H-2V11.8287H2ZM9.61771 12.6151L4.76457 16.4272L7.23543 19.5728L12.0886 15.7607L9.61771 12.6151ZM7.23543 16.4272L2.38228 12.6151L-0.0885728 15.7607L4.76457 19.5728L7.23543 16.4272ZM-2 11.8287C-2 13.3632 -1.29534 14.8128 -0.0885728 15.7607L2.38228 12.6151C2.14093 12.4255 2 12.1356 2 11.8287H-2ZM10 11.8287C10 12.1356 9.85907 12.4255 9.61771 12.6151L12.0886 15.7607C13.2953 14.8128 14 13.3632 14 11.8287H10ZM9 2C9.55228 2 10 2.44772 10 3H14C14 0.238577 11.7614 -2 9 -2V2ZM3 -2C0.238579 -2 -2 0.23857 -2 3H2C2 2.44771 2.44771 2 3 2V-2Z"
-                          fill="#090C14" mask="url(#path-1-inside-1_1578_341598)"></path>
+                      d="M6 18L4.76457 19.5728L6 20.5432L7.23543 19.5728L6 18ZM1.14686 14.1879L-0.0885728 15.7607L1.14686 14.1879ZM10.8531 14.1879L12.0886 15.7607L10.8531 14.1879ZM3 2H9V-2H3V2ZM10 3V11.8287H14V3H10ZM2 11.8287V3H-2V11.8287H2ZM9.61771 12.6151L4.76457 16.4272L7.23543 19.5728L12.0886 15.7607L9.61771 12.6151ZM7.23543 16.4272L2.38228 12.6151L-0.0885728 15.7607L4.76457 19.5728L7.23543 16.4272ZM-2 11.8287C-2 13.3632 -1.29534 14.8128 -0.0885728 15.7607L2.38228 12.6151C2.14093 12.4255 2 12.1356 2 11.8287H-2ZM10 11.8287C10 12.1356 9.85907 12.4255 9.61771 12.6151L12.0886 15.7607C13.2953 14.8128 14 13.3632 14 11.8287H10ZM9 2C9.55228 2 10 2.44772 10 3H14C14 0.238577 11.7614 -2 9 -2V2ZM3 -2C0.238579 -2 -2 0.23857 -2 3H2C2 2.44771 2.44771 2 3 2V-2Z"
+                      fill="#090C14" mask="url(#path-1-inside-1_1578_341598)"></path>
                   </svg>
                 </S.TrackerCursor>
               </S.TimilineTracker>
               <S.InnerTimeline
                 onClick={onTimeLineClick}
               >
-                <S.TimelineFiller/>
+                <S.TimelineFiller />
               </S.InnerTimeline>
               <S.RightHandle
                 ref={rightHandleRef}
                 onMouseDown={resizeAdd(HANDLER_TYPES.RIGHT)}
               >
-                <S.HandleLine/>
+                <S.HandleLine />
               </S.RightHandle>
             </S.Timeline>
           </Tip>
         </S.TimelineWrapper>
 
         <S.Button
-          style={{marginLeft: 5}}
-          onClick={onChangeVideoSpeed}
+          style={{ marginLeft: 5 }}
+          onClick={() => onChangeVideoSpeed(videoSpeed)}
         >
           {videoSpeed}x
         </S.Button>

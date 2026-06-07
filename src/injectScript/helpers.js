@@ -286,6 +286,9 @@ export function deriveRenderSteps(storyDemo) {
                     step.screenType = screen.type
                     step.asset = screen.asset
                     step.playbackRate = screen.playbackRate
+                    step.startTime = screen.startTime
+                    step.endTime = screen.endTime
+                    step.duration = screen.duration
                     step.zoomSpans = screen.zoomSpans
                     step.cursorPositions = screen.cursorPositions
 
