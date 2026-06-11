@@ -4,14 +4,16 @@ import Button from 'antd/es/button'
 import Icon from '../../../../../../components/Icon/Icon'
 import Input from 'antd/es/input'
 import Modal from 'antd/es/modal'
+import 'antd/es/input/style'
 import Select from 'antd/es/select'
 import Checkbox from 'antd/es/checkbox'
 import Colors from '../../../../../../constants/mainColors'
-import React from 'react'
+import React, { useState } from 'react'
 import styled from 'styled-components'
 import { RgbaColorPicker } from 'react-colorful'
 import { MdAdsClick, MdArrowRightAlt } from 'react-icons/md'
 import CommonOptions from '../CommonOptions/CommonOptions'
+import EmbedOptionsView from '../EmbedOptionsView/EmbedOptionsView'
 import PreviewImageSection from './PreviewImageSection'
 import TippyPremium from '../../../../../../components/TippyPremium/TippyPremium'
 import { useNavigate } from 'react-router-dom'
@@ -38,12 +40,14 @@ const POPUP_TYPES = {
   POPUP: 'popup',
   NONE: 'none',
   FORM: 'form',
+  EMBED: 'embed',
   START: 'start',
   IFRAME: 'iframe',
 }
 
 const POPUP_TYPES_LIMITED = {
   POST: 'popup',
+  EMBED: 'embed',
   FORM: 'form',
 }
 
@@ -214,6 +218,12 @@ const PopupOptionsView = ({
           internalStep={internalStep}
         />) : ('')}
 
+      {popupType === POPUP_TYPES.EMBED && (
+        <EmbedOptionsView
+          internalStep={internalStep}
+          setInternalStep={setInternalStep}
+        />
+      )}
 
       <ST.ActionSelectorLineMargin>
         <ST.CheckboxLineMargin onClick={() => {

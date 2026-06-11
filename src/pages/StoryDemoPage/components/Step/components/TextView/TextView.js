@@ -34,6 +34,7 @@ const POPUP_TYPES = {
   POPUP: 'popup',
   NONE: 'none',
   FORM: 'form',
+  EMBED: 'embed',
   START: 'start',
   IFRAME: 'iframe',
 }

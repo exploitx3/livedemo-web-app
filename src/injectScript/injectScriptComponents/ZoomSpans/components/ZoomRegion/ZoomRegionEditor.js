@@ -405,15 +405,15 @@ const RL = {
 
     '&:hover': {
       border: `solid 1px #dae3f2`,
-      background: `${Colors.primaryColor}`,
+      background: `${Colors.primaryColor} !important`,
     },
     '&:active': {
       border: `solid 1px #dae3f2`,
-      background: `${Colors.primaryColor}`,
+      background: `${Colors.primaryColor} !important`,
     },
     '&:focus': {
       border: `solid 1px #dae3f2`,
-      background: `${Colors.primaryColor}`,
+      background: `${Colors.primaryColor} !important`,
     },
     '&& .anticon > svg': {
       width: '1.5em',

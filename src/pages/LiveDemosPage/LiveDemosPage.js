@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import StoryDemosView from './components/StoryDemosView/StoryDemosView'
+import AIRecordingsView from './components/AIRecordingsView/AIRecordingsView'
 import Header from '../../components/Header/Header'
 // //import { Button, Col, Layout, Modal } from 'antd'
 
@@ -8,11 +9,15 @@ import Col from 'antd/es/col'
 import Row from 'antd/es/row'
 import Layout from 'antd/es/layout'
 import Modal from 'antd/es/modal'
+import Tabs from 'antd/es/tabs'
 import 'antd/es/button/style'
 import 'antd/es/col/style'
 import 'antd/es/row/style'
 import 'antd/es/layout/style'
 import 'antd/es/modal/style'
+import 'antd/es/tabs/style'
+
+const { TabPane } = Tabs
 
 import { bindActionCreators } from 'redux'
 import { connect } from 'react-redux'
@@ -41,9 +46,16 @@ if(chrome) {
   chromeRuntimeExists = true
 }
 
+const TABS = {
+  LIVE_DEMOS: 'LiveDemos',
+  AI_RECORDINGS: 'AI Recordings',
+}
+
 function LiveDemosPage(props) {
   let [liveDemos, setLiveDemos] = useState([])
   let [storyDemos, setStoryDemos] = useState(null)
+  let [autoRecordings, setAutoRecordings] = useState(null)
+  let [activeTab, setActiveTab] = useState(TABS.LIVE_DEMOS)
 
   function getLiveDemos(workspaceId, authToken) {
     return axios.get(`/workspaces/${workspaceId}/livedemos`,{
@@ -56,6 +68,15 @@ function LiveDemosPage(props) {
 
   function getStoryDemos(workspaceId, authToken) {
     return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories`,{
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    })
+      .then((res) => res.data)
+  }
+
+  function getAutoRecordings(workspaceId, authToken) {
+    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/auto-recordings`,{
       headers: {
         Authorization: `Bearer ${authToken}`
       }
@@ -81,6 +102,9 @@ function LiveDemosPage(props) {
 
     if (props.currentSelectedWorkspace && props.currentSelectedWorkspace._id) {
 
+      setStoryDemos(null)
+      setAutoRecordings(null)
+
       Promise.all([
         // getLiveDemos(props.currentSelectedWorkspace._id, props.authData.token)
         // .then((liveDemosArray) => {
@@ -90,8 +114,11 @@ function LiveDemosPage(props) {
         // }),
         getStoryDemos(props.currentSelectedWorkspace._id, props.authData.token)
           .then((storyDemosArray) => {
-
             setStoryDemos(storyDemosArray)
+          }),
+        getAutoRecordings(props.currentSelectedWorkspace._id, props.authData.token)
+          .then((autoRecordingsArray) => {
+            setAutoRecordings(autoRecordingsArray)
           })
         ])
     }
@@ -138,20 +165,32 @@ function LiveDemosPage(props) {
         <S.DashboardContainer id={'dashboard-container'}>
           <S.DashboardRow gutter={[16, 16]}>
             <S.WorkspacesCol xs={24} lg={24}>
-              <S.ColTitle>LiveDemos</S.ColTitle>
-              <StoryDemosView
-                onDeleteLiveDemo={showConfirmDeleteLiveDemo}
-                storydemos={storyDemos}
-                isChromeAppAuthorized={props.isChromeAppAuthorized}
-                noDemoLimit={props.authData?.featureFlags?.noDemoLimit === true}
-              />
+              <S.TabsContainer>
+                <S.Tabs
+                  animated={false}
+                  defaultActiveKey={activeTab}
+                  activeKey={activeTab}
+                  onChange={(newActiveTab) => setActiveTab(newActiveTab)}
+                  tabPosition={'top'}
+                >
+                  <TabPane tab={'LiveDemos'} key={TABS.LIVE_DEMOS} />
+                  <TabPane tab={'AI Recordings'} key={TABS.AI_RECORDINGS} />
+                </S.Tabs>
+              </S.TabsContainer>
+              {activeTab === TABS.LIVE_DEMOS && (
+                <StoryDemosView
+                  onDeleteLiveDemo={showConfirmDeleteLiveDemo}
+                  storydemos={storyDemos}
+                  isChromeAppAuthorized={props.isChromeAppAuthorized}
+                  noDemoLimit={props.authData?.featureFlags?.noDemoLimit === true}
+                />
+              )}
+              {activeTab === TABS.AI_RECORDINGS && (
+                <AIRecordingsView
+                  autoRecordings={autoRecordings}
+                />
+              )}
             </S.WorkspacesCol>
-            {/*<S.WorkspacesColRight xs={24} lg={12}>*/}
-
-            {/*  <S.ColTitle>LiveDemos</S.ColTitle>*/}
-            {/*  <LiveDemosView onDeleteLiveDemo={() => {*/}
-            {/*  }} livedemos={liveDemos}/>*/}
-            {/*</S.WorkspacesColRight>*/}
           </S.DashboardRow>
         </S.DashboardContainer>
 
@@ -168,6 +207,73 @@ const S = {
     color: ${mainColors.primaryText};
     text-align: left;
     margin-left: 30px;
+  `,
+  TabsContainer: styled.div`
+    font-size: 19px;
+    display: flex;
+    align-items: center;
+    margin-left: 30px;
+    margin-bottom: 8px;
+
+    && div[role="tab"] {
+      margin: 0px;
+    }
+  `,
+  Tabs: styled(Tabs)`
+    && .ant-tabs-tab {
+      font-family: ${mainColors.fontFamily};
+      justify-content: center;
+      margin: 0px;
+    }
+
+    && .ant-tabs-nav-list {
+    width: 350px;
+
+    }
+
+    && .ant-tabs-bar {
+      margin: 0 0px 0 0;
+      border-bottom: none;
+    }
+
+    && .ant-tabs {
+      overflow: initial;
+    }
+
+    && .ant-tabs-nav {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    && .ant-tabs-nav-wrap {
+      border: 1px solid #ddd;
+      border-radius: 14px;
+    }
+
+    && .ant-tabs-nav-container {
+      border: 1px solid #ddd;
+      border-radius: 14px;
+    }
+
+    @media (min-width: 900px) {
+      && .ant-tabs-nav {
+        width: 100%;
+      }
+
+      && .ant-tabs-nav > div {
+        width: 100%;
+        display: flex;
+        justify-content: space-evenly;
+      }
+
+      && .ant-tabs-nav > div .ant-tabs-tab {
+        font-size: 1.1em;
+        padding: 12px 0;
+        text-align: center;
+        width: 50%;
+        margin: 0;
+      }
+    }
   `,
   Content: styled(Content)`
     && {

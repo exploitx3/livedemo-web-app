@@ -11,6 +11,12 @@ import ViewEditor from '../../../ViewEditor/ViewEditor'
 import DescriptionEditor from '../../../ViewEditor/DescriptionEditor'
 import styled from 'styled-components'
 import PopupButton from '../PopupButton/PopupButton'
+import OverlayConfig from '../OverlayConfig/OverlayConfig'
+import CommonOptions from '../CommonOptions/CommonOptions'
+import EmbedOptionsView from '../EmbedOptionsView/EmbedOptionsView'
+import PreviewImageSection from '../PopupOptionsView/PreviewImageSection'
+import PopupAlignments from '../../../../../../constants/PopupAlignments'
+import { useNavigate } from 'react-router-dom'
 import 'antd/es/select/style'
 
 const { Option } = Select
@@ -35,8 +41,15 @@ const POPUP_TYPES = {
   POPUP: 'popup',
   NONE: 'none',
   FORM: 'form',
+  EMBED: 'embed',
   START: 'start',
   IFRAME: 'iframe',
+}
+
+const POPUP_TYPES_LIMITED = {
+  POST: 'popup',
+  EMBED: 'embed',
+  FORM: 'form',
 }
 
 const OPEN_VIEWS = {
@@ -58,8 +71,27 @@ const PopupView = ({
                     popupTitle,
                      setInternalStep,
                      internalStep,
-                     storyDemo
+                     storyDemo,
+                     popupType,
+                     setPopupType,
+                     alignment,
+                     setAlignment,
+                     authData,
+                     workspaceId,
+                     storyDemoId,
+                     screenId,
                   }) => {
+
+  let navigate = useNavigate()
+  let featureFlags = authData ? authData.featureFlags : {}
+
+  function updateViewField(fieldName, value) {
+    let newStep = JSON.parse(JSON.stringify(internalStep))
+    if (newStep.view.popup[fieldName] !== value) {
+      newStep.view.popup[fieldName] = value
+      setInternalStep(newStep)
+    }
+  }
 
 
   /*
@@ -113,7 +145,40 @@ function addButton(buttonObj){
 
 
   return <React.Fragment>
-    <ST.ViewContainer>
+      <ST.ActionSelectorLineMargin>
+        <ST.ActionSelectorText>Alignment:</ST.ActionSelectorText>
+        <ST.Select
+          dropdownStyle={{
+            background: Colors.App.sidebarColor,
+            border: `1px solid ${Colors.primaryColor}`
+          }}
+          value={alignment}
+          style={{ width: 120 }}
+          onChange={(newAlignment) => {
+            setAlignment(PopupAlignments[newAlignment])
+          }}>
+          {Object.entries(PopupAlignments).map(([key, value], index, array) => {
+            let isLast = index === array.length - 1
+            return <Option style={{
+              background: 'none',
+              color: Colors.primaryColor,
+              borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
+              textTransform: 'capitalize',
+            }} key={key} value={key}>{value}</Option>
+          })}
+        </ST.Select>
+      </ST.ActionSelectorLineMargin>
+
+      <PreviewImageSection
+        internalStep={internalStep}
+        setInternalStep={setInternalStep}
+        storyDemo={storyDemo}
+        workspaceId={workspaceId}
+        storyDemoId={storyDemoId}
+        screenId={screenId}
+        authData={authData}
+      />
+
       <ST.TitleComponent>
         <ST.TextLabel>Title: </ST.TextLabel>
         <ST.TitleInput
@@ -166,6 +231,7 @@ function addButton(buttonObj){
 
         <ST.AddButtonIcon
           className={'AddLine_AddStepIcon'}
+          title={"Add button"}
           onClick={() => {
 
             addButton({
@@ -181,7 +247,12 @@ function addButton(buttonObj){
         </ST.AddButtonIcon>
       </ST.AddButtonLine>
 
-    </ST.ViewContainer>
+      <OverlayConfig
+        internalStep={internalStep}
+        updateViewField={updateViewField}
+      />
+
+
   </React.Fragment>
 }
 
@@ -235,15 +306,17 @@ const ST = {
   `,
   TitleComponent: styled.div`
     display: flex;
+    width: 100%;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
   `,
   TextLabel: styled.p`
     margin: 0px 5px 0px 0px;
+    flex-grow: 1;
   `,
   TitleInput: styled(Input)`
-    flex-grow: 1;
+    max-width: 250px;
   `,
   ViewContainer: styled.div`
     position: relative;
@@ -531,6 +604,41 @@ const ST = {
   ActionSelectorText: styled.p`
     margin: 0px;
   `,
+  ActionSelectorLineMargin: styled.div`
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 15px;
+  `,
+  LockedOptionRow: styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  `,
+  LockedOptionLabel: styled.span`
+    color: #bfbfbf;
+    font-size: 0.875rem;
+  `,
+  LockedOptionUpgradeBtn: styled.button`
+    background: ${Colors.primaryColor};
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: opacity 0.15s ease;
+
+    &:hover { opacity: 0.88; }
+    &:active { opacity: 0.75; }
+  `,
   SelectorInput: styled(Input)`
     && {
       margin-top: 10px;
@@ -540,7 +648,8 @@ const ST = {
   `,
   Select: styled(Select)`
     flex-grow: 1;
-
+    margin-left: 10px;
+    max-width: 250px;
     && .ant-select-content-value {
       background: none;
       color: ${Colors.primaryColor};
@@ -566,7 +675,7 @@ const ST = {
     && .ant-select-selection-selected-value {
       width: 90%;
     }
-`
+`,
 
 }
 

@@ -71,9 +71,9 @@ const PLACEMENT_TYPES = {
 const { confirm } = Modal
 
 const CommonOptions = ({
-                         setInternalStep,
-                         internalStep,
-                       }) => {
+  setInternalStep,
+  internalStep,
+}) => {
 
 
   function updateViewField(fieldName, value) {
@@ -93,23 +93,26 @@ const CommonOptions = ({
 
   return <React.Fragment>
 
+    <ST.CommonOptionsLine>
+      <ST.ActionSelectorLineTitle>Options:</ST.ActionSelectorLineTitle>
+
     <ST.ActionSelectorLineMargin>
       <ST.CheckboxLineMargin
         onClick={() => {
           updateViewField('showHeader', !internalStep.view.showHeader)
         }}>
         <ST.Checkbox
-          checked={internalStep.view.showHeader}/>
+          checked={internalStep.view.showHeader} />
         <ST.CheckboxText>Show header</ST.CheckboxText>
       </ST.CheckboxLineMargin>
     </ST.ActionSelectorLineMargin>
     <ST.ActionSelectorLineMargin>
       <ST.CheckboxLineMargin
-      onClick={() => {
-        updateViewField('showFooter', !internalStep.view.showFooter)
-      }}>
+        onClick={() => {
+          updateViewField('showFooter', !internalStep.view.showFooter)
+        }}>
         <ST.Checkbox
-          checked={internalStep.view.showFooter}/>
+          checked={internalStep.view.showFooter} />
         <ST.CheckboxText>Show footer</ST.CheckboxText>
       </ST.CheckboxLineMargin>
     </ST.ActionSelectorLineMargin>
@@ -119,7 +122,7 @@ const CommonOptions = ({
       }}>
         <ST.Checkbox
 
-          checked={internalStep.view.showStepNumbers}/>
+          checked={internalStep.view.showStepNumbers} />
         <ST.CheckboxText>Show step number</ST.CheckboxText>
       </ST.CheckboxLineMargin>
     </ST.ActionSelectorLineMargin>
@@ -134,15 +137,26 @@ const CommonOptions = ({
           setInternalStep(newStep)
 
         }}
-        value={internalStep.view.nextButtonText}/>
+        value={internalStep.view.nextButtonText} />
     </ST.ActionSelectorLineMargin>
+  </ST.CommonOptionsLine>
 
 
-  </React.Fragment>
+  </React.Fragment >
 }
 
 
 const ST = {
+  ActionSelectorLineTitle: styled.p`
+    margin: 10px 0px;
+  `,
+  CommonOptionsLine: styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    width: 100%;
+  `,
   NextButtonTextInput: styled(Input)`
     && {
       width: 45%;
@@ -338,12 +352,12 @@ const ST = {
     && .Step__DeleteButton,
     && .Step__SaveButton {
       ${(props) => {
-    if (props.isViewOpen) {
-      return 'visibility: visible'
-    } else {
-      return ''
-    }
-  }}
+      if (props.isViewOpen) {
+        return 'visibility: visible'
+      } else {
+        return ''
+      }
+    }}
     }
   `,
   ViewContainer: styled.div`
@@ -380,18 +394,18 @@ const ST = {
   `,
   ActionContainer: styled.span`
     ${(props) => {
-    if (props.isActionOpen) {
-      return 'justify-content: flex-start;\n' +
-        'align-items: flex-start;\n' +
-        `border: 1px solid ${Colors.primaryText};\n` +
-        'padding: 10px 5px;\n'
-    } else {
-      return `border: none;\n` +
-        'justify-content: flex-start;\n' +
-        'align-items: center;\n' +
-        'padding: 0px 5px;\n'
-    }
-  }}
+      if (props.isActionOpen) {
+        return 'justify-content: flex-start;\n' +
+          'align-items: flex-start;\n' +
+          `border: 1px solid ${Colors.primaryText};\n` +
+          'padding: 10px 5px;\n'
+      } else {
+        return `border: none;\n` +
+          'justify-content: flex-start;\n' +
+          'align-items: center;\n' +
+          'padding: 0px 5px;\n'
+      }
+    }}
 
     box-sizing: content-box;
     overflow: hidden;

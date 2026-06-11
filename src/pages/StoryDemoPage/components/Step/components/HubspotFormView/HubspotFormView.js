@@ -6,6 +6,7 @@ import * as ENV from '../../../../../../config'
 import Colors from '../../../../../../constants/mainColors'
 import Spinner from '../../../../../../components/Spinner/Spinner'
 import FormTypes from '../../../../../../constants/FormTypes'
+import OverlayConfig from '../OverlayConfig/OverlayConfig'
 
 const { Option } = Select
 
@@ -15,13 +16,24 @@ const HubspotFormView = ({
   formData,
   setFormData,
   workspaceId,
-  authData
+  authData,
+  internalStep,
+  setInternalStep
 }) => {
   const [hubspotForms, setHubspotForms] = useState([])
   const [loading, setLoading] = useState(false)
   const [selectedFormId, setSelectedFormId] = useState(
     formData?.hubspot?.formId || null
   )
+
+  function updateViewField(fieldName, value) {
+    if (!internalStep || !setInternalStep) return
+    let newStep = JSON.parse(JSON.stringify(internalStep))
+    if (newStep.view.popup[fieldName] !== value) {
+      newStep.view.popup[fieldName] = value
+      setInternalStep(newStep)
+    }
+  }
 
   useEffect(() => {
     if (workspaceId && authData?.token) {
@@ -97,6 +109,12 @@ const HubspotFormView = ({
           Form selected: {hubspotForms.find(f => f.guid === selectedFormId)?.name}
         </ST.InfoText>
       )}
+      {internalStep && setInternalStep && (
+        <OverlayConfig
+          internalStep={internalStep}
+          updateViewField={updateViewField}
+        />
+      )}
     </ST.ViewSelectorWrapper>
   )
 }
@@ -125,11 +143,6 @@ const ST = {
     width: 100%;
     background: #fff;
     min-height: 200px;
-    border: 1px solid black;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
-    border-top: none;
-    padding: 10px;
 
 
   `,

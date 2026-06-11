@@ -1,49 +1,34 @@
 //import { Input, Modal, Select } from 'antd'
 
 import Input from 'antd/es/input'
-import Modal from 'antd/es/modal'
-import Select from 'antd/es/select'
-import Colors from '../../../../../../constants/mainColors'
 import React, { useState } from 'react'
 import styled from 'styled-components'
-
-import 'antd/es/select/style'
-
-const { Option } = Select
-
-
-const { confirm } = Modal
-
-const VIEW_TYPES = {
-  POPUP: 'popup',
-  POINTER: 'Pointer',
-  FORM: 'Form'
-}
-
-const VIEW_TYPE_NAMES = {
-  POPUP: 'popup',
-  POINTER: 'Pointer',
-  FORM: 'Form'
-}
-
-const ACTION_TYPES = {
-  NEXT_BUTTON: 'NextButton',
-  ELEMENT_CLICK: 'ElementClick'
-}
-
+import CommonOptions from '../CommonOptions/CommonOptions'
+import OverlayConfig from '../OverlayConfig/OverlayConfig'
 
 const FormView = ({
 
                     formHasChanged,
                     setFormHasChanged,
+                    formData,
+                    setFormData,
+                    internalStep,
                     setInternalStep,
-                    internalStep
                   }) => {
 
 
-  let formTitle = (internalStep.view.formId && internalStep.view.formId.title) || 'Get in touch with us'
+  let formTitle = (formData && formData.title) || 'Get in touch with us'
 
-  return <ST.ViewSelectorWrapper>
+  function updateViewField(fieldName, value) {
+    if (!internalStep || !setInternalStep) return
+    let newStep = JSON.parse(JSON.stringify(internalStep))
+    if (newStep.view.popup[fieldName] !== value) {
+      newStep.view.popup[fieldName] = value
+      setInternalStep(newStep)
+    }
+  }
+
+  return <ST.ViewSelectorWrapper className={'form-body'}>
     <ST.ActionSelectorLine>
       <ST.Text>Title:</ST.Text>
 
@@ -55,13 +40,11 @@ const FormView = ({
           }
 
           let newTitle = event.target.value
+          let newFormData = {...formData}
 
+          newFormData.title = newTitle
 
-          if(formTitle !== newTitle){ 
-            let newStep = { ...internalStep }
-            newStep.view.formId.title = newTitle
-            setInternalStep(newStep)
-          }
+          setFormData(newFormData)
 
         }}
         value={formTitle}/>
@@ -84,21 +67,26 @@ const FormView = ({
 
     <ST.ActionSelectorLine>
     </ST.ActionSelectorLine>
+
+    {internalStep && setInternalStep && (
+      <CommonOptions
+        setInternalStep={setInternalStep}
+        internalStep={internalStep}
+      />
+    )}
+
+    {internalStep && setInternalStep && (
+      <OverlayConfig
+        internalStep={internalStep}
+        updateViewField={updateViewField}
+      />
+    )}
   </ST.ViewSelectorWrapper>
 }
 
 
 const ST = {
   ActionSelectorLine: styled.div`
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    margin-bottom: 15px;
-  `,
-
-  ActionSelectorLineMargin: styled.div`
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -141,49 +129,19 @@ const ST = {
     //background: #f1f1f1;
     min-height: 200px;
 
-    border: 1px solid black;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
-    border-top: none;
-    padding: 10px;
+    // border: 1px solid black;
+    // border-bottom-left-radius: 6px;
+    // border-bottom-right-radius: 6px;
+    // border-top: none;
+    // padding: 10px;
   `,
   SelectorInput: styled(Input)`
     && {
-      //margin-top: 10px;
+      margin-left: 10px;
       width: 100%;
     }
 
   `,
-  Select: styled(Select)`
-    flex-grow: 1;
-
-    && .ant-select-content-value {
-      background: none;
-      color: ${Colors.primaryColor};
-      border: none !important;
-      box-shadow: none;
-    }
-
-    && .ant-select-selection {
-      background: none;
-      color: ${Colors.primaryColor};
-      border: 1px solid #d9d9d9;
-      box-shadow: none;
-    }
-
-    && .ant-select-selection:hover {
-      border: 1px solid ${Colors.primaryColor};
-    }
-
-    && .ant-select-arrow {
-      color: ${Colors.primaryColor};
-    }
-
-    && .ant-select-selection-selected-value {
-      width: 90%;
-    }
-`
-
 }
 
 export default FormView

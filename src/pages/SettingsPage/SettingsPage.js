@@ -1,5 +1,6 @@
 import styled from 'styled-components'
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { connect } from 'react-redux'
 import Spinner from '../../components/Spinner/Spinner'
 import Header from '../../components/Header/Header'
@@ -27,13 +28,14 @@ import Colors from '../../constants/mainColors'
 import InviteUsersModal from './InviteUsersModal'
 import axios from '../../utils/axiosInstance'
 import { bindActionCreators } from "redux";
-import { updateAllWorkspacesForUser, updateCurrentSelectedWorkspace } from "../../actions/workspacesActions";
+import { updateAllWorkspacesForUser, updateCurrentSelectedWorkspace, resetCurrentSelectedWorkspace } from "../../actions/workspacesActions";
 import ENV from '../../config.json'
 const { Content, Footer, Sider } = Layout
 const { confirm, info } = Modal
 
 
 const SettingsPage = ({ authData, currentSelectedWorkspace, actions }) => {
+  const navigate = useNavigate()
   const [user, setUser] = useState([])
 
   const [userLoading, setUserLoading] = useState(false)
@@ -211,6 +213,37 @@ const SettingsPage = ({ authData, currentSelectedWorkspace, actions }) => {
                           <F.SaveButton__Image type="save" />
                           <F.SaveButton__Text>Save</F.SaveButton__Text>
                         </F.SaveButton>
+                        {selectedWorkspace.adminUser._id === authData.id && (
+                          <F.DeleteButton onClick={() => {
+                            confirm({
+                              title: 'Delete Workspace',
+                              content: `Are you sure you want to delete "${selectedWorkspace.name}"? This action cannot be undone.`,
+                              okText: 'Delete',
+                              okType: 'danger',
+                              cancelText: 'Cancel',
+                              onOk() {
+                                return axios.delete(`workspaces/${selectedWorkspace._id}`, {
+                                  headers: { Authorization: `Bearer ${authData.token}` }
+                                })
+                                  .then(() => {
+
+                                    return actions.updateAllWorkspacesForUser(authData.token)
+                                      .then(() => {
+                                        return actions.resetCurrentSelectedWorkspace()
+                                      })
+                                      .then(() => {
+                                      navigate('/')
+                                    })
+                                  })
+                                  .catch(err => {
+                                    console.log(err)
+                                  })
+                              }
+                            })
+                          }}>
+                            <F.DeleteButton__Text>Delete Workspace</F.DeleteButton__Text>
+                          </F.DeleteButton>
+                        )}
                       </F.LastLine>
                     </F.MainSection>
                   </F.Form>
@@ -596,7 +629,7 @@ const F = {
   LastLine: styled.div`
     display: flex;
     flex-direction: row;
-    justify-content: flex-start;
+    justify-content: space-between;
     align-items: center;
     gap: 8px;
     padding: 12px 24px 16px;
@@ -642,6 +675,41 @@ const F = {
     font-size: 13px;
     font-weight: 600;
     font-family: ${Colors.fontFamily};
+  `,
+  DeleteButton: styled.div`
+    margin: 0;
+    background: transparent;
+    color: #e03535;
+    display: flex;
+    height: 40px;
+    width: fit-content;
+    min-width: 90px;
+    padding: 0 20px;
+    border-radius: 10px;
+    border: 1.5px solid #e03535;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+    font-family: ${Colors.fontFamily};
+
+    &:hover {
+      background: #e03535;
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  `,
+  DeleteButton__Text: styled.p`
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: ${Colors.fontFamily};
+    color: inherit;
   `,
   IntegrationItem: styled.div`
     display: flex;
@@ -996,7 +1064,8 @@ function mapDispatchToProps(dispatch) {
   return {
     actions: bindActionCreators({
       updateCurrentSelectedWorkspace,
-      updateAllWorkspacesForUser
+      updateAllWorkspacesForUser,
+      resetCurrentSelectedWorkspace
     }, dispatch)
   }
 }

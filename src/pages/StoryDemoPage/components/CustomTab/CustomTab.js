@@ -11,6 +11,7 @@ import Theme from './Theme/Theme'
 import Background from './Background/Background'
 import Misc from './Misc/Misc'
 import Variables from './Variables/Variables'
+import Security from './Security/Security'
 
 /*
   tabsWidth is used to manually set the width of the element
@@ -71,6 +72,12 @@ const CustomTab = ({ storyDemo, authData, tabsWidth, changeIframeStep, reloadSto
           reloadStoryDemo={reloadStoryDemo}
         />
         <Misc
+          storyDemo={storyDemo}
+          workspaceId={storyDemo.workspaceId}
+          authData={authData}
+          reloadStoryDemo={reloadStoryDemo}
+        />
+        <Security
           storyDemo={storyDemo}
           workspaceId={storyDemo.workspaceId}
           authData={authData}

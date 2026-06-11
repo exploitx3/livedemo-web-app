@@ -6,6 +6,7 @@ import Form from "../Form/Form.js";
 import FormHubspotV2 from "../Form/FormHubspotV2.js";
 import FormHubspotV4 from "../Form/FormHubspotV4.js";
 import PopupContentView from './components/PopupContentView/PopupContentView.js'
+import EmbedView from '../EmbedView/EmbedView.js'
 
 function PopupComponenet(props) {
 
@@ -134,6 +135,19 @@ function PopupComponenet(props) {
                 changeToScreen={changeToScreen}
                 onNext={onNext}
             />
+        } else if (step.view.popup.type === 'embed') {
+            return (
+                <EmbedView
+                    step={step}
+                    onNext={onNext}
+                    onBack={onBack}
+                    size={size}
+                    themeBackgroundColor={themeBackgroundColor}
+                    themeTextColor={themeTextColor}
+                    themeButtonBackgroundColor={themeButtonBackgroundColor}
+                    themeButtonTextColor={themeButtonTextColor}
+                />
+            )
         } else if (step.view.popup.type === 'form' && showForm) {
             // Check if form type is hubspot
             const isHubspotForm = step.view.popup.formId &&

@@ -206,7 +206,6 @@ const PreviewImageSection = ({
 
 const styles = {
   container: {
-    borderTop: '1px solid #e5e7eb',
     paddingTop: '16px',
     width: '100%',
     marginBottom: '15px',

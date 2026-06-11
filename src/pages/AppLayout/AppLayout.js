@@ -34,6 +34,7 @@ const BillingSuccessfulPage = WithSuspense(lazy(() => import('../BillingSuccessf
 const BillingFailedPage = WithSuspense(lazy(() => import('../BillingFailedPage/BillingFailedPage.js')))
 const WorkspacePage = WithSuspense(lazy(() => import('../WorkspacePage/WorkspacePage.js')))
 const StoryDemoPage = WithSuspense(lazy(() => import('../StoryDemoPage/StoryDemoPage.js')))
+const AutoRecordingPreviewPage = WithSuspense(lazy(() => import('../AutoRecordingPreviewPage/AutoRecordingPreviewPage.js')))
 const CreateWorkspace = WithSuspense(lazy(() => import('../CreateWorkspace/CreateWorkspace.js')))
 const LeadsPage = WithSuspense(lazy(() => import('../LeadsPage/LeadsPage.js')))
 const AnalyticsPage = WithSuspense(lazy(() => import('../AnalyticsPage/AnalyticsPage.js')))
@@ -161,6 +162,7 @@ class AppLayout extends Component {
                   <Route path="/analytics" element={<AnalyticsPage/>}/>
                   {/*<Route path="/workspace/:workspaceId/livedemo/:liveDemoId" element={<LiveDemoPage collapsed={this.state.collapsed}/>}/>*/}
                   <Route path="/workspace/:workspaceId/storydemo/:storyDemoId" element={<StoryDemoPage collapsed={this.state.collapsed}/>}/>
+                  <Route path="/workspace/:workspaceId/auto-recording/:autoRecordingId" element={<AutoRecordingPreviewPage/>}/>
                   {/*<Route path="/members/:workspaceMemberId" element={<WorkspaceMemberPage/>}/>*/}
 
                   <Route path="*" element={<NotFoundPage/>}/>

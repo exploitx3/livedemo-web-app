@@ -18,11 +18,12 @@ import PostIcon from '../../../../static/images/postIcon.svg'
 import Spinner from '../../../../components/Spinner/Spinner'
 import TextView from './components/TextView/TextView'
 import PopupView from './components/PopupView/PopupView'
+import PopupCompleteView from './components/PopupCompleteView/PopupCompleteView'
 import OptionsView from './components/OptionsView/OptionsView'
 import HotspotOptionsView from './components/HotspotOptionsView/HotspotOptionsView'
 import PointerOptionsView from './components/PointerOptionsView/PointerOptionsView'
 import PopupOptionsView from './components/PopupOptionsView/PopupOptionsView'
-import FormView from '../../components/FormView/FormView'
+import FormView from './components/FormView/FormView'
 import FormTypes from '../../../../constants/FormTypes'
 import HubspotFormView from './components/HubspotFormView/HubspotFormView'
 
@@ -63,6 +64,7 @@ const POPUP_TYPES = {
   POPUP: 'popup',
   NONE: 'none',
   FORM: 'form',
+  EMBED: 'embed',
   START: 'start',
   IFRAME: 'iframe',
 }
@@ -327,6 +329,17 @@ const Step = ({
       })
   }
 
+  function decodeEmbedHtml(value) {
+    if (!value || !value.trim()) return ''
+    try {
+      const attempt = atob(value)
+      if (attempt.includes('<')) return attempt
+    } catch (e) {
+      // not base64
+    }
+    return value
+  }
+
   function updateForm(formUpdateObj, storyDemoId, screenId, workspaceId, stepId, formId, authToken) {
     setIsUpdating(true)
 
@@ -386,7 +399,8 @@ const Step = ({
           title: (internalStep.view.popup && internalStep.view.popup.title),
           description: (internalStep.view.popup && popupDescription),
           buttons: (buttons),
-          alignment: alignment
+          alignment: alignment,
+          embedHtmlContent: decodeEmbedHtml(internalStep.view.popup && internalStep.view.popup.embedHtmlContent),
         },
         viewType: (internalStep.view && internalStep.view.viewType),
         showStepNumbers: (internalStep.view.showStepNumbers && internalStep.view.showStepNumbers),
@@ -486,67 +500,25 @@ const Step = ({
           editorValue={editorValue}
           setEditorValue={setEditorValue}
         />
-      } else if (viewType === VIEW_TYPES.POPUP && popupType === POPUP_TYPES.POPUP) {
+      } else if (viewType === VIEW_TYPES.POPUP) {
 
-        return <PopupView
+        return <PopupCompleteView
+          popupType={popupType}
+          setPopupType={setPopupType}
+          alignment={alignment}
+          setAlignment={setAlignment}
           popupDescriptionValue={popupDescriptionValue}
           setPopupDescriptionValue={setPopupDescriptionValue}
           popupTitle={popupTitle}
           setPopupTitle={setPopupTitle}
-          setInternalStep={setInternalStepByUser}
           internalStep={internalStepState}
+          setInternalStep={setInternalStepByUser}
           storyDemo={storyDemo}
+          authData={authData}
+          workspaceId={workspaceId}
+          storyDemoId={storyDemoId}
+          screenId={screenId}
         />
-      } else if (viewType === VIEW_TYPES.POPUP && popupType === POPUP_TYPES.FORM) {
-
-        return <React.Fragment>
-          <ST.TypeSelectorWrapper>
-            <ST.TypeLabel>Type:</ST.TypeLabel>
-            <ST.TypeSelect
-              value={formType}
-              onChange={(value) => {
-                setFormType(value)
-                // if (!formHasChanged) {
-                setFormHasChanged(true)
-                // }
-                // Update formData type
-                const updatedFormData = {
-                  ...formData,
-                  type: value
-                }
-
-                // Initialize hubspot object if switching to hubspot type
-                if (value === FormTypes.HUBSPOT && !updatedFormData.hubspot) {
-                  updatedFormData.hubspot = { formId: '' }
-                }
-
-                setFormDataByUser(updatedFormData)
-              }}
-            >
-              <Option value={FormTypes.STEP}>standard</Option>
-              <Option value={FormTypes.HUBSPOT}>hubspot</Option>
-            </ST.TypeSelect>
-          </ST.TypeSelectorWrapper>
-
-          {formType === FormTypes.HUBSPOT ? (
-            <HubspotFormView
-              formHasChanged={formHasChanged}
-              setFormHasChanged={setFormHasChanged}
-              formData={formData}
-              setFormData={setFormDataByUser}
-              workspaceId={workspaceId}
-              authData={authData}
-            />
-          ) : (
-            <FormView
-              formHasChanged={formHasChanged}
-              setFormHasChanged={setFormHasChanged}
-              formData={formData}
-              setFormData={setFormDataByUser}
-            />
-          )}
-        </React.Fragment>
-
       } else {
         return ''
       }
@@ -601,11 +573,11 @@ const Step = ({
 
             // if (isViewOpen) {
 
-              // setIsViewOpen(false)
+            // setIsViewOpen(false)
             // } else {
 
-              // setIsViewOpen(true)
-              // changeStep(calculatedStepIndex)
+            // setIsViewOpen(true)
+            // changeStep(calculatedStepIndex)
             // }
 
             changeStep(calculatedStepIndex)
@@ -627,14 +599,17 @@ const Step = ({
               setOpenView(OPEN_VIEWS.TEXT_VIEW)
             }}>
           </ST.EditTextButton>
-          <ST.SettingsButton
-            type="setting"
-            className={'Step__SettingsButton'}
-            onClick={function () {
-              setOpenView(OPEN_VIEWS.OPTIONS_VIEW)
-            }}
-          >
-          </ST.SettingsButton>
+          {viewType !== VIEW_TYPES.POPUP && 
+          (
+            <ST.SettingsButton
+              type="setting"
+              className={'Step__SettingsButton'}
+              onClick={function () {
+                setOpenView(OPEN_VIEWS.OPTIONS_VIEW)
+              }}
+            >
+            </ST.SettingsButton>
+          )}
           <ST.SaveButtonWrapper onClick={() => {
             onSaveStep()
           }} className={'Step__SaveButton'}>

@@ -1,12 +1,12 @@
 import Colors from "../../../../../../constants/mainColors";
-import React, {useState, useEffect, useRef} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import Input from "antd/es/input";
 import Icon from "../../../../../../components/Icon/Icon";
 import Button from "antd/es/button";
-import {MdAdsClick} from "react-icons/md";
+import { MdAdsClick } from "react-icons/md";
 import Select from "antd/es/select";
-import {HexColorInput, HexColorPicker, RgbaColorPicker} from "react-colorful";
+import { HexColorInput, HexColorPicker, RgbaColorPicker } from "react-colorful";
 import 'tippy.js/dist/tippy.css' // optional
 import 'tippy.js/animations/shift-away.css'
 import Tippy from '@tippyjs/react'
@@ -22,7 +22,7 @@ function Tip({ children, ...props }) {
   return <S.Tippy {...props}>{children}</S.Tippy>
 }
 
-const PopupButton = ({popupButton, setPopupButton, deleteButton, storyDemo}) => {
+const PopupButton = ({ popupButton, setPopupButton, deleteButton, storyDemo }) => {
   let [text, setText] = useState(popupButton && popupButton.text ? popupButton.text : '')
   let [currentSelectedScreen, setCurrentSelectedScreen] = useState(popupButton && popupButton.gotoScreen ? popupButton.gotoScreen : (storyDemo.screens.length !== 0 ? storyDemo.screens[0] : {}))
   let [gotoType, setGotoType] = useState(popupButton && popupButton.gotoType && GOTO_TYPES[popupButton.gotoType] ? GOTO_TYPES[popupButton.gotoType] : GOTO_TYPES.next)
@@ -40,7 +40,8 @@ const PopupButton = ({popupButton, setPopupButton, deleteButton, storyDemo}) => 
       isInitialMountRef.current = false
       return
     }
-    setPopupButton({...popupButton,
+    setPopupButton({
+      ...popupButton,
       text,
       gotoScreen: currentSelectedScreen,
       gotoType: gotoType,
@@ -140,146 +141,152 @@ const PopupButton = ({popupButton, setPopupButton, deleteButton, storyDemo}) => 
 
 
   return (
-  <S.PopupButtonWrapper>
-    <S.SideComponent>
-      <S.OpenArrow type={isViewOpen ? 'down' : 'right'}
-      onClick={() => {
-        setIsViewOpen(!isViewOpen)
-      }}/>
+    <S.PopupButtonWrapper>
+      <S.SideComponent>
+        <S.OpenArrow type={isViewOpen ? 'down' : 'right'}
+          onClick={() => {
+            setIsViewOpen(!isViewOpen)
+          }} />
 
-      <S.TextInput value={text} onChange={event => {
-        setText(event.target.value)
-      }} />
-      <S.DeleteIcon
-        type={'delete'}
-        theme={'filled'}
-        onClick={() => {
-          deleteButton(popupButton.index)
+        <S.TextInput value={text} onClick={() => {
+          if (!isViewOpen) {
+            setIsViewOpen(true)
+          }
+
         }}
-      />
-    </S.SideComponent>
-    {!isViewOpen ? '' : (
-      <span>
-        <S.SideComponent style={{justifyContent: 'space-between'}}>
-      <S.Text>Color Text:</S.Text>
-      <Tip
-        zIndex={5}
-        // disabled={!showTippy}
-        arrow={true}
-        animation={'shift-away'}
-        trigger={'click'}
-        offset={[0, 10]}
-        popperOptions={{
-          modifiers: [
-            {
-              name: 'flip',
-              options: {
-                fallbackPlacements: ['top', 'right', 'left', 'bottom'],
-              },
-            },
-          ],
-        }}
-        interactive={true}
-        placement={'bottom'}
-        content={
-          <span>
-            <S.ColorPicker color={buttonTextColor} onChange={setButtonTextColor}/>
-            <S.ColorInput color={buttonTextColor} onChange={setButtonTextColor}/>
-          </span>
-        }
-      >
-        <span>
-          <S.ColorIcon
-            type={'bg-colors'}
-            color={buttonTextColor}
-            backgroundColor={buttonBackgroundColor}
-          ></S.ColorIcon>
-          </span>
-      </Tip>
-
-      <S.Text style={{marginLeft: 15}}>Color Background:</S.Text>
-      <Tip
-        zIndex={5}
-        // disabled={!showTippy}
-        arrow={true}
-        animation={'shift-away'}
-        trigger={'click'}
-        offset={[0, 10]}
-        popperOptions={{
-          modifiers: [
-            {
-              name: 'flip',
-              options: {
-                fallbackPlacements: ['top', 'right', 'left', 'bottom'],
-              },
-            },
-          ],
-        }}
-        interactive={true}
-        placement={'bottom'}
-        content={
-          <span>
-            <S.ColorPicker color={buttonBackgroundColor} onChange={setButtonBackgroundColor}/>
-            <S.ColorInput color={buttonBackgroundColor} onChange={setButtonBackgroundColor}/>
-          </span>
-        }
-      >
-        <span>
-          <S.ColorIcon
-            type={'bg-colors'}
-
-            color={buttonTextColor}
-            backgroundColor={buttonBackgroundColor}
-          ></S.ColorIcon>
-          </span>
-      </Tip>
-    </S.SideComponent>
-    <S.SideComponent>
-    <S.Text>Go to</S.Text>
-    <S.Select
-      dropdownStyle={{
-        background: Colors.App.sidebarColor,
-        border: `1px solid ${Colors.primaryColor}`
-      }}
-      defaultValue={
-        gotoType
-      }
-      value={
-        gotoType
-      }
-      style={{
-        maxWidth: 115,
-        width: 115
-      }}
-      onChange={(newGotoType) => {
-
-        setGotoType(newGotoType)
-      }}>
-      {Object.keys(GOTO_TYPES).map((type, index, array) => {
-        let isLast = index === array.length - 1
-        return <Option
-          style={{
-            background: 'none',
-            color: Colors.primaryColor,
-            borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
+          onChange={event => {
+            setText(event.target.value)
+          }} />
+        <S.DeleteIcon
+          type={'delete'}
+          theme={'filled'}
+          onClick={() => {
+            deleteButton(popupButton.index)
           }}
-          key={type}
-          value={type}>
-          {type}</Option>
-      })
-      }
-    </S.Select>
+        />
+      </S.SideComponent>
+      {!isViewOpen ? '' : (
+        <span>
+          <S.SideComponent style={{ justifyContent: 'space-between' }}>
+            <S.Text>Color Text:</S.Text>
+            <Tip
+              zIndex={5}
+              // disabled={!showTippy}
+              arrow={true}
+              animation={'shift-away'}
+              trigger={'click'}
+              offset={[0, 10]}
+              popperOptions={{
+                modifiers: [
+                  {
+                    name: 'flip',
+                    options: {
+                      fallbackPlacements: ['top', 'right', 'left', 'bottom'],
+                    },
+                  },
+                ],
+              }}
+              interactive={true}
+              placement={'bottom'}
+              content={
+                <span>
+                  <S.ColorPicker color={buttonTextColor} onChange={setButtonTextColor} />
+                  <S.ColorInput color={buttonTextColor} onChange={setButtonTextColor} />
+                </span>
+              }
+            >
+              <span>
+                <S.ColorIcon
+                  type={'bg-colors'}
+                  color={buttonTextColor}
+                  backgroundColor={buttonBackgroundColor}
+                ></S.ColorIcon>
+              </span>
+            </Tip>
 
-      {gotoType === GOTO_TYPES.next ? '' :
-        (gotoType === GOTO_TYPES.screen ?
-            getSelectScreenComp(storyDemo.screens, currentSelectedScreen) :
-            getWebsiteInputComp(gotoWebsite, setGotoWebsite)
-        )}
-    </S.SideComponent>
-      </span>
-    )}
+            <S.Text style={{ marginLeft: 15 }}>Color Background:</S.Text>
+            <Tip
+              zIndex={5}
+              // disabled={!showTippy}
+              arrow={true}
+              animation={'shift-away'}
+              trigger={'click'}
+              offset={[0, 10]}
+              popperOptions={{
+                modifiers: [
+                  {
+                    name: 'flip',
+                    options: {
+                      fallbackPlacements: ['top', 'right', 'left', 'bottom'],
+                    },
+                  },
+                ],
+              }}
+              interactive={true}
+              placement={'bottom'}
+              content={
+                <span>
+                  <S.ColorPicker color={buttonBackgroundColor} onChange={setButtonBackgroundColor} />
+                  <S.ColorInput color={buttonBackgroundColor} onChange={setButtonBackgroundColor} />
+                </span>
+              }
+            >
+              <span>
+                <S.ColorIcon
+                  type={'bg-colors'}
 
-  </S.PopupButtonWrapper>
+                  color={buttonTextColor}
+                  backgroundColor={buttonBackgroundColor}
+                ></S.ColorIcon>
+              </span>
+            </Tip>
+          </S.SideComponent>
+          <S.SideComponent>
+            <S.Text>Go to</S.Text>
+            <S.Select
+              dropdownStyle={{
+                background: Colors.App.sidebarColor,
+                border: `1px solid ${Colors.primaryColor}`
+              }}
+              defaultValue={
+                gotoType
+              }
+              value={
+                gotoType
+              }
+              style={{
+                maxWidth: 115,
+                width: 115
+              }}
+              onChange={(newGotoType) => {
+
+                setGotoType(newGotoType)
+              }}>
+              {Object.keys(GOTO_TYPES).map((type, index, array) => {
+                let isLast = index === array.length - 1
+                return <Option
+                  style={{
+                    background: 'none',
+                    color: Colors.primaryColor,
+                    borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
+                  }}
+                  key={type}
+                  value={type}>
+                  {type}</Option>
+              })
+              }
+            </S.Select>
+
+            {gotoType === GOTO_TYPES.next ? '' :
+              (gotoType === GOTO_TYPES.screen ?
+                getSelectScreenComp(storyDemo.screens, currentSelectedScreen) :
+                getWebsiteInputComp(gotoWebsite, setGotoWebsite)
+              )}
+          </S.SideComponent>
+        </span>
+      )}
+
+    </S.PopupButtonWrapper>
 
   )
 }
@@ -380,7 +387,7 @@ const S = {
       width: 100%;
       height: 100%;
       fill: #fff;
-      fill: ${({color}) => color};
+      fill: ${({ color }) => color};
     }
   `,
   SideComponent: styled.div`
