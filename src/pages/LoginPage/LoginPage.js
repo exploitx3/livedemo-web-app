@@ -119,7 +119,7 @@ const LoginPage = (props) => {
           postRegisterRedirectPath = responseData.redirectPath
         }
         setIsLoading(false)
-        return postWarm(CONFIG.LANDING_PAGE_CLIENT_TOKEN)
+        return responseData
       })
       .then(() => {
         navigate(postRegisterRedirectPath, { replace: true })

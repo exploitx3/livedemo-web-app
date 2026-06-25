@@ -37,7 +37,10 @@ export function authWithEmailAndPassword(email, password, browserSessionId) {
 
         dispatch({
           type: types.UPDATE_AUTH_DATA,
-          authData: response.data
+          authData: {
+            ...response.data,
+            emailVerified: response.data.emailVerified === true,
+          }
         })
 
         return response.data
@@ -60,13 +63,50 @@ export function registerWithEmailAndPassword(email, password, fullName, browserS
 
         dispatch({
           type: types.UPDATE_AUTH_DATA,
-          authData: response.data
+          authData: {
+            ...response.data,
+            emailVerified: response.data.emailVerified === true,
+          }
         })
 
         return response.data
       })
 
 
+  }
+}
+
+export function sendEmailVerificationCode(token) {
+  return function () {
+    return axios.post('/users/send-email-verify', {}, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => response.data)
+  }
+}
+
+export function checkEmailVerificationCode(code, token) {
+  return function (dispatch, getState) {
+    return axios.post('/users/check-email-verify', { code }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => {
+        const currentAuthData = getState().authReducer.authData
+
+        dispatch({
+          type: types.UPDATE_AUTH_DATA,
+          authData: {
+            ...currentAuthData,
+            emailVerified: true,
+          }
+        })
+
+        return response.data
+      })
   }
 }
 
@@ -87,14 +127,13 @@ export function authWithToken(token) {
           }
         }
 
-
-        Promise.all([
-          dispatch({
-            type: types.UPDATE_AUTH_DATA,
-            authData: response.data
-          })
-        ])
-
+        dispatch({
+          type: types.UPDATE_AUTH_DATA,
+          authData: {
+            ...response.data,
+            emailVerified: response.data.emailVerified === true,
+          }
+        })
 
         return response.data
       }).catch(e => {
@@ -150,7 +189,10 @@ debugger
 
         dispatch({
           type: types.UPDATE_AUTH_DATA,
-          authData: response.data
+          authData: {
+            ...response.data,
+            emailVerified: response.data.emailVerified === true,
+          }
         })
 
 

@@ -1,58 +1,90 @@
 // in src/restricted.js
-import React from 'react'
+import React, { useEffect } from 'react'
 import { connect } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import SuspenseWrapper from './SuspenseWrapper'
 
-function SwitchComponentIfAuth(NonAuthComponent, AuthComponent) {
+const EMAIL_VERIFY_PATH = '/email-verify'
 
+function getAuthDataFromState(state) {
+  const authData = state.authReducer.authData
+  return (Object.entries(authData).length === 0 && authData.constructor === Object) ? null : authData
+}
 
-  class RedirectComponent extends React.Component {
-    constructor(props, context) {
-      super(props, context)
-    }
-
-    getComponentToRender() {
-
-      if (this.props.authData) {
-        return AuthComponent
-      } else {
-        return NonAuthComponent
-      }
-    }
-
-    render() {
-
-      let ComponentToRender = this.getComponentToRender()
-
-      return ComponentToRender
-    }
+function isEmailVerified(authData) {
+  if (authData?.isDemo) {
+    return true
   }
+  return authData?.emailVerified === true
+}
 
+function SwitchComponentIfAuth(NonAuthComponent, AuthComponent, options = {}) {
+  const { bypassEmailVerify = false } = options
+
+  const RedirectComponentWrapper = (props) => {
+    const navigate = useNavigate()
+    const location = useLocation()
+    const hasAuth = !!props.authData
+    const verified = isEmailVerified(props.authData)
+    const onEmailVerifyPage = location.pathname === EMAIL_VERIFY_PATH
+
+    useEffect(() => {
+      if (hasAuth && !verified && !bypassEmailVerify && !onEmailVerifyPage) {
+        navigate(EMAIL_VERIFY_PATH, { replace: true })
+      } else if (hasAuth && verified && bypassEmailVerify && onEmailVerifyPage) {
+        navigate('/', { replace: true })
+      }
+    }, [hasAuth, verified, bypassEmailVerify, onEmailVerifyPage, navigate])
+
+    if (!hasAuth) {
+      return NonAuthComponent
+    }
+
+    if (!verified && !bypassEmailVerify && !onEmailVerifyPage) {
+      return <React.Fragment/>
+    }
+
+    if (verified && bypassEmailVerify && onEmailVerifyPage) {
+      return <React.Fragment/>
+    }
+
+    return AuthComponent
+  }
 
   function mapStateToProps(state) {
-
     return {
-      authData: (Object.entries(state.authReducer.authData).length === 0 && state.authReducer.authData.constructor === Object) ? null : state.authReducer.authData
+      authData: getAuthDataFromState(state)
     }
   }
 
-  const ConnectedComponent = connect(mapStateToProps)(RedirectComponent)
+  const ConnectedComponent = connect(mapStateToProps)(RedirectComponentWrapper)
   return <ConnectedComponent />
 }
 
 function RedirectComponentIfAuth(currentPath, redirectPath, NonAuthComponent, AuthComponent) {
   const RedirectComponentWrapper = (props) => {
     const navigate = useNavigate()
+    const location = useLocation()
+    const hasAuth = !!props.authData
+    const verified = isEmailVerified(props.authData)
 
-    if (props.authData) {
-      return <AuthComponent/>
-    } else if (props.authData && currentPath !== redirectPath) {
-      return <AuthComponent/>
-    } else if (!props.authData && currentPath !== redirectPath) {
-      navigate(redirectPath)
+    useEffect(() => {
+      if (hasAuth && !verified && location.pathname !== EMAIL_VERIFY_PATH) {
+        navigate(EMAIL_VERIFY_PATH, { replace: true })
+      } else if (!hasAuth && currentPath !== redirectPath) {
+        navigate(redirectPath)
+      }
+    }, [hasAuth, verified, location.pathname, navigate])
+
+    if (hasAuth && !verified && location.pathname !== EMAIL_VERIFY_PATH) {
       return <React.Fragment/>
-    } else if (!props.authData && currentPath === redirectPath) {
+    }
+
+    if (hasAuth) {
+      return <AuthComponent/>
+    } else if (!hasAuth && currentPath !== redirectPath) {
+      return <React.Fragment/>
+    } else if (!hasAuth && currentPath === redirectPath) {
       return <NonAuthComponent/>
     }
     return null
@@ -60,7 +92,7 @@ function RedirectComponentIfAuth(currentPath, redirectPath, NonAuthComponent, Au
 
   function mapStateToProps(state) {
     return {
-      authData: (Object.entries(state.authReducer.authData).length === 0 && state.authReducer.authData.constructor === Object) ? null : state.authReducer.authData
+      authData: getAuthDataFromState(state)
     }
   }
 
@@ -83,38 +115,6 @@ export function WithSuspense(Component) {
 
   return WrappedComponent
 }
-
-//
-// //TODO: implement a saving of accessed url and redirect on successful login
-// function RedirectToLoginIfNotAuth(WrappedComponent) {
-//   return class extends React.Component {
-//     constructor(props, context) {
-//       super(props, context)
-//
-//       this.checkAuthentication = this.checkAuthentication.bind(this)
-//     }
-//
-//     componentWillMount() {
-//       this.checkAuthentication(this.props);
-//     }
-//
-//     componentWillReceiveProps(nextProps) {
-//       if (nextProps.location !== this.props.location) {
-//         this.checkAuthentication(nextProps);
-//       }
-//     }
-//
-//     checkAuthentication(params) {
-//       const { history } = params;
-//       if(!Auth.isUserAuthenticated()){
-//         history.replace({ pathname: '/login' })
-//       }
-//     }
-//     render() {
-//       return <WrappedComponent {...this.props} />;
-//     }
-//   }
-// }
 
 export default {
   RedirectComponentIfAuth: RedirectComponentIfAuth,

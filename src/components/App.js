@@ -21,6 +21,7 @@ import LiveDemoPreviewPage from '../pages/LiveDemoPreviewPage/LiveDemoPreviewPag
 import AutoRecordingPreviewPage from '../pages/AutoRecordingPreviewPage/AutoRecordingPreviewPage'
 import DesktopAuthPage from '../pages/DesktopAuthPage/DesktopAuthPage'
 import OnboardingPage from '../pages/OnboardingPage/OnboardingPage'
+import EmailVerifyPage from '../pages/EmailVerifyPage/EmailVerifyPage'
 import DemoDashboardPage from '../pages/DemoDashboardPage/DemoDashboardPage'
 import UrlPreviewPage from '../pages/UrlPreviewPage/UrlPreviewPage'
 import { enableMapSet } from "immer"
@@ -160,6 +161,7 @@ class App extends React.Component {
             <Route path="/livedemos/:livedemoId/links/:linkId" element={<LiveDemoPreviewPage />} />
 
             <Route path="/refreshToken" element={<RefreshToken />} />
+            <Route path="/email-verify" element={HOC.SwitchComponentIfAuth(<LoginPage />, <EmailVerifyPage />, { bypassEmailVerify: true })} />
             <Route path="/onboarding" element={HOC.SwitchComponentIfAuth(<LoginPage />, <OnboardingPage />)} />
             <Route path="/demo-dashboard" element={HOC.SwitchComponentIfAuth(<LoginPage />, <DemoDashboardPage />)} />
             <Route path="/login" element={HOC.SwitchComponentIfAuth(<LoginPage />, <AppLayout />)} />
