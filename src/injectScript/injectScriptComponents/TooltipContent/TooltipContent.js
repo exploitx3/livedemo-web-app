@@ -34,6 +34,7 @@ function TooltipContent(props) {
         forceUpdateVar,
         showHeader,
         showFooter,
+        showStepNumbers,
         headerOnMouseDown,
         scale,
         onClick
@@ -43,7 +44,6 @@ function TooltipContent(props) {
     let customHeader = (liveDemo.custom && liveDemo.custom.header) || {}
     let hideFooter = true //step && step.hideFooter
     let nextButtonText = (view && view.nextButtonText) || 'Next'
-    let showStepNumbers = (view && view.showStepNumbers) || (view && view.showStepNumbers)
 
     let nextButtonTextString = (nextButtonText ? nextButtonText : 'Next')
     let stepNumbersString = (showStepNumbers ? `(${index + 1}/${size})` : '')
@@ -123,8 +123,7 @@ function TooltipContent(props) {
         return promise
     }
 
-
-
+debugger
     return <TC.WrapperInner
         onClick={
             !showFooter &&
@@ -153,7 +152,7 @@ function TooltipContent(props) {
                 {/*  setShowStartButton(true)*/}
                 {/*}} type="close"/>*/}
             </TC.HeaderWrapper>) : (
-            <TC.EmptyHeader addPadding={showFooter || showForm}>
+            <TC.EmptyHeader addPadding={showForm}>
             </TC.EmptyHeader>
         )}
 
@@ -283,7 +282,7 @@ const TC = {
         display: block;
         font-size: 1.4vw;
 
-        padding: 5px 20px;
+        padding: 15px 20px;
 
         @media (min-width: 1200px) {
             max-height: 240px;
@@ -519,7 +518,7 @@ const TC = {
         align-items: center;
         display: flex;
         justify-content: space-between;
-        margin-top: 15px;
+        margin-top: 5px;
 
         padding: 5px 15px 15px 15px;
 
@@ -607,7 +606,14 @@ const TC = {
 
     TooltipContent: styled.span`
 
-    
+    && span,
+    && p {
+        -webkit-font-smoothing: antialiased !important;
+        -webkit-backface-visibility: hidden !important;
+        backface-visibility: hidden !important;
+        transform: translate3d(0, 0, 0) !important;
+    }
+
         && p {
             font-weight: 500;
             font-family: ${Colors.fontFamilyRobotoMono};

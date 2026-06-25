@@ -22,7 +22,8 @@ import AutoRecordingPreviewPage from '../pages/AutoRecordingPreviewPage/AutoReco
 import DesktopAuthPage from '../pages/DesktopAuthPage/DesktopAuthPage'
 import OnboardingPage from '../pages/OnboardingPage/OnboardingPage'
 import DemoDashboardPage from '../pages/DemoDashboardPage/DemoDashboardPage'
-import {enableMapSet} from "immer"
+import UrlPreviewPage from '../pages/UrlPreviewPage/UrlPreviewPage'
+import { enableMapSet } from "immer"
 import TopLoadingBar from "./TopLoadingBar";
 import 'antd/reset'
 
@@ -37,7 +38,7 @@ class App extends React.Component {
   constructor(props) {
     super(props)
 
-    if(!isMobile) {
+    if (!isMobile) {
       // this.setupIntercom()
       // this.setupStonly()
       this.setupCrisp()
@@ -144,34 +145,35 @@ class App extends React.Component {
     const activeStyle = { color: 'blue' }
     return (
       <S.Main>
-        <TopLoadingBar  />
+        <TopLoadingBar />
         <S.Container>
 
           <Routes>
-          <Route path="/auto-recordings/:autoRecordingId" element={<AutoRecordingPreviewPage/>}/>
+            <Route path="/preview" element={<UrlPreviewPage />} />
+            <Route path="/auto-recordings/:autoRecordingId" element={<AutoRecordingPreviewPage />} />
 
-            <Route path="/change-password" element={<ChangePassword/>}/>
-            <Route path="/auth" element={<Auth/>}/>
-            <Route path="/demo-login" element={<DemoLoginPage/>}/>
-            <Route path="/desktop-auth" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <DesktopAuthPage/>)}/>
-            <Route path="/livedemos/:livedemoId" element={<LiveDemoPreviewPage/>}/>
-            <Route path="/livedemos/:livedemoId/links/:linkId" element={<LiveDemoPreviewPage/>}/>
+            <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/demo-login" element={<DemoLoginPage />} />
+            <Route path="/desktop-auth" element={HOC.SwitchComponentIfAuth(<LoginPage />, <DesktopAuthPage />)} />
+            <Route path="/livedemos/:livedemoId" element={<LiveDemoPreviewPage />} />
+            <Route path="/livedemos/:livedemoId/links/:linkId" element={<LiveDemoPreviewPage />} />
 
-            <Route path="/refreshToken" element={<RefreshToken/>}/>
-            <Route path="/onboarding" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <OnboardingPage/>)}/>
-            <Route path="/demo-dashboard" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <DemoDashboardPage/>)}/>
-            <Route path="/login" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <AppLayout/>)}/>
-            <Route path="/register" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <AppLayout/>)}/>
-            <Route path="/forgot-password" element={HOC.SwitchComponentIfAuth(<ForgotPassword/>, <AppLayout/>)}/>
+            <Route path="/refreshToken" element={<RefreshToken />} />
+            <Route path="/onboarding" element={HOC.SwitchComponentIfAuth(<LoginPage />, <OnboardingPage />)} />
+            <Route path="/demo-dashboard" element={HOC.SwitchComponentIfAuth(<LoginPage />, <DemoDashboardPage />)} />
+            <Route path="/login" element={HOC.SwitchComponentIfAuth(<LoginPage />, <AppLayout />)} />
+            <Route path="/register" element={HOC.SwitchComponentIfAuth(<LoginPage />, <AppLayout />)} />
+            <Route path="/forgot-password" element={HOC.SwitchComponentIfAuth(<ForgotPassword />, <AppLayout />)} />
             {/*<Route path="/register" element={HOC.SwitchComponentIfAuth(<RegisterPage/>, <AppLayout/>)}/>*/}
 
-            <Route path="/" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <AppLayout/>)}/>
-            
+            <Route path="/" element={HOC.SwitchComponentIfAuth(<LoginPage />, <AppLayout />)} />
+
             {/* Catch-all route for authenticated pages - must be last */}
-            <Route path="/*" element={HOC.SwitchComponentIfAuth(<LoginPage/>, <AppLayout/>)}/>
+            <Route path="/*" element={HOC.SwitchComponentIfAuth(<LoginPage />, <AppLayout />)} />
           </Routes>
           {/*<Route path="/" element={() => <Navigate to={'/'} replace />} />*/}
-          
+
           {/* react-toastify container with updated API */}
           <S.StyledToastContainer
             position="top-right"
@@ -189,7 +191,7 @@ class App extends React.Component {
               duration: 400,
             })}
           />
-          
+
           {/* react-hot-toast container */}
           <Toaster
             position="top-center"

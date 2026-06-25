@@ -134,7 +134,7 @@ export function setupSessionRecording(eventsRef, currentStepIndexRef) {
 
             window.config.sessionId = sessionId
 
-            let stopFn = rrweb.record({
+            let stopFn = rrwebRecord({
                 emit(event) {
 
                     if (eventsRef.current.length > 1000) {

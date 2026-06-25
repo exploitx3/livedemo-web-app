@@ -537,7 +537,7 @@ const TC = {
     transition: 0.5s all ease-out;
 
     transform-origin: top left;
-    transform: translateX(${({tooltipX}) => tooltipX}px) translateY(${({tooltipY}) => tooltipY}px);
+    transform: translate3d(${({tooltipX}) => Math.round(tooltipX)}px, ${({tooltipY}) => Math.round(tooltipY)}px, 0);
 
     font-size: 1.5vw;
     font-family: ${Colors.fontFamilyApple};
@@ -545,11 +545,10 @@ const TC = {
     visibility: ${({visible}) => visible ? 'visible' : 'hidden'};
 
     will-change: transform, visibility, opacity;
-    backface-visibility: hidden;
-    -webkit-font-smoothing: antialiased;
 
-    //
-    //
+
+    -webkit-font-smoothing: antialiased !important;
+
     //top: 50%;
     //left: 50%;
 

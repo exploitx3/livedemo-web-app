@@ -98,12 +98,6 @@ function HotspotContentEditor({
       }
      */
 
-  let textFontSize = '2vw' // + (2.70 * (1 - widthDimensionPercentage))
-  let hotspotSize = HOTSPOT_SIZE
-
-  let reverseWidthPercentage = 1 + (1 - widthDimensionPercentage)
-
-  textFontSize = '14px'
 
   // if(wrapperWidth <= 1040) {
   //     textFontSize = '14px'
@@ -128,8 +122,12 @@ function HotspotContentEditor({
   //   hotspotSize *= 1.05
   // }
 
+
+  let hotspotSize = HOTSPOT_SIZE
+
   let omniBarHeight = isOmniBarDisabled ? 0 : 40
 
+  let showStepNumbers = (view && view.showStepNumbers) || (view && view.showStepNumbers) || false
   let tabInfoWidth = (liveDemo && liveDemo.windowMeasures && liveDemo.windowMeasures.innerWidth) ? liveDemo.windowMeasures.innerWidth : (liveDemo.tabInfo ? liveDemo.tabInfo.width : 1366)
   let tabInfoHeight = (liveDemo && liveDemo.windowMeasures && liveDemo.windowMeasures.innerHeight) ? liveDemo.windowMeasures.innerHeight : (liveDemo.tabInfo ? liveDemo.tabInfo.height : 664)
 
@@ -153,6 +151,12 @@ function HotspotContentEditor({
 
   let hotspotPositionXTest = ((view.hotspot.frameX) - (hotspotSize / 2)) * xPercentage
   let hotspotPositionYTest = ((view.hotspot.frameY) - (hotspotSize / 2)) * yPercentage
+
+
+
+  let reverseWidthPercentage = 1 + (1 - widthDimensionPercentage)
+
+  let textFontSize = showStepNumbers && showFooter ? '16px' : '15px'
 
   // useEffect(() => {
   //
@@ -389,6 +393,7 @@ function HotspotContentEditor({
       allowHTML={true}
       content={
         <TooltipContentEditor
+          showStepNumbers={showStepNumbers}
           liveDemo={liveDemo}
           continuous={true}
           index={currentStepIndex.current}

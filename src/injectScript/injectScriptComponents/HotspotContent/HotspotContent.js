@@ -105,12 +105,7 @@ function HotspotContent({
       }
      */
 
-    let textFontSize = '2vw' // + (2.70 * (1 - widthDimensionPercentage))
-    let hotspotSize = HOTSPOT_SIZE
-
-    let reverseWidthPercentage = 1 + (1 - widthDimensionPercentage)
-
-    textFontSize = '15px'
+   
 
     // if(wrapperWidth <= 1040) {
     //     textFontSize = '14px'
@@ -134,8 +129,11 @@ function HotspotContent({
     //   textFontSize *= 1.45
     //   hotspotSize *= 1.05
     // }
+    let hotspotSize = HOTSPOT_SIZE
 
     let omniBarHeight = isOmniBarDisabled ? 0 : 40
+
+    let showStepNumbers = (view && view.showStepNumbers) || (view && view.showStepNumbers)
 
     let tabInfoWidth = (liveDemo && liveDemo.windowMeasures && liveDemo.windowMeasures.innerWidth) ? liveDemo.windowMeasures.innerWidth : (liveDemo.tabInfo ? liveDemo.tabInfo.width : 1366)
     let tabInfoHeight = (liveDemo && liveDemo.windowMeasures && liveDemo.windowMeasures.innerHeight) ? liveDemo.windowMeasures.innerHeight : (liveDemo.tabInfo ? liveDemo.tabInfo.height : 664)
@@ -171,6 +169,11 @@ function HotspotContent({
     // let hotspotPositionY = ((view.hotspot.frameY * yPercentage) - (hotspotSize / 2)) //+ (!isScaled ? 0 : scaleValuesRef.current.newTop)
 
     let newHotspotSize = hotspotSize * scaleValuesRef.current.scaleValueX
+
+
+    let reverseWidthPercentage = 1 + (1 - widthDimensionPercentage)
+
+    let textFontSize = showStepNumbers && showFooter ? '16px' : '15px'
 
 
     let originalX
@@ -492,6 +495,7 @@ function HotspotContent({
                     textFontSize={textFontSize}
                     showHeader={showHeader}
                     showFooter={showFooter}
+                    showStepNumbers={showStepNumbers}
                     onClick={onClick}
                 />
 
@@ -525,11 +529,9 @@ const HT = {
         }
 
 
-        //&& .tippy-content {
-        //  max-width: 250px;
-        //  width: max-content;
-        //  padding: 0px;
-        //}
+        && .tippy-content {
+            padding: 0px !important;
+        }
 
         && .tippy-arrow::before {
             color: ${({ $themeBackgroundColor }) => $themeBackgroundColor} !important;

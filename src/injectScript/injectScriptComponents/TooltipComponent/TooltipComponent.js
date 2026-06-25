@@ -712,6 +712,7 @@ const HT = {
     }
 
 
+
     && .tippy-arrow::before {
       color: ${Colors.primaryColor} !important;
     }

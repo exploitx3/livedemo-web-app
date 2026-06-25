@@ -37,6 +37,7 @@ import PopupComponenet from "./injectScriptComponents/PopupComponent/PopupCompon
 import RoundAudioPlayer from './injectScriptComponents/RoundAudioPlayer/RoundAudioPlayer.js'
 import RoundAudioPlayerEditor from "./injectScriptComponents/RoundAudioPlayerEditor/RoundAudioPlayerEditor.js";
 import AutoPlayToggle from "./injectScriptComponents/AutoPlayToggle/AutoPlayToggle.js";
+import OmniBar from "./injectScriptComponents/OmniBar/OmniBar.js";
 import Cursor from "./injectScriptComponents/Cursor/Cursor.js";
 import VideoCursor from './injectScriptComponents/VideoCursor/VideoCursor.js'
 import DebugCursor from './injectScriptComponents/DebugCursor/DebugCursor.js'
@@ -84,7 +85,6 @@ const REGION_TYPES = {
 }
 
 const HOTSPOT_SIZE = 90
-
 
 let checkForElement = function (selector) {
   return new Promise((resolve, reject) => {
@@ -150,7 +150,6 @@ function WalkthroughComponent({
   width = window.innerWidth,
   height = window.innerHeight,
   config,
-
   authData = {},
   reloadStoryDemo = () => {
   }
@@ -223,6 +222,7 @@ function WalkthroughComponent({
 
     }
   }
+
   let stepsWrapperRef = useRef(null)
 
   let [isInEditor, _setIsInEditor] = useState(isEditor)
@@ -403,7 +403,11 @@ function WalkthroughComponent({
 
   const autoPlayTimerRef = useRef(null)
 
-  const isAudioEnabled = true
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false)
+
+  const bgMusicRef = useRef(null)
+  const bgMusicPositionRef = useRef(0)
+  const hasAutoStartedAudioRef = useRef(false)
 
   let omniBarHeight = isOmniBarDisabled ? 0 : 40
 
@@ -593,7 +597,40 @@ function WalkthroughComponent({
     _setAudioHasStarted(audioHasStartedValue)
   }
 
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const [isNarrativeAudioPlaying, setIsNarrativeAudioPlaying] = useState(false)
+  const [isBackgroundMusicPlaying, setIsBackgroundMusicPlaying] = useState(false)
+
+  function playBgMusic() {
+    if (!bgMusicRef.current) return
+
+    const audio = bgMusicRef.current
+    const rawVolume = storyDemo?.custom?.backgroundMusic?.backgroundMusicVolume
+    audio.volume = rawVolume != null ? Math.min(1, Math.max(0, rawVolume / 100)) : 1
+    audio.currentTime = bgMusicPositionRef.current
+
+    audio.play().then(() => {
+      setIsBackgroundMusicPlaying(true)
+    }).catch((err) => {
+      if (err.name === 'AbortError') return
+      console.error('bg music play failed:', err)
+      setIsBackgroundMusicPlaying(false)
+    })
+  }
+
+  function pauseBgMusic() {
+    if (!bgMusicRef.current) return
+    bgMusicPositionRef.current = bgMusicRef.current.currentTime
+    bgMusicRef.current.pause()
+    setIsBackgroundMusicPlaying(false)
+  }
+
+  useEffect(() => {
+    if (!isAudioEnabled) {
+      pauseBgMusic()
+      setIsNarrativeAudioPlaying(false)
+      
+    }
+  }, [isAudioEnabled])
 
   function setStepRegions(newRegions) {
     stepRegionsRef.current = newRegions
@@ -2113,7 +2150,7 @@ function WalkthroughComponent({
           if (countedWords < 7) {
             delayResult = 3 * 1000
           } else {
-            delayResult = countedWords * multiplier * 1000
+            delayResult = (countedWords * multiplier * 1000) / 2
           }
           console.log('countWords - ' + countedWords)
           console.log('delayResult - ' + delayResult)
@@ -2552,7 +2589,6 @@ function WalkthroughComponent({
 
   let stepIndexValue = currentStepIndexRef && currentStepIndexRef.current !== undefined && currentStepIndexRef.current + 1
 
-  let showAudio = (isAudioEnabled && stepAudio)
 
   // console.log('showRegions')
   // console.log(showRegions)
@@ -2617,6 +2653,13 @@ function WalkthroughComponent({
     ref={onWrapperRefSetup}
     width={width ? width + 'px' : '100%'}
     height={height ? height + 'px' : '100%'}
+    onClick={() => {
+      if (!hasAutoStartedAudioRef.current) {
+        hasAutoStartedAudioRef.current = true
+        setIsAudioEnabled(true)
+        playBgMusic()
+      }
+    }}
     onMouseUp={() => {
       setIsTooltipDragging(false)
     }}
@@ -2642,83 +2685,46 @@ function WalkthroughComponent({
 
     {ENABLE_DEBUG_CURSOR ? <DebugCursor /> : null}
 
-    {!isOmniBarDisabled ? (<WS.OmniBar $width={width}>
-      <WS.OmniBar_Container className={'OmniBar__leftSide'}>
-        <WS.OmniBar__Buttons>
-          <WS.ButtonIcon className={'OmniBar__exitBtn'} onClick={() => {
-            document.exitFullscreen()
-            setIsFullScreen(false)
+    {storyDemoInternalRef.current?.custom?.backgroundMusic?.isActive &&
+      storyDemoInternalRef.current?.custom?.backgroundMusic?.backgroundMusicUrl ? (
+      <audio
+        key={storyDemoInternalRef.current?.custom?.backgroundMusic?.backgroundMusicUrl}
+        ref={bgMusicRef}
+        src={storyDemoInternalRef.current?.custom.backgroundMusic.backgroundMusicUrl}
+        loop
+        style={{ display: 'none' }}
+      />
+    ) : null}
 
-            setTimeout(() => {
-              forceUpdate()
-            }, 250)
-          }}>
-            <img src={CloseIcon} />
-          </WS.ButtonIcon>
-          <WS.ButtonIcon className={'OmniBar__minimizeBtn'} onClick={() => {
-            document.exitFullscreen()
-            setIsFullScreen(false)
-            setTimeout(() => {
-
-              // setTimeout(() => {
-              //   setupTransitionRegions(currentScreenRef.current.customTransitions, currentScreenRef.current._id)
-              //
-              //   setupPointerTransitions(currentScreenRef.current.customTransitions)
-              //
-              //   setupStepRegions(step, currentScreenRef.current._id)
-              // }, 250)
-
-              forceUpdate()
-            }, 250)
-
-          }}>
-            <img src={MinimizeIcon} />
-          </WS.ButtonIcon>
-          <WS.ButtonIcon className={'OmniBar__maximizeBtn'} style={{ cursor: 'pointer' }}
-            onClick={onFullScreenButtonClick}>
-            <img src={MaximizeIcon} />
-          </WS.ButtonIcon>
-        </WS.OmniBar__Buttons>
-      </WS.OmniBar_Container>
-
-      <WS.OmniBar__urlWrapper className={'OmniBar__url'}>
-        <WS.OmniBar__urlWrapperLeft className={'UrlWrapper__leftSide'}>
-        </WS.OmniBar__urlWrapperLeft>
-        <WS.OmniBar__urlWrapperInner className={'UrlWrapper__urlWrapper'}>
-          <WS.UrlLock className={'UrlWrapper__lockIcon'} />
-          <WS.UrlName
-            className={'UrlWrapper__urlName'}>{storyDemoInternalRef.current.name || ''}</WS.UrlName>
-        </WS.OmniBar__urlWrapperInner>
-
-        <WS.OmniBar__urlWrapperRight className={'UrlWrapper__rightSide'}>
-          <WS.UrlReload
-            onClick={() => {
-
-              changeStep(0, stepsInternalRef.current)
-              // currentStepIndex.current = 0
-              // processStep(currentStepIndex, videoRef, flixDoc)
-            }}
-          />
-        </WS.OmniBar__urlWrapperRight>
-      </WS.OmniBar__urlWrapper>
-
-      <WS.OmniBar_Container className={'OmniBar__rightSide'}>
-
-        <WS.OmniBar__LineSpace>
-          {isInEditor ? '' : (
-            <AutoPlayToggle isAutoPlayActive={isAutoPlayActive}
-              setIsAutoPlayActive={setIsAutoPlayActive} />
-          )}
-          {!isInEditor ? '' : (
-            <WS.OmniBar__StepIndicator>
-              Step {stepIndexValue}
-            </WS.OmniBar__StepIndicator>
-          )}
-        </WS.OmniBar__LineSpace>
-      </WS.OmniBar_Container>
-
-
-    </WS.OmniBar>
+    {!isOmniBarDisabled ? (
+      <OmniBar
+        width={width}
+        storyName={storyDemoInternalRef.current.name}
+        isInEditor={isInEditor}
+        stepIndexValue={stepIndexValue}
+        isAutoPlayActive={isAutoPlayActive}
+        setIsAutoPlayActive={setIsAutoPlayActive}
+        isAudioEnabled={isAudioEnabled}
+        setIsAudioEnabled={(nextEnabled) => {
+          setIsAudioEnabled(nextEnabled)
+          if (nextEnabled) {
+            playBgMusic()
+          }
+        }}
+        shouldShowAudio={storyDemoInternalRef.current?.custom?.backgroundMusic?.isActive || stepAudio}
+        onExitFullScreen={() => {
+          document.exitFullscreen()
+          setIsFullScreen(false)
+          setTimeout(() => { forceUpdate() }, 250)
+        }}
+        onMinimize={() => {
+          document.exitFullscreen()
+          setIsFullScreen(false)
+          setTimeout(() => { forceUpdate() }, 250)
+        }}
+        onFullScreenButtonClick={onFullScreenButtonClick}
+        onReload={() => { changeStep(0, stepsInternalRef.current) }}
+      />
     ) : ''}
     <WS.Main id={'main'}
       $isOmniBarDisabled={isOmniBarDisabled}
@@ -2923,7 +2929,7 @@ function WalkthroughComponent({
           </WS.WatermarkButton>
         </WS.WatermarkWrapper>
       )}
-      {isAudioEnabled && stepAudio ? (
+      {stepAudio ? (
         <WS.AudioWrapper>
 
           {isInEditor ? (
@@ -2950,8 +2956,8 @@ function WalkthroughComponent({
           ) : (
             <RoundAudioPlayer
               stepAudio={stepAudio}
-              isAudioPlaying={isAudioPlaying}
-              setIsAudioPlaying={setIsAudioPlaying}
+              isAudioPlaying={isNarrativeAudioPlaying}
+              setIsAudioPlaying={setIsNarrativeAudioPlaying}
               autoPlay={true}
               setAudioHasPlayed={setAudioHasPlayed}
               setAudioHasStarted={setAudioHasStarted}

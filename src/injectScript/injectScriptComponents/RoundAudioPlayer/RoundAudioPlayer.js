@@ -27,12 +27,12 @@ const RoundAudioPlayer = (props) => {
             attachAudioTimeChangeHandler(audioInternalRf.current)
 
             if (autoPlay) {
-                try {
-                    audioInternalRf.current.play()
+                audioInternalRf.current.play().then(() => {
                     setIsAudioPlaying(true)
-                } catch (error) {
-                    console.log(error)
-                }
+                }).catch((err) => {
+                    if (err.name === 'AbortError') return
+                    console.log(err)
+                })
             }
 
         }

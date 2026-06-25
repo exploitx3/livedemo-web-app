@@ -37,6 +37,7 @@ function TooltipContentEditor(props) {
     showHeader,
     showFooter,
     headerOnMouseDown,
+    showStepNumbers,
     onClick
   } = props
 
@@ -44,7 +45,7 @@ function TooltipContentEditor(props) {
   let customHeader = (liveDemo.custom && liveDemo.custom.header) || {}
   let hideFooter = true //step && step.hideFooter
   let nextButtonText = (view && view.nextButtonText) || 'Next'
-  let showStepNumbers = (view && view.showStepNumbers) || (view && view.showStepNumbers)
+  // let showStepNumbers = (view && view.showStepNumbers) || (view && view.showStepNumbers)
 
   let nextButtonTextString = (nextButtonText ? nextButtonText : 'Next')
   let stepNumbersString = (showStepNumbers ? `(${index + 1}/${size})` : '')
@@ -153,7 +154,7 @@ function TooltipContentEditor(props) {
         {/*  setShowStartButton(true)*/}
         {/*}} type="close"/>*/}
       </TC.HeaderWrapper>) : (
-        <TC.EmptyHeader $addPadding={showFooter || showForm}>
+        <TC.EmptyHeader $addPadding={showForm}>
         </TC.EmptyHeader>
       )}
 
@@ -281,7 +282,7 @@ const TC = {
     display: block;
     font-size: 1.4vw;
     
-    padding: 5px 20px;
+    padding: 15px 20px;
 
     @media (min-width: 1200px) {
         max-height: 240px;
@@ -505,7 +506,7 @@ const TC = {
     align-items: center;
     display: flex;
     justify-content: space-between;
-    margin-top: 15px;
+    margin-top: 5px;
 
     padding: 5px 15px 15px 15px;
 

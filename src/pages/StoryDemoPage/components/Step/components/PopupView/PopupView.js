@@ -6,7 +6,7 @@ import Input from 'antd/es/input'
 import Modal from 'antd/es/modal'
 import Select from 'antd/es/select'
 import Colors from '../../../../../../constants/mainColors'
-import React, {useState} from 'react'
+import React from 'react'
 import ViewEditor from '../../../ViewEditor/ViewEditor'
 import DescriptionEditor from '../../../ViewEditor/DescriptionEditor'
 import styled from 'styled-components'
@@ -108,9 +108,8 @@ const PopupView = ({
    */
 
 
-  let [buttons, setButtons] = useState(internalStep.view.popup.buttons ? internalStep.view.popup.buttons : [
+  const buttons = internalStep.view.popup.buttons || []
 
-  ])
 
   popupDescriptionValue = popupDescriptionValue ? popupDescriptionValue : []
   popupDescriptionValue = popupDescriptionValue.map(value => {
@@ -132,14 +131,8 @@ const PopupView = ({
   })
 
 function addButton(buttonObj){
-  let newButtons = JSON.parse(JSON.stringify(buttons))
-
-  newButtons.push(buttonObj)
-
   let newStep = JSON.parse(JSON.stringify(internalStep))
-  newStep.view.popup.buttons = newButtons
-
-  setButtons(newButtons)
+  newStep.view.popup.buttons = [...(newStep.view.popup.buttons || []), buttonObj]
   setInternalStep(newStep)
 }
 
@@ -206,21 +199,13 @@ function addButton(buttonObj){
             key={popupButton.index}
             popupButton={popupButton}
             deleteButton={(index) => {
-              let newButtons = JSON.parse(JSON.stringify(buttons))
-              newButtons = newButtons.filter(b => b.index !== index)
-
-              setButtons(newButtons)
               let newStep = JSON.parse(JSON.stringify(internalStep))
-              newStep.view.popup.buttons = newButtons
+              newStep.view.popup.buttons = newStep.view.popup.buttons.filter(b => b.index !== index)
               setInternalStep(newStep)
             }}
             setPopupButton={(popupButton) => {
-
-              let newButtons = JSON.parse(JSON.stringify(buttons))
-              newButtons = newButtons.map(b => b.index === popupButton.index ? popupButton : b)
-
               let newStep = JSON.parse(JSON.stringify(internalStep))
-              newStep.view.popup.buttons = newButtons
+              newStep.view.popup.buttons = newStep.view.popup.buttons.map(b => b.index === popupButton.index ? popupButton : b)
               setInternalStep(newStep)
             }}
             storyDemo={storyDemo}

@@ -39,7 +39,7 @@ const PopupContentView = ({
                 />
             )}
             <C.Spacer />
-            <C.ButtonsWrapper alignment={alignment}>
+            <C.ButtonsWrapper alignment={alignment} showPreviewImage={!!showPreviewImage}>
                 {buttons.map(popupButton => (
                     <PopupButton
                         fontSize={buttonFontSize}
@@ -195,7 +195,7 @@ const C = {
         display: flex;
         align-items: ${({ alignment }) => alignment};
         justify-content: ${({ alignment }) => alignment};
-        flex-direction: ${({ alignment }) => alignment === 'center' ? 'row' : 'column'};
+        flex-direction: ${({ alignment, showPreviewImage }) => showPreviewImage && alignment === 'center' ? 'row' : 'column'};
         gap: ${({ alignment }) => alignment === 'center' ? '10px' : '0px'};
         margin: 0;
         width: 85%;
