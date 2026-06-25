@@ -25,11 +25,12 @@ try {
   console.log(err)
 }
 
-export function authWithEmailAndPassword(email, password) {
+export function authWithEmailAndPassword(email, password, browserSessionId) {
   return function (dispatch) {
     return axios.post('/users/password-authenticate', {
       email: email,
-      password: password
+      password: password,
+      ...(browserSessionId ? { browserSessionId } : {})
     })
       .then(function (response) {
 
@@ -46,12 +47,13 @@ export function authWithEmailAndPassword(email, password) {
   }
 }
 
-export function registerWithEmailAndPassword(email, password, fullName) {
+export function registerWithEmailAndPassword(email, password, fullName, browserSessionId) {
   return function (dispatch) {
     return axios.post('/users', {
       email: email,
       password: password,
-      fullName: fullName
+      fullName: fullName,
+      ...(browserSessionId ? { browserSessionId } : {})
     })
       .then(function (response) {
 

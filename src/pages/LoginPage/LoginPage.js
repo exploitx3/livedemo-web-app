@@ -1,4 +1,4 @@
-import React, { Fragment, useMemo, useState } from 'react'
+import React, { Fragment, useMemo, useState, useEffect } from 'react'
 import Button from 'antd/es/button'
 import Icon from '../../components/Icon/Icon'
 import Layout from 'antd/es/layout'
@@ -14,7 +14,7 @@ import styled, { keyframes } from 'styled-components'
 import Colors from '../../constants/mainColors'
 import { bindActionCreators } from 'redux'
 import { connect } from 'react-redux'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import IconTextButton from '../../components/IconTextButton/IconTextButton'
 import StyledInput from '../../components/StyledInput/StyledInput'
 
@@ -39,10 +39,20 @@ const TAB_KEYS = {
 const LoginPage = (props) => {
   const location = useLocation()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const returnPath = useMemo(
     () => getPostLoginPathFromLocation(location),
     [location.pathname, location.search]
   )
+
+  const browserSessionId = useMemo(() => {
+    const fromParams = searchParams.get('browserSessionId')
+    if (fromParams) {
+      sessionStorage.setItem('browserSessionId', fromParams)
+      return fromParams
+    }
+    return sessionStorage.getItem('browserSessionId') || null
+  }, [searchParams])
 
   let [emailAddress, setEmailAddress] = useState('')
   let [password, setPassword] = useState('')
@@ -70,10 +80,11 @@ const LoginPage = (props) => {
   }
 
   function onSignWithGoogle(e) {
-    const googleUrl =
-      `${CONFIG.API_URL}/users/auth/google-link?returnTo=${encodeURIComponent(returnPath)}`
+    let googleUrl = `${CONFIG.API_URL}/users/auth/google-link?returnTo=${encodeURIComponent(returnPath)}`
+    if (browserSessionId) {
+      googleUrl += `&browserSessionId=${encodeURIComponent(browserSessionId)}`
+    }
     window.location.assign(googleUrl)
-
   }
 
   function onLogin(e) {
@@ -82,7 +93,7 @@ const LoginPage = (props) => {
 
     let postLoginRedirectPath = returnPath
 
-    return props.authActions.authWithEmailAndPassword(emailAddress, password)
+    return props.authActions.authWithEmailAndPassword(emailAddress, password, browserSessionId)
       .then((responseData) => {
         if (responseData && typeof responseData.redirectPath === 'string' && responseData.redirectPath.trim() !== '') {
           postLoginRedirectPath = responseData.redirectPath
@@ -102,7 +113,7 @@ const LoginPage = (props) => {
 
     let postRegisterRedirectPath = returnPath
 
-    return props.authActions.registerWithEmailAndPassword(emailAddress, passwordReg, fullNameReg)
+    return props.authActions.registerWithEmailAndPassword(emailAddress, passwordReg, fullNameReg, browserSessionId)
       .then((responseData) => {
         if (responseData && typeof responseData.redirectPath === 'string' && responseData.redirectPath.trim() !== '') {
           postRegisterRedirectPath = responseData.redirectPath

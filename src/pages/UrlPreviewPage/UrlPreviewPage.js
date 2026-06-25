@@ -225,6 +225,7 @@ const ButtonList = styled.div`
 `
 
 const ActiveOptionButton = styled.button`
+  cursor: pointer;
   position: relative;
   border: none;
   height: 36px;
@@ -440,6 +441,34 @@ const TextHolder = styled.div`
   position: relative;
 `
 
+const ModalWrapper = styled.div`
+  background:
+    radial-gradient(ellipse at 15% 85%, ${Colors.primaryColor}8c 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 10%, ${Colors.primaryColorDarker}73 0%, transparent 48%),
+    radial-gradient(ellipse at 50% 50%, ${Colors.secondaryColor}1f 0%, transparent 70%),
+    linear-gradient(145deg, #0d1b4b 0%, #101c3a 40%, #0a1229 100%);
+
+  h3 {
+    color: #ffffff;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-shadow: 0 1px 16px rgba(16, 112, 255, 0.25);
+    font-family: ${mainColors.fontFamilyLexend};
+  }
+
+  p, .modal-text {
+    color: #F9F9F9;
+    font-family: ${mainColors.fontFamilyLexend};
+
+  }
+
+  span {
+    color: #F9F9F9;
+    font-family: ${mainColors.fontFamilyLexend};
+
+  }
+`
+
 const DemoIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" style={{ width: 14, height: 14, flexShrink: 0, strokeWidth: 1.5, color: '#2563eb' }}>
     <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
@@ -469,6 +498,7 @@ function UrlPreviewPage({ authData }) {
   const [urlDemo, setUrlDemo] = useState(null)
   const [storyDemo, setStoryDemo] = useState(null)
   const [hasDemoLoaded, setHasDemoLoaded] = useState(false)
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false)
   const pollIntervalRef = useRef(null)
 
 
@@ -511,7 +541,16 @@ function UrlPreviewPage({ authData }) {
     []
   )
 
-  
+  const handleEditClick = () => {
+    if (!hasDemoLoaded) return
+    if (isAuthenticated) {
+      window.location.href = `${ENV.APP_URL}/workspace/${storyDemo.workspaceId}/storydemo/${storyDemo._id}`
+    } else {
+      setIsSignupModalOpen(true)
+    }
+  }
+
+  const redirectUrl = `${ENV.APP_URL}/?browserSessionId=${browserSessionId}`
 
   return (
     <Wrapper>
@@ -527,7 +566,7 @@ function UrlPreviewPage({ authData }) {
           <EditButton
             disabled={!hasDemoLoaded}
             aria-disabled={!hasDemoLoaded}
-            onClick={hasDemoLoaded ? () => window.location.href = `${ENV.APP_URL}/workspace/${storyDemo.workspaceId}/storydemo/${storyDemo._id}` : undefined}
+            onClick={handleEditClick}
           >Edit</EditButton>
         </RightSection>
       </TopBar>
@@ -538,7 +577,7 @@ function UrlPreviewPage({ authData }) {
             <SidePanel>
               <SidePanelTitle>Your demo is being created</SidePanelTitle>
               <ButtonList>
-                <ActiveOptionButton>
+                <ActiveOptionButton onClick={handleEditClick}>
                   <IconBox bg="#eff6ff">
                     <DemoIcon />
                   </IconBox>
@@ -587,6 +626,133 @@ function UrlPreviewPage({ authData }) {
           </ContentArea>
         </MainContainer>
       </Body>
+
+      {isSignupModalOpen && (
+        <div style={{
+          pointerEvents: 'auto',
+          position: 'fixed',
+          inset: 0,
+          zIndex: 2147483647,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(249,250,251,0.9)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+            }}
+            onClick={() => setIsSignupModalOpen(false)}
+          />
+          <ModalWrapper style={{
+            position: 'relative',
+            marginLeft: 16,
+            marginRight: 16,
+            width: 510,
+            maxWidth: 'calc(100vw - 32px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 20,
+            overflow: 'hidden',
+            borderRadius: 24,
+
+            paddingTop: 80,
+            paddingBottom: 80,
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 8px 48px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
+          }}>
+            <button
+              onClick={() => setIsSignupModalOpen(false)}
+              aria-label="Close"
+              style={{
+                position: 'absolute',
+                right: 16,
+                top: 16,
+                zIndex: 20,
+                display: 'flex',
+                height: 36,
+                width: 36,
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: 12,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                border: 'none',
+                cursor: 'pointer',
+                backdropFilter: 'blur(8px)',
+                color: '#fff',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ width: 16, height: 16, color: '#fff' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 5 5 19M5 5l14 14" vectorEffect="non-scaling-stroke" />
+              </svg>
+            </button>
+
+            <div style={{ pointerEvents: 'none', position: 'absolute', inset: 0, zIndex: 0 }}>
+            </div>
+
+            <div style={{ position: 'relative', zIndex: 10, display: 'flex', width: 380, flexDirection: 'column', alignItems: 'flex-start', gap: 40 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <h3 style={{ fontSize: 32, fontWeight: 700, lineHeight: '40px', margin: 0 }}>
+                Your product at its best.
+                </h3>
+                <p className="modal-text" style={{ fontSize: 16, margin: 0 }}>
+                  Create a free account to continue.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', width: '100%', flexDirection: 'column', gap: 8, fontSize: 16,  }}>
+                {[
+                  'Generate unlimited product stories',
+                  'Embed and share anywhere',
+                  'Free to get started, no credit card',
+                ].map((text) => (
+                  <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ width: 16, height: 16, color: Colors.primaryColor, flexShrink: 0 }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 6 9 17l-5-5" vectorEffect="non-scaling-stroke" />
+                    </svg>
+                    <span className="modal-text">{text}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', width: '100%', flexDirection: 'column', gap: 16 }}>
+                <a
+                  href={redirectUrl}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    height: 48,
+                    borderRadius: 12,
+                    background: Colors.primaryColor,
+                    border: `1px solid ${Colors.primaryColorDarker}`,
+                    color: '#fff',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    transition: 'background 0.15s, border-color 0.15s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = Colors.primaryColorDarker; e.currentTarget.style.borderColor = Colors.primaryColorDarker }}
+                  onMouseLeave={e => { e.currentTarget.style.background = Colors.primaryColor; e.currentTarget.style.borderColor = Colors.primaryColorDarker }}
+                >
+                  Sign up for free
+                </a>
+              </div>
+            </div>
+          </ModalWrapper>
+        </div>
+      )}
     </Wrapper>
   )
 }
