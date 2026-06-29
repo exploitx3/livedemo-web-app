@@ -55,6 +55,7 @@ function HotspotContent({
     view,
     hotspotId,
     isInEditor,
+    isMobile,
     widthDimensionPercentage,
     heightDimensionPercentage,
     navWrapperRef,
@@ -441,7 +442,7 @@ function HotspotContent({
 
         <Tip
             zIndex={3}
-            disabled={false}
+            disabled={isMobile}
             // disabled={!showTippy}
             delay={200}
             arrow={true}

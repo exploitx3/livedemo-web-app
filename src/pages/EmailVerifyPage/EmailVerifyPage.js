@@ -1,16 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
+import { bindActionCreators } from 'redux'
 import { useNavigate } from 'react-router-dom'
-import { MdArrowBack } from 'react-icons/md'
 import mainColors from '../../constants/mainColors'
-import axios from '../../utils/axiosInstance'
 import { showErrorsForResponse } from '../../utils/helperFunctions'
-import * as types from '../../constants/actionTypes'
+import {
+  logout,
+  checkEmailVerificationCode,
+  sendEmailVerificationCode,
+} from '../../actions/authActions'
+import { MdArrowBack } from 'react-icons/md'
 
 const CODE_LENGTH = 6
 
-function EmailVerifyPage({ authData, dispatch }) {
+function EmailVerifyPage({ authData, authActions }) {
   const navigate = useNavigate()
   const [digits, setDigits] = useState(Array(CODE_LENGTH).fill(''))
   const [isVerifying, setIsVerifying] = useState(false)
@@ -60,12 +64,6 @@ function EmailVerifyPage({ authData, dispatch }) {
     focusInput(Math.min(pasted.length, CODE_LENGTH - 1))
   }
 
-  function getAuthHeaders() {
-    return {
-      Authorization: `Bearer ${authData?.token}`,
-    }
-  }
-
   function onVerify() {
     const code = digits.join('')
     if (code.length !== CODE_LENGTH) {
@@ -73,17 +71,9 @@ function EmailVerifyPage({ authData, dispatch }) {
     }
 
     setIsVerifying(true)
-    return axios.post('/users/check-email-verify', { code }, { headers: getAuthHeaders() })
-      .then((response) => {
-        dispatch({
-          type: types.UPDATE_AUTH_DATA,
-          authData: {
-            ...authData,
-            emailVerified: true,
-          },
-        })
-
-        const redirectPath = response.data?.redirectPath || '/onboarding'
+    return authActions.checkEmailVerificationCode(code, authData?.token)
+      .then((responseData) => {
+        const redirectPath = responseData?.redirectPath || '/onboarding'
         navigate(redirectPath, { replace: true })
       })
       .catch((error) => {
@@ -100,7 +90,7 @@ function EmailVerifyPage({ authData, dispatch }) {
     }
 
     setIsResending(true)
-    return axios.post('/users/send-email-verify', {}, { headers: getAuthHeaders() })
+    return authActions.sendEmailVerificationCode(authData?.token)
       .then(() => {
         setResendCooldown(60)
         setDigits(Array(CODE_LENGTH).fill(''))
@@ -114,6 +104,22 @@ function EmailVerifyPage({ authData, dispatch }) {
       })
   }
 
+  function onLogout() {
+    const token = authData?.token
+    if (!token) {
+      navigate('/login', { replace: true })
+      return
+    }
+
+    authActions.logout(token)
+      .then(() => {
+        navigate('/login', { replace: true })
+      })
+      .catch(() => {
+        navigate('/login', { replace: true })
+      })
+  }
+
   const codeComplete = digits.every((d) => d !== '')
 
   return (
@@ -124,7 +130,7 @@ function EmailVerifyPage({ authData, dispatch }) {
       </S.GoalsBlobLayer>
 
       <S.TopBar $whiteIntro>
-        <S.TextButton type="button" onClick={() => navigate('/login', { replace: true })}>
+        <S.TextButton type="button" onClick={onLogout}>
           <MdArrowBack size={18} aria-hidden />
           Back to login
         </S.TextButton>
@@ -422,4 +428,14 @@ const mapStateToProps = (state) => ({
   authData: state.authReducer.authData,
 })
 
-export default connect(mapStateToProps)(EmailVerifyPage)
+function mapDispatchToProps(dispatch) {
+  return {
+    authActions: bindActionCreators({
+      logout,
+      checkEmailVerificationCode,
+      sendEmailVerificationCode,
+    }, dispatch),
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(EmailVerifyPage)

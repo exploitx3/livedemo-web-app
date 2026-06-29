@@ -17,6 +17,7 @@ import TooltipContent from '../TooltipContent/TooltipContent.js'
 
 function TooltipComponent(props) {
   let {
+    isMobile,
     tooltipRef,
     tooltipWrapperRef,
     tooltipX,

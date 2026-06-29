@@ -152,6 +152,27 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
     }))
   }
 
+  const [billingPortalLoading, setBillingPortalLoading] = useState(false)
+
+  async function handleOpenBillingPortal() {
+    setBillingPortalLoading(true)
+    try {
+      const response = await axios.post(
+        '/users/billing-portal',
+        {},
+        { headers: { Authorization: `Bearer ${authData.token}` } }
+      )
+      if (response.data.url) {
+        window.location.href = response.data.url
+      }
+    } catch (err) {
+      console.error('Billing portal error:', err)
+      toast.error(getApiErrorMessage(err, 'Failed to open billing portal'))
+    } finally {
+      setBillingPortalLoading(false)
+    }
+  }
+
   async function handleCheckout(subName, quantity = 1) {
     const productId = PRODUCT_IDS[subName]?.[planLength]
     if (!productId) return
@@ -308,14 +329,13 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           render: (workspaceIds) => formatSubscriptionWorkspaceNames(workspaceIds, workspaces),
         },
         {
-          title: 'Active',
+          title: 'Status',
           dataIndex: 'active',
           key: 'active',
           render: (active, record) => {
-            if (!active) return <U.StatusText $enabled={false}>Disabled</U.StatusText>
-            return <U.StatusText $enabled={record.autoPay}>
-              {record.autoPay ? 'Enabled' : 'Disabled'}
-            </U.StatusText>
+            if (!active) return <U.StatusText $enabled={false}>Inactive</U.StatusText>
+            if (record.cancelAtPeriodEnd) return <U.StatusText $enabled={false}>Cancels at period end</U.StatusText>
+            return <U.StatusText $enabled={true}>Active</U.StatusText>
           }
         }
       ]
@@ -338,24 +358,15 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           render: (workspaceIds) => formatSubscriptionWorkspaceNames(workspaceIds, workspaces),
         },
         {
-          title: 'Active',
+          title: 'Status',
           dataIndex: 'active',
           key: 'active',
           render: (active, record) => {
-            if (!active) return <U.StatusText $enabled={false}>Disabled</U.StatusText>
-            return <U.StatusText $enabled={record.autoPay}>
-              {record.autoPay ? 'Enabled' : 'Disabled'}
-            </U.StatusText>
+            if (!active) return <U.StatusText $enabled={false}>Inactive</U.StatusText>
+            if (record.cancelAtPeriodEnd) return <U.StatusText $enabled={false}>Cancels at period end</U.StatusText>
+            return <U.StatusText $enabled={true}>Active</U.StatusText>
           }
         },
-        // {
-        //   title: 'Expired',
-        //   dataIndex: 'expired',
-        //   key: 'expired',
-        //   render: (expired) => {
-        //     return <Checkbox defaultChecked={expired} disabled={true} />
-        //   }
-        // },
         {
           title: 'Next Renewal Date',
           dataIndex: 'expireDate',
@@ -365,39 +376,16 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
           }
         },
         {
-          title: 'Enable/Disable',
-          dataIndex: 'autoPay',
-          key: 'autoPay',
-          render: (autoPay, record) => {
-
-
+          title: 'Manage',
+          key: 'manage',
+          render: (_, record) => {
             if (!record.active) return null
-
-            const toggleAutoPay = (newValue) => {
-              setSubLoading(true)
-              axios.patch(`/subscriptions/${record._id}`, { autoPay: newValue }, {
-                headers: { Authorization: `Bearer ${authData.token}` }
-              })
-                .then(() => {
-                  setSubscriptions(prev =>
-                    prev.map(s => s._id === record._id ? { ...s, autoPay: newValue } : s)
-                  )
-                  setSubLoading(false)
-                })
-                .catch(err => { console.log(err); setSubLoading(false) })
-            }
-
-            if (autoPay) {
-              return (
-                <U.AutoPayCancelBtn disabled={subLoading} onClick={() => toggleAutoPay(false)}>
-                  Cancel
-                </U.AutoPayCancelBtn>
-              )
-            }
-
             return (
-              <U.AutoPayActivateBtn disabled={subLoading} onClick={() => toggleAutoPay(true)}>
-                Activate
+              <U.AutoPayActivateBtn
+                disabled={billingPortalLoading}
+                onClick={handleOpenBillingPortal}
+              >
+                {billingPortalLoading ? 'Opening…' : 'Manage'}
               </U.AutoPayActivateBtn>
             )
           }
@@ -670,7 +658,26 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
                   </U.InfoText>
                 </S.WorkspacesCol>
                 <S.WorkspacesCol xs={24} lg={12}>
-                  <U.TitleText>Plans</U.TitleText>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <U.TitleText style={{ margin: 0 }}>Plans</U.TitleText>
+                    {/* <button
+                      onClick={handleOpenBillingPortal}
+                      disabled={billingPortalLoading}
+                      style={{
+                        padding: '6px 14px',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        border: '1px solid #d9d9d9',
+                        borderRadius: '6px',
+                        background: billingPortalLoading ? '#f5f5f5' : '#fff',
+                        color: billingPortalLoading ? '#aaa' : '#333',
+                        cursor: billingPortalLoading ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {billingPortalLoading ? 'Opening…' : 'Open Billing Portal'}
+                    </button> */}
+                  </div>
 
                   {/* <h2 style={{ fontSize: '24px' }}>Plans</h2> */}
                   <U.FormUsers>
@@ -734,15 +741,15 @@ const BillingPage = ({ authData, currentSelectedWorkspace, workspaces }) => {
               </S.DashboardRow>
             </S.FirstLine>
             <S.SecondLine>
+              
               <S.DashboardRow gutter={[16, 16]}>
-                <S.WorkspacesCol xs={24} lg={12}>
+                {/* <S.WorkspacesCol xs={24} lg={12}>
                   <U.TitleText>Cards</U.TitleText>
-                  {/* <h2 style={{ fontSize: '24px' }}>Cards</h2> */}
                   <React.Fragment>
                     <Media query="(max-width: 576px)" render={() => renderCardsTable(cards, true)} />
                     <Media query="(min-width: 577px)" render={() => renderCardsTable(cards, false)} />
                   </React.Fragment>
-                </S.WorkspacesCol>
+                </S.WorkspacesCol> */}
                 <S.WorkspacesCol xs={24} lg={12}>
 
                 </S.WorkspacesCol>

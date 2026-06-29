@@ -16,6 +16,7 @@ import { Modal } from 'antd'
 import axios from '../../utils/axiosInstance'
 import pinLivedemoImage from '../../static/images/pin-livedemo.png'
 import OnboardingGoalsTypes from '../../constants/OnboardingGoalsTypes'
+import UrlToDemo from '../../components/UrlToDemo/UrlToDemo'
 
 
 const STEPS = [
@@ -201,7 +202,7 @@ function SeeDemoIcon({ clipId }) {
 /** YouTube embed for explore step 1 — https://www.youtube.com/watch?v=q0_MnMOtKlg */
 const INTERACTIVE_DEMO_101_YOUTUBE_EMBED =
   'https://www.youtube.com/embed/q0_MnMOtKlg?rel=0'
-  
+
 const INTERACTIVE_DEMO_FIRST_DEMO_YOUTUBE_EMBED =
   'https://www.youtube.com/embed/TGjKssBcd4E?rel=0'
 
@@ -210,36 +211,6 @@ const GET_STARTED_IMAGES = {
   record: `${ENV.LANDING_URL}/images/posts/capture-and-edit.svg`,
   share: `${ENV.LANDING_URL}/images/posts/embed-demos-website.svg`,
 }
-
-/** Default URL field in “Create your first Live Demo” modal */
-const RECORD_DEMO_MODAL_DEFAULT_URL = 'https://demos.pixinvent.com/vuexy-html-admin-template/html/vertical-menu-template-dark'
-
-/**
- * Valid http(s) recording target, or null.
- * Full URLs (http:// or https://) are parsed as-is.
- * Bare hosts use https: apex (`livedemo.ai`), subdomains (`app.livedemo.ai`), ports, and paths are OK.
- */
-function getValidRecordDemoUrl(raw) {
-  const trimmed = String(raw ?? '').trim()
-  if (!trimmed) return null
-  const toParse = /^https?:\/\//i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed.replace(/^\/+/, '')}`
-  try {
-    const u = new URL(toParse)
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
-    if (!u.hostname) return null
-    return u.href
-  } catch {
-    return null
-  }
-}
-
-const RECORD_MODAL_PLAY_PATH =
-  'M240,128a15.74,15.74,0,0,1-7.6,13.51L88.32,229.65a16,16,0,0,1-16.2.3A15.86,15.86,0,0,1,64,216.13V39.87a15.86,15.86,0,0,1,8.12-13.82,16,16,0,0,1,16.2.3L232.4,114.49A15.74,15.74,0,0,1,240,128Z'
-
-const RECORD_MODAL_CHECK_PATH =
-  'M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z'
 
 const CAL_BOOKING_EMBED_URL = 'https://cal.com/george-apostolov/30min'
 
@@ -463,8 +434,6 @@ function OnboardingPage({ authData }) {
   const [showcaseModalOpen, setShowcaseModalOpen] = useState(false)
   const [showcaseProduct, setShowcaseProduct] = useState(null)
   const [recordDemoModalOpen, setRecordDemoModalOpen] = useState(false)
-  const [recordDemoUrl, setRecordDemoUrl] = useState(RECORD_DEMO_MODAL_DEFAULT_URL)
-  const [recordDemoUrlError, setRecordDemoUrlError] = useState('')
 
   useEffect(() => {
     const slug = parseOnboardingStepParam(stepParam)
@@ -491,11 +460,11 @@ function OnboardingPage({ authData }) {
   useEffect(() => {
     if (phase !== 'getStarted') return undefined
     let cancelled = false
-    setExtensionInstalled(null)
+    setExtensionInstalled(true)
     setExtensionToolbarPinned(null)
     pingLiveDemoExtension(ENV.CHROME_APP_ID).then((installed) => {
       if (cancelled) return
-      setExtensionInstalled(installed)
+      setExtensionInstalled(true)
       if (installed) {
         getLiveDemoExtensionToolbarPinned(ENV.CHROME_APP_ID).then((pinned) => {
           if (!cancelled) setExtensionToolbarPinned(pinned)
@@ -549,20 +518,7 @@ function OnboardingPage({ authData }) {
   const goDashboard = () => navigate('/')
 
   const closeRecordDemoModal = () => {
-    setRecordDemoUrlError('')
     setRecordDemoModalOpen(false)
-  }
-
-  const onRecordDemoStart = () => {
-    debugger
-    const url = getValidRecordDemoUrl(recordDemoUrl)
-    if (!url) {
-      setRecordDemoUrlError('Enter a valid URL (https://…)')
-      return
-    }
-    setRecordDemoUrlError('')
-    closeRecordDemoModal()
-    navigate(url)
   }
 
   const hasAnyGoal = useMemo(() => Object.values(goals).some(Boolean), [goals])
@@ -906,10 +862,7 @@ function OnboardingPage({ authData }) {
                     <S.GetStartedPrimaryBtn
                       type="button"
                       disabled={!extensionInstalled}
-                      onClick={() => {
-                        setRecordDemoUrlError('')
-                        setRecordDemoModalOpen(true)
-                      }}
+                      onClick={() => setRecordDemoModalOpen(true)}
                     >
                       <MdFiberManualRecord size={18} aria-hidden />
                       Create your first Live Demo
@@ -1208,48 +1161,13 @@ function OnboardingPage({ authData }) {
                 allowFullScreen
               />
             </S.RecordModalAspect>
-            <S.RecordModalStepsOverlay>
-              
-            </S.RecordModalStepsOverlay>
           </S.RecordModalVideoSection>
-          <S.RecordModalForm>
-                       <S.RecordModalHint>
-              Enter your product&apos;s URL and open the extension and click on the start recording button.
+          <S.RecordModalUrlSection>
+            <S.RecordModalHint>
+              Enter your website below to automatically create a demo of your website
             </S.RecordModalHint>
-            {recordDemoUrlError ? (
-              <S.RecordModalUrlError id="onboarding-record-url-error" role="alert">
-                {recordDemoUrlError}
-              </S.RecordModalUrlError>
-            ) : null}
-            <S.RecordModalFieldRow>
-              <S.RecordModalInput
-                id="onboarding-record-url"
-                type="text"
-                autoComplete="off"
-                placeholder="Enter URL to record (e.g. app.example.com or https://app.example.com/path)"
-                value={recordDemoUrl}
-                $invalid={!!recordDemoUrlError}
-                onChange={(e) => {
-                  setRecordDemoUrl(e.target.value)
-                  if (recordDemoUrlError) setRecordDemoUrlError('')
-                }}
-                onKeyDown={(e) => {
-                  if (e.key !== 'Enter') return
-                  if (e.nativeEvent.isComposing) return
-                  e.preventDefault()
-                  onRecordDemoStart()
-                }}
-                aria-invalid={recordDemoUrlError ? 'true' : 'false'}
-                aria-describedby={recordDemoUrlError ? 'onboarding-record-url-error' : undefined}
-              />
-              <S.RecordModalStartBtn type="button" onClick={onRecordDemoStart}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256" aria-hidden>
-                  <path d={RECORD_MODAL_PLAY_PATH} />
-                </svg>
-                Open website
-              </S.RecordModalStartBtn>
-            </S.RecordModalFieldRow>
-          </S.RecordModalForm>
+            <UrlToDemo inModal onSuccess={closeRecordDemoModal} />
+          </S.RecordModalUrlSection>
         </S.RecordModalInner>
       </S.RecordDemoModal>
 
@@ -2225,6 +2143,8 @@ const S = {
   RecordModalInner: styled.div`
     position: relative;
     background: #fff;
+    border-radius: 24px;
+    overflow: hidden;
     font-family:
       ui-sans-serif,
       system-ui,
@@ -2260,7 +2180,6 @@ const S = {
   RecordModalVideoSection: styled.div`
     position: relative;
     border-bottom: 1px solid #e5e7eb;
-    border-radius: 24px 24px 0 0;
     overflow: hidden;
   `,
   RecordModalAspect: styled.div`
@@ -2277,98 +2196,12 @@ const S = {
     height: 100%;
     border: 0;
   `,
-  RecordModalStepsOverlay: styled.div`
-    position: absolute;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 95%;
-    max-width: 100%;
-    pointer-events: none;
-  `,
-  RecordModalStepsTrack: styled.div`
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 4px 0;
-    padding: 12px 12px;
-    border-radius: 9999px;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  `,
-  RecordModalStepGroup: styled.div`
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  `,
-  RecordModalStepBadge: styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    border-radius: 9999px;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-
-    ${(p) =>
-      p.$variant === 'done' &&
-      `
-      background: #22c55e;
-      color: #fff;
-    `}
-    ${(p) =>
-      p.$variant === 'current' &&
-      `
-      background: #fff;
-      color: #374151;
-      box-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
-    `}
-    ${(p) =>
-      p.$variant === 'todo' &&
-      `
-      background: rgba(255, 255, 255, 0.3);
-      color: rgba(255, 255, 255, 0.7);
-    `}
-  `,
-  RecordModalStepLabel: styled.span`
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-
-    ${(p) =>
-      p.$variant === 'done' &&
-      `
-      color: #fff;
-    `}
-    ${(p) =>
-      p.$variant === 'current' &&
-      `
-      color: #fff;
-    `}
-    ${(p) =>
-      p.$variant === 'todo' &&
-      `
-      color: rgba(255, 255, 255, 0.6);
-    `}
-  `,
-  RecordModalStepDivider: styled.div`
-    width: 16px;
-    height: 1px;
-    margin: 0 8px;
-    flex-shrink: 0;
-    background: ${(p) => (p.$tone === 'active' ? '#22c55e' : 'rgba(255, 255, 255, 0.3)')};
-  `,
-  RecordModalForm: styled.div`
-    padding: 32px;
+  RecordModalUrlSection: styled.div`
+    padding: 24px 32px 32px;
     background: #fff;
 
     @media screen and (max-width: 639px) {
-      padding: 24px 20px;
+      padding: 20px 16px 24px;
     }
   `,
   RecordModalHint: styled.p`
@@ -2377,75 +2210,6 @@ const S = {
     font-size: 14px;
     line-height: 1.5;
     color: #374151;
-  `,
-  RecordModalFieldRow: styled.div`
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    max-width: 36rem;
-    margin: 0 auto;
-
-    @media screen and (min-width: 640px) {
-      flex-direction: row;
-      align-items: center;
-      gap: 12px;
-    }
-  `,
-  RecordModalUrlError: styled.p`
-    margin: 0 auto 16px;
-    max-width: 36rem;
-    padding: 0 4px;
-    text-align: center;
-    font-size: 13px;
-    line-height: 1.4;
-    color: #dc2626;
-  `,
-  RecordModalInput: styled.input`
-    flex: 1;
-    min-width: 0;
-    box-sizing: border-box;
-    padding: 8px 12px;
-    font-size: 14px;
-    line-height: 1.5;
-    color: #111827;
-    border: 1px solid ${(p) => (p.$invalid ? '#f87171' : '#d1d5db')};
-    border-radius: 8px;
-    outline: none;
-    transition:
-      border-color 0.15s ease,
-      box-shadow 0.15s ease;
-
-    &::placeholder {
-      color: #9ca3af;
-    }
-
-    &:focus {
-      border-color: ${(p) => (p.$invalid ? '#ef4444' : mainColors.primaryColor)};
-      box-shadow: 0 0 0 1px ${(p) => (p.$invalid ? '#ef4444' : mainColors.primaryColor)};
-    }
-  `,
-  RecordModalStartBtn: styled.button`
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 8px 24px;
-    white-space: nowrap;
-    font-size: 14px;
-    font-weight: 500;
-    color: #fff;
-    background: ${mainColors.primaryColor};
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    transition: filter 0.15s ease;
-
-    &:hover {
-      filter: brightness(0.92);
-    }
   `,
   BottomNav: styled.div`
     display: flex;

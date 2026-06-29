@@ -460,6 +460,16 @@ function WalkthroughComponent({
   const [updateStateVar, updateState] = React.useState();
   const forceUpdate = React.useCallback(() => updateState({}), []);
 
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   let screenshotScreens = stepsInternalRef.current.filter(step => step.screenType === 'Screen_Screenshot')
 
   screenshotScreens = [
@@ -2358,6 +2368,7 @@ function WalkthroughComponent({
         key={step._id}
 
         step={step}
+        isMobile={isMobile}
         prevStep={prevStep}
         currentStepIndex={currentStepIndexRef}
         currentStepIndexCount={(currentStepIndexRef.current - amountOfInitialPosts)}
@@ -2394,10 +2405,15 @@ function WalkthroughComponent({
       />
     } else if (step.view.viewType === STEP_VIEWS.POINTER) {
 
+      if(isMobile) {
+        return ''
+      }
+
       let TooltipComponentConditional = isInEditor ? TooltipComponentEditor : TooltipComponent
 
       return <TooltipComponentConditional
         tooltipRef={stepTooltipRef}
+        isMobile={isMobile}
         tooltipX={stepTooltipX}
         tooltipY={stepTooltipY}
         setTooltipX={setStepTooltipX}
@@ -2975,7 +2991,7 @@ function WalkthroughComponent({
         /> : ''}
       </WS.AudioWrapper>}
 
-      {isTabsEnabled ? (
+      {isTabsEnabled && !isMobile ? (
         <WS.TabsWrapper
           $isOverlayEnabled={stepIsOverlayEnabled}
 
@@ -3001,6 +3017,44 @@ function WalkthroughComponent({
             </WS.Tabs__TabWrapper>
           </WS.TabsInner>
         </WS.TabsWrapper>
+      ) : ''}
+
+      {isMobile ? (
+        <WS.MobileTabsWrapper
+          $backgroundColor={themeStepBackgroundColor}
+          $color={themeTextColor}
+          $isOverlayEnabled={stepIsOverlayEnabled}
+        >
+          <WS.MobileTabs__StepCount>
+            {currentStepIndexRef.current + 1}/{stepsInternalRef.current.length}
+          </WS.MobileTabs__StepCount>
+
+          <WS.MobileTabs__TextArea>
+            <WS.MobileTabs__TextFade $backgroundColor={themeStepBackgroundColor} />
+            <WS.MobileTabs__Text
+              dangerouslySetInnerHTML={{
+                __html: step && step.view && step.view.viewType !== STEP_VIEWS.POPUP
+                  ? (step.view.content || '')
+                  : ''
+              }}
+            />
+          </WS.MobileTabs__TextArea>
+
+          <WS.MobileTabs__NavBtn
+            onClick={onBack}
+            $dimmed={currentStepIndexRef.current === 0}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24">
+              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7.667-6.333L5 12m6.333 6.333L5 12" vectorEffect="non-scaling-stroke"/>
+            </svg>
+          </WS.MobileTabs__NavBtn>
+
+          <WS.MobileTabs__NavBtn onClick={onNext}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24">
+              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 12H5m7.667 6.333L19 12m-6.333-6.333L19 12" vectorEffect="non-scaling-stroke"/>
+            </svg>
+          </WS.MobileTabs__NavBtn>
+        </WS.MobileTabsWrapper>
       ) : ''}
 
       <WS.TooltipElemAnchorsWrapper ref={tooltipElemAnchorsWrapperRef} id={'tooltip-element-visualizer'}
@@ -3933,6 +3987,81 @@ const WS = {
     top: 20px;
     right: 20px;
 
+  `,
+  MobileTabsWrapper: styled.div`
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-height: 41px;
+    z-index: ${({ $isOverlayEnabled }) => $isOverlayEnabled ? '4' : '3'};
+    background-color: ${({ $backgroundColor }) => $backgroundColor};
+    color: ${({ $color }) => $color};
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    user-select: none;
+    transition: all 0.2s cubic-bezier(0.6, 0.6, 0, 1);
+    -webkit-tap-highlight-color: transparent;
+    font-family: Inter, system-ui, sans-serif;
+    box-sizing: border-box;
+  `,
+  MobileTabs__StepCount: styled.div`
+    flex: none;
+    font-weight: 600;
+    font-size: 0.75rem;
+    width: 3rem;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `,
+  MobileTabs__TextArea: styled.div`
+    flex: 1;
+    position: relative;
+    // height: 40px;
+    // overflow: hidden;
+    padding: 0.625rem 0;
+    box-sizing: border-box;
+  `,
+  MobileTabs__TextFade: styled.div`
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 0.75rem;
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.6, 0.6, 0, 1);
+    z-index: 10;
+    opacity: 0.5;
+    background-color: ${({ $backgroundColor }) => $backgroundColor};
+  `,
+  MobileTabs__Text: styled.div`
+    position: relative;
+    font-size: 0.875rem;
+    line-height: 1.125rem;
+    overflow: auto;
+    // height: 1.25rem;
+    transform: translateY(1px);
+    // white-space: nowrap;
+  `,
+  MobileTabs__NavBtn: styled.button`
+    flex: none;
+    width: 2.5rem;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    opacity: ${({ $dimmed }) => $dimmed ? '0.5' : '1'};
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.15s ease;
   `,
 
 }

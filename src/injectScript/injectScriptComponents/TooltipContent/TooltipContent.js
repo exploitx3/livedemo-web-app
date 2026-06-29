@@ -15,6 +15,7 @@ import '@fontsource/lexend/latin.css'
 
 function TooltipContent(props) {
     let {
+        isMobile,
         continuous,
         index,
         view,

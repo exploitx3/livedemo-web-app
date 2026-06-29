@@ -24,6 +24,8 @@ import OnboardingPage from '../pages/OnboardingPage/OnboardingPage'
 import EmailVerifyPage from '../pages/EmailVerifyPage/EmailVerifyPage'
 import DemoDashboardPage from '../pages/DemoDashboardPage/DemoDashboardPage'
 import UrlPreviewPage from '../pages/UrlPreviewPage/UrlPreviewPage'
+import UrlToDemoPage from '../pages/UrlToDemoPage/UrlToDemoPage'
+import UnsubscribePage from '../pages/UnsubscribePage/UnsubscribePage'
 import { enableMapSet } from "immer"
 import TopLoadingBar from "./TopLoadingBar";
 import 'antd/reset'
@@ -151,6 +153,8 @@ class App extends React.Component {
 
           <Routes>
             <Route path="/preview" element={<UrlPreviewPage />} />
+            <Route path="/url-to-demo" element={<UrlToDemoPage />} />
+            <Route path="/unsubscribe" element={<UnsubscribePage />} />
             <Route path="/auto-recordings/:autoRecordingId" element={<AutoRecordingPreviewPage />} />
 
             <Route path="/change-password" element={<ChangePassword />} />

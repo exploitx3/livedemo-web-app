@@ -45,6 +45,8 @@ const SettingsPage = ({ authData, currentSelectedWorkspace, actions }) => {
   const [selectedWorkspace, setSelectedWorkspace] = useState(currentSelectedWorkspace)
 
   const [hubspotEnabled, setHubspotEnabled] = useState(currentSelectedWorkspace.integrations?.hubspot || false)
+  const [isEmailSubscribed, setIsEmailSubscribed] = useState(true)
+  const [emailConfigLoading, setEmailConfigLoading] = useState(true)
 
   let [newEmail, setNewEmail] = useState('')
   let [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
@@ -68,6 +70,24 @@ const SettingsPage = ({ authData, currentSelectedWorkspace, actions }) => {
     setSelectedWorkspace(currentSelectedWorkspace)
     setHubspotEnabled(currentSelectedWorkspace.integrations?.hubspot || false)
   }, [currentSelectedWorkspace])
+
+  useEffect(() => {
+    if (!authData?.token) return
+
+    setEmailConfigLoading(true)
+    axios.get('/users', {
+      headers: { Authorization: `Bearer ${authData.token}` },
+    })
+      .then((response) => {
+        setIsEmailSubscribed(response.data?.emailConfig?.isSubscribed !== false)
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        setEmailConfigLoading(false)
+      })
+  }, [authData?.token])
 
 
   function showConfirmDeleteUser(userId, userName, authToken) {
@@ -158,6 +178,24 @@ const SettingsPage = ({ authData, currentSelectedWorkspace, actions }) => {
       .catch(err => {
         console.log(err)
         // showErrorsForResponse(err)
+      })
+  }
+
+  function updateUserEmailSubscription(isSubscribed, token) {
+    return axios.patch('/users', {
+      emailConfig: { isSubscribed },
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => {
+        setIsEmailSubscribed(response.data?.emailConfig?.isSubscribed !== false)
+        return response.data
+      })
+      .catch(err => {
+        console.log(err)
+        throw err
       })
   }
 
@@ -285,6 +323,34 @@ const SettingsPage = ({ authData, currentSelectedWorkspace, actions }) => {
                       </F.IntegrationItem>
                     </F.MainSection>
                   </F.IntegrationsForm>
+                  <F.EmailCommunicationsForm style={{ marginTop: '20px' }}>
+                    <F.TitleSection>
+                      <F.Title>Email communications</F.Title>
+                    </F.TitleSection>
+                    <F.MainSection>
+                      <F.IntegrationItem>
+                        <F.IntegrationItemLeft>
+                          <F.IntegrationName>Marketing emails</F.IntegrationName>
+                          <F.IntegrationDescription>
+                            Receive product updates, tips, and announcements from LiveDemo
+                          </F.IntegrationDescription>
+                        </F.IntegrationItemLeft>
+                        <F.IntegrationItemRight>
+                          <Switch
+                            checked={isEmailSubscribed}
+                            loading={emailConfigLoading}
+                            onChange={(checked) => {
+                              setIsEmailSubscribed(checked)
+                              updateUserEmailSubscription(checked, authData.token)
+                                .catch(() => {
+                                  setIsEmailSubscribed(!checked)
+                                })
+                            }}
+                          />
+                        </F.IntegrationItemRight>
+                      </F.IntegrationItem>
+                    </F.MainSection>
+                  </F.EmailCommunicationsForm>
                 </S.ColTopLeft>
                 <S.ColTopRight xs={24} lg={14}>
                   <U.FormUsers>
@@ -506,6 +572,15 @@ const F = {
     flex-direction: column;
   `,
   IntegrationsForm: styled.div`
+    height: 100%
+    border: 1px solid #e8edf5;
+    box-shadow: 0 2px 8px rgba(16, 112, 255, 0.06), 0 1px 3px rgba(0,0,0,0.05);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+`,
+  EmailCommunicationsForm: styled.div`
     height: 100%
     border: 1px solid #e8edf5;
     box-shadow: 0 2px 8px rgba(16, 112, 255, 0.06), 0 1px 3px rgba(0,0,0,0.05);

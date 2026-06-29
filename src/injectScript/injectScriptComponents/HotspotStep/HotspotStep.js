@@ -38,6 +38,7 @@ function HotspotStep({
     screen,
     step,
     isInEditor,
+    isMobile,
     widthDimensionPercentage,
     heightDimensionPercentage,
     navWrapperRef,
@@ -352,7 +353,7 @@ function HotspotStep({
     return <HotspotContent
         view={step.view}
         hotspotId={step._id}
-
+        isMobile={isMobile}
         screenId={screenId}
         screen={screen}
         isInEditor={isInEditor}
