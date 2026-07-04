@@ -101,7 +101,7 @@ const TopBar = styled.div`
 const LeftSection = styled.div`
   display: flex;
   align-items: center;
-  flex: 1 1 33%;
+  flex: 1 1 67%;
   font-size: 14px;
   color: #6b7280;
 `
@@ -205,9 +205,12 @@ const SidePanel = styled.div`
   z-index: 10;
   display: flex;
   width: 100%;
-  max-width: 304px;
   flex-direction: column;
   justify-content: center;
+
+  @media (min-width: 980px) {
+    max-width: 304px;
+  }
 `
 
 const SidePanelTitle = styled.h1`
@@ -215,6 +218,7 @@ const SidePanelTitle = styled.h1`
   font-weight: 600;
   color: #111827;
   margin: 0;
+  text-align: center;
 `
 
 const ButtonList = styled.div`
@@ -285,7 +289,7 @@ const PreviewArea = styled.div`
   position: relative;
   height: auto;
   min-height: 360px;
-  width: 60%;
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;

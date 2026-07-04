@@ -2665,6 +2665,67 @@ function WalkthroughComponent({
     videoCursorPositions.length > 0 &&
     typeof videoCursorPositions[0].frameX === 'number'
 
+  const watermarkElement = showLiveDemoWatermark ? (<WS.WatermarkWrapper
+    $isInEditor={isInEditor}
+    $isMobile={isMobile}
+    onClick={() => {
+      window.open("https://livedemo.ai", '_blank')
+    }}>
+    <WS.WatermarkButton>
+      <WS.Watermark__Icon $isInEditor={isInEditor} className={'Watermark__Icon'} width="94"
+        height="106"
+        viewBox="0 0 94 106" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path className={"watermark-icon-inner-layer"}
+          d="M0.5 6.85552C0.5 3.52841 3.43103 0.963143 6.72881 1.40402L76.0839 10.6761C85.7686 11.9708 93 20.2333 93 30.0041V82.0433C93 89.997 86.9798 96.6599 79.0668 97.4639L6.55596 104.831C3.31524 105.161 0.5 102.617 0.5 99.3595V6.85552Z"
+          fill={"#f9f9f9"} stroke="#999" />
+        <path
+          d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+          fill="white" />
+        <path
+          d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+          stroke={Colors.primaryColor} stroke-width="3" />
+        <path
+          d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+          stroke="white" stroke-opacity="0.15" stroke-width="3" />
+      </WS.Watermark__Icon>
+      <WS.Watermark__Text $isInEditor={isInEditor}
+        className={'Watermark__Text'}>LiveDemo</WS.Watermark__Text>
+    </WS.WatermarkButton>
+  </WS.WatermarkWrapper>
+  ) : (
+    <WS.WatermarkWrapper
+      $isInEditor={isInEditor}
+      $isMobile={isMobile}
+      onClick={() => {
+        window.open(themeWatermarkConfigUrl, '_blank')
+      }}>
+      <WS.WatermarkButton>
+
+        <WS.Watermark__Text $isInEditor={isInEditor}
+          className={'Watermark__Text'}>{themeWatermarkConfigText}</WS.Watermark__Text>
+        {themeWatermarkConfigImageUrl === '' ? (
+          <WS.Watermark__Icon $isInEditor={isInEditor} className={'Watermark__Icon'} width="94"
+            height="106"
+            viewBox="0 0 94 106" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path className={"watermark-icon-inner-layer"}
+              d="M0.5 6.85552C0.5 3.52841 3.43103 0.963143 6.72881 1.40402L76.0839 10.6761C85.7686 11.9708 93 20.2333 93 30.0041V82.0433C93 89.997 86.9798 96.6599 79.0668 97.4639L6.55596 104.831C3.31524 105.161 0.5 102.617 0.5 99.3595V6.85552Z"
+              fill={"#f9f9f9"} stroke="#999" />
+            <path
+              d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+              fill="white" />
+            <path
+              d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+              stroke={Colors.primaryColor} stroke-width="3" />
+            <path
+              d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
+              stroke="white" stroke-opacity="0.15" stroke-width="3" />
+          </WS.Watermark__Icon>) : (
+          <WS.Watermark__Image $isInEditor={isInEditor} src={themeWatermarkConfigImageUrl}
+            className={'Watermark__Icon'} />)}
+      </WS.WatermarkButton>
+    </WS.WatermarkWrapper>
+  )
+
   return (<WS.Wrapper
     ref={onWrapperRefSetup}
     width={width ? width + 'px' : '100%'}
@@ -2887,64 +2948,7 @@ function WalkthroughComponent({
           run={true}
         />
       ) : ''}
-      {showLiveDemoWatermark ? (<WS.WatermarkWrapper
-        $isInEditor={isInEditor}
-        onClick={() => {
-          window.open("https://livedemo.ai", '_blank')
-        }}>
-        <WS.WatermarkButton>
-          <WS.Watermark__Icon $isInEditor={isInEditor} className={'Watermark__Icon'} width="94"
-            height="106"
-            viewBox="0 0 94 106" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path className={"watermark-icon-inner-layer"}
-              d="M0.5 6.85552C0.5 3.52841 3.43103 0.963143 6.72881 1.40402L76.0839 10.6761C85.7686 11.9708 93 20.2333 93 30.0041V82.0433C93 89.997 86.9798 96.6599 79.0668 97.4639L6.55596 104.831C3.31524 105.161 0.5 102.617 0.5 99.3595V6.85552Z"
-              fill={"#f9f9f9"} stroke="#999" />
-            <path
-              d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-              fill="white" />
-            <path
-              d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-              stroke={Colors.primaryColor} stroke-width="3" />
-            <path
-              d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-              stroke="white" stroke-opacity="0.15" stroke-width="3" />
-          </WS.Watermark__Icon>
-          <WS.Watermark__Text $isInEditor={isInEditor}
-            className={'Watermark__Text'}>LiveDemo</WS.Watermark__Text>
-        </WS.WatermarkButton>
-      </WS.WatermarkWrapper>
-      ) : (
-        <WS.WatermarkWrapper
-          $isInEditor={isInEditor}
-          onClick={() => {
-            window.open(themeWatermarkConfigUrl, '_blank')
-          }}>
-          <WS.WatermarkButton>
-
-            <WS.Watermark__Text $isInEditor={isInEditor}
-              className={'Watermark__Text'}>{themeWatermarkConfigText}</WS.Watermark__Text>
-            {themeWatermarkConfigImageUrl === '' ? (
-              <WS.Watermark__Icon $isInEditor={isInEditor} className={'Watermark__Icon'} width="94"
-                height="106"
-                viewBox="0 0 94 106" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path className={"watermark-icon-inner-layer"}
-                  d="M0.5 6.85552C0.5 3.52841 3.43103 0.963143 6.72881 1.40402L76.0839 10.6761C85.7686 11.9708 93 20.2333 93 30.0041V82.0433C93 89.997 86.9798 96.6599 79.0668 97.4639L6.55596 104.831C3.31524 105.161 0.5 102.617 0.5 99.3595V6.85552Z"
-                  fill={"#f9f9f9"} stroke="#999" />
-                <path
-                  d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-                  fill="white" />
-                <path
-                  d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-                  stroke={Colors.primaryColor} stroke-width="3" />
-                <path
-                  d="M31 35.6795C31 31.0607 36 28.1739 40 30.4833L70 47.8039C74 50.1133 74 55.8868 70 58.1962L40 75.5167C36 77.8261 31 74.9393 31 70.3205L31 35.6795Z"
-                  stroke="white" stroke-opacity="0.15" stroke-width="3" />
-              </WS.Watermark__Icon>) : (
-              <WS.Watermark__Image $isInEditor={isInEditor} src={themeWatermarkConfigImageUrl}
-                className={'Watermark__Icon'} />)}
-          </WS.WatermarkButton>
-        </WS.WatermarkWrapper>
-      )}
+      {!isMobile ? watermarkElement : ''}
       {stepAudio ? (
         <WS.AudioWrapper>
 
@@ -3020,10 +3024,11 @@ function WalkthroughComponent({
       ) : ''}
 
       {isMobile ? (
+        <WS.MobileBottomWrapper $isOverlayEnabled={stepIsOverlayEnabled}>
+        {watermarkElement}
         <WS.MobileTabsWrapper
           $backgroundColor={themeStepBackgroundColor}
           $color={themeTextColor}
-          $isOverlayEnabled={stepIsOverlayEnabled}
         >
           <WS.MobileTabs__StepCount>
             {currentStepIndexRef.current + 1}/{stepsInternalRef.current.length}
@@ -3055,6 +3060,7 @@ function WalkthroughComponent({
             </svg>
           </WS.MobileTabs__NavBtn>
         </WS.MobileTabsWrapper>
+        </WS.MobileBottomWrapper>
       ) : ''}
 
       <WS.TooltipElemAnchorsWrapper ref={tooltipElemAnchorsWrapperRef} id={'tooltip-element-visualizer'}
@@ -3713,7 +3719,7 @@ const WS = {
     height: 100%;
   `,
   WatermarkWrapper: styled.div`
-    position: fixed;
+    position: ${({ $isMobile }) => $isMobile ? 'relative' : 'fixed'};
     //width: 25%; //240px;
     //height: 16%; //75px;
     height: fit-content;
@@ -3723,15 +3729,16 @@ const WS = {
 
     max-width: 240px;
     max-height: 75px;
-    z-index: 4;
+    z-index: ${({ $isMobile }) => $isMobile ? 'auto' : '4'};
     //opacity: 0.75;
     //background: #f9f9f9;
     background: transparent;
     //border: 2px solid #999;
     border-radius: 6px;
 
-    bottom: 35px;
-    right: 20px;
+    bottom: ${({ $isMobile }) => $isMobile ? 'auto' : '35px'};
+    right: ${({ $isMobile }) => $isMobile ? 'auto' : '20px'};
+    margin: ${({ $isMobile }) => $isMobile ? '0 20px 12px 0' : '0'};
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -3988,14 +3995,22 @@ const WS = {
     right: 20px;
 
   `,
-  MobileTabsWrapper: styled.div`
+  MobileBottomWrapper: styled.div`
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     width: 100%;
-    min-height: 41px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
     z-index: ${({ $isOverlayEnabled }) => $isOverlayEnabled ? '4' : '3'};
+  `,
+  MobileTabsWrapper: styled.div`
+    position: relative;
+    align-self: stretch;
+    width: 100%;
+    min-height: 41px;
     background-color: ${({ $backgroundColor }) => $backgroundColor};
     color: ${({ $color }) => $color};
     display: flex;
