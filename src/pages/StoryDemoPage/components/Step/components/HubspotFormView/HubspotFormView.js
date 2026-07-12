@@ -61,7 +61,7 @@ const HubspotFormView = ({
       setFormHasChanged(true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFormId, hubspotForms])
+  }, [selectedFormId, hubspotForms.length])
 
   function fetchHubspotForms() {
     setLoading(true)

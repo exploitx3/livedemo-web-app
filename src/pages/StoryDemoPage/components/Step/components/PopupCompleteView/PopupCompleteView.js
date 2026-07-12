@@ -45,6 +45,12 @@ const PopupCompleteView = ({
   workspaceId,
   storyDemoId,
   screenId,
+  formData,
+  setFormData,
+  formHasChanged,
+  setFormHasChanged,
+  formType,
+  setFormType,
 }) => {
 
   const internalStepRef = useRef(internalStep)
@@ -52,19 +58,6 @@ const PopupCompleteView = ({
     internalStepRef.current = internalStep
   }, [internalStep])
 
-  const [formHasChanged, setFormHasChanged] = useState(false)
-  const [formData, setFormData] = useState(() => {
-    const initialForm = internalStep?.view?.popup?.formId?._id
-      ? internalStep.view.popup.formId
-      : {}
-    if (initialForm.type === FormTypes.HUBSPOT && !initialForm.hubspot) {
-      initialForm.hubspot = { formId: '' }
-    }
-    return initialForm
-  })
-  const [formType, setFormType] = useState(
-    (formData && formData.type) || FormTypes.STEP
-  )
   const [isCreatingForm, setIsCreatingForm] = useState(false)
 
   useEffect(() => {
@@ -72,14 +65,6 @@ const PopupCompleteView = ({
       createForm()
     }
   }, [popupType])
-
-  useEffect(() => {
-    if (internalStep?.view?.popup?.formId) {
-      const newFormData = internalStep.view.popup.formId
-      setFormData(newFormData)
-      setFormHasChanged(false)
-    }
-  }, [internalStep])
 
   function setFormDataByUser(newFormData) {
     setFormHasChanged(true)
@@ -189,6 +174,7 @@ const PopupCompleteView = ({
               <ST.TypeSelect
                 value={formType}
                 onChange={(value) => {
+                  debugger
                   setFormType(value)
                   setFormHasChanged(true)
                   const updatedFormData = { ...formData, type: value }

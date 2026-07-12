@@ -487,7 +487,7 @@ const Step = ({
         clearTimeout(autoSaveTimerRef.current)
       }
     }
-  }, [userChangeKey, editorValue, popupDescriptionValue, hotspotViewPlacement, pointerViewPlacement, popupType, alignment])
+  }, [userChangeKey, editorValue, popupDescriptionValue, hotspotViewPlacement, pointerViewPlacement, popupType, alignment, formHasChanged])
 
 
   function getView(viewType, openView) {
@@ -518,6 +518,12 @@ const Step = ({
           workspaceId={workspaceId}
           storyDemoId={storyDemoId}
           screenId={screenId}
+          formData={formData}
+          setFormData={setFormData}
+          formHasChanged={formHasChanged}
+          setFormHasChanged={setFormHasChanged}
+          formType={formType}
+          setFormType={setFormType}
         />
       } else {
         return ''
