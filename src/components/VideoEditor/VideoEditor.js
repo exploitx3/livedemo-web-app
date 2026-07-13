@@ -48,7 +48,10 @@ const VideoEditor = (props) => {
 
   let [isPlaying, setIsPlaying] = useState(false)
 
-  let [videoPercentageTime, setVideoPercentageTime] = useState(0)
+  // Plain ref, not state: tracker position moves on every video `timeupdate` (many times a
+  // second) and only needs a direct DOM write to `trackerRef`. Routing it through useState
+  // forced a full VideoEditor re-render (and full JSX re-diff) on every tick for no visual gain.
+  let videoPercentageTimeRef = useRef(0)
   let [videoSpeed, setVideoSpeed] = useState(currentScreen && currentScreen.playbackRate ? currentScreen.playbackRate : 1)
 
   let leftHandleRef = useRef(null)
@@ -109,50 +112,23 @@ const VideoEditor = (props) => {
 
   }
 
-  useEffect(() => {
+  function updateTrackerPosition(percentage) {
+    videoPercentageTimeRef.current = percentage
 
-    if (!videoInternalRef.current) {
+    if (!trackerRef.current) {
       return
     }
 
     let width = internalTimelineRightPosition.current - internalTimelineLeftPosition.current - 4
-    //
-    // let timestampInSeconds = event.timeStamp / 10000
-    // let timestampPercentage = timestampInSeconds / event.currentTarget.duration
-    // let singleMarginSize = (event.currentTarget.duration / width)
-    // let newMargin =  (width * timestampPercentage)
-
-    // let timestampInSeconds = videoInternalRef.current.currentTime
-    // let timePercentage = videoInternalRef.current.currentTime / videoInternalRef.current.duration
-    // let newMargin = width * timePercentage
-
-    let newMargin = width * videoPercentageTime
+    let newMargin = width * percentage
     trackerRef.current.style.marginLeft = newMargin + 'px'
-  }, [videoPercentageTime])
+  }
 
   function onVideoTimeChange(event) {
     console.log(event)
 
-    let width = internalTimelineRightPosition.current - internalTimelineLeftPosition.current - 4
-    //
-    // let timestampInSeconds = event.timeStamp / 10000
-    // let timestampPercentage = timestampInSeconds / event.currentTarget.duration
-    // let singleMarginSize = (event.currentTarget.duration / width)
-    // let newMargin =  (width * timestampPercentage)
-
-    let timestampInSeconds = videoInternalRef.current.currentTime
     let timePercentage = videoInternalRef.current.currentTime / videoInternalRef.current.duration
-    setVideoPercentageTime(timePercentage)
-
-    // let newMargin = width * timePercentage
-
-    // console.log('timestampInSeconds')
-    // console.log(timestampInSeconds)
-    // console.log('newMargin')
-    // console.log(newMargin)
-
-
-    // trackerRef.current.style.marginLeft = newMargin + 'px'
+    updateTrackerPosition(timePercentage)
   }
 
   function findVideoRef(frame, videoInternalRef, repeatCount) {
@@ -162,7 +138,7 @@ const VideoEditor = (props) => {
       try {
         if (frame.videoRef) {
 
-          console.log('videoRef found returning')
+          console.log('searchForVideo - videoRef found returning')
           videoInternalRef.current = frame.videoRef.current
           setVideoCurrentTime(frame.videoRef.current.currentTime)
           // setVideoDuration(frame.videoRef.current.duration)
@@ -238,8 +214,17 @@ const VideoEditor = (props) => {
   }, [leftHandleInitXPos.current, rightHandleInitXPos.current])
 
 
+  // Tracks which screen the tracker/timeline were last set up for, so that edits to the
+  // currently-open screen (e.g. dragging a zoom span, which produces a new `currentScreen`
+  // reference from the reducer) don't re-trigger a tracker/handle reset - only an actual
+  // screen switch should do that. Tracker position otherwise stays fully local to VideoEditor.
+  let previousScreenIdRef = useRef(currentScreen && currentScreen._id)
+
   useEffect(() => {
 
+    let screenId = currentScreen && currentScreen._id
+    let isScreenSwitch = previousScreenIdRef.current !== screenId
+    previousScreenIdRef.current = screenId
 
     if (currentScreen && currentScreen.playbackRate) {
 
@@ -254,9 +239,13 @@ const VideoEditor = (props) => {
       _setZoomSpans([])
     }
 
+    if (!isScreenSwitch) {
+      return
+    }
+
     if (currentScreen && currentScreen.asset && currentScreen.asset.duration) {
-      // Reset tracker
-      setVideoPercentageTime(0)
+      // Reset tracker - only on an actual screen switch, not on every zoomSpan edit
+      updateTrackerPosition(0)
 
       videoDurationRef.current = currentScreen.asset.duration
 
@@ -688,7 +677,7 @@ const VideoEditor = (props) => {
 
                 videoInternalRef.current.play()
               } else {
-                videoInternalRef.current.currentTime = 0
+                videoInternalRef.current.currentTime = videoCurrentTime
 
                 videoInternalRef.current.play()
               }

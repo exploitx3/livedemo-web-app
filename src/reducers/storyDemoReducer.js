@@ -254,36 +254,36 @@ export default function storyDemoReducer(state = initialState.storyDemoReducer, 
     case UPDATE_ZOOM_SPAN:
       let updateVideoZoomSpan = JSON.parse(JSON.stringify(action.zoomSpan))
 
-      newState.currentStoryDemo.screens = JSON.parse(JSON.stringify(newState.currentStoryDemo)).screens.map(screen => {
+      // Base off the pre-clone `state.currentStoryDemo.screens`, NOT `newState`'s copy - `newState`
+      // was already fully deep-cloned at the top of this reducer (line 22) for every action, so
+      // building off it means every screen - even untouched ones - gets a new object reference no
+      // matter what this case does. That reference churn was cascading into `steps` (derived from
+      // `currentStoryDemo` with no memoization) getting a new array on every zoom-span edit, which
+      // re-triggered WalkthroughComponent's `[steps]` effect -> `processStep()` -> HLS re-init ->
+      // video/tracker reset. Only the touched screen (and its touched zoomSpan) get new objects here;
+      // every sibling screen keeps its exact prior reference.
+      let updatedZoomSpanScreens = state.currentStoryDemo.screens.map(screen => {
 
-        if (screen._id === action.screenId) {
-
-
-          let newZoomSpans = JSON.parse(JSON.stringify(screen.zoomSpans))
-          newZoomSpans = newZoomSpans.map(iterSpan => {
-
-            if (iterSpan._id === action.zoomSpan._id) {
-
-              return updateVideoZoomSpan
-            } else {
-
-              return iterSpan
-            }
-          })
-
-          return {
-            ...screen,
-            zoomSpans: newZoomSpans
-          }
-        } else {
-
+        if (screen._id !== action.screenId) {
           return screen
+        }
+
+        return {
+          ...screen,
+          zoomSpans: screen.zoomSpans.map(iterSpan =>
+            iterSpan._id === action.zoomSpan._id ? updateVideoZoomSpan : iterSpan
+          )
         }
       })
 
       return {
         ...newState,
+        currentStoryDemo: {
+          ...state.currentStoryDemo,
+          screens: updatedZoomSpanScreens
+        }
       }
+      
     case DELETE_STEP_AUDIO:
 
       newState.currentStoryDemo.screens = JSON.parse(JSON.stringify(newState.currentStoryDemo)).screens.map(screen => {

@@ -486,6 +486,13 @@ function WalkthroughComponent({
   let videoRef = useRef(null)
   window.videoRef = videoRef
 
+  // Guards the HLS reload in processStep(): `steps` is rebuilt fresh (new array) on every redux
+  // dispatch with no memoization, so an unrelated edit (e.g. dragging a zoom span) still re-runs
+  // processStep() for the currently-shown step. Without this, that re-run always re-attached HLS
+  // and reset `video.currentTime` back to the step's startTime, even though nothing about the
+  // actual video (screen/asset/start/end) changed - only zoomSpans did.
+  let lastVideoLoadKeyForZoomSpanUpdatesRef = useRef(null)
+
   const currentStepIndexRef = useRef(storyConfig.currentStepIndex || 0)
 
   function setCurrentStepIndexRef(value) {
@@ -638,7 +645,7 @@ function WalkthroughComponent({
     if (!isAudioEnabled) {
       pauseBgMusic()
       setIsNarrativeAudioPlaying(false)
-      
+
     }
   }, [isAudioEnabled])
 
@@ -723,6 +730,7 @@ function WalkthroughComponent({
       // Restart video if it has a video and it zooms out or in
 
       videoRef.current.currentTime = 0
+      console.log('videoRef.current.currentTime = 0 updated because of fullscreen')
 
       setTimeout(() => {
 
@@ -1403,128 +1411,136 @@ function WalkthroughComponent({
 
       scaleVideo(isEmbed, videoMuxAsset, videoRef)
 
-      let hls = new Hls({
-        maxBufferLength: 5,
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90,
-        startLevel: 4,
-        autoStartLoad: false,
-      })
-      hls.attachMedia(video)
-      hls.loadSource(streamUrl)
+      let videoLoadKey = `${screen._id}:${videoMuxAsset.playback_ids[0].id}:${startTime}:${endTime}`
+      let needsVideoReload = lastVideoLoadKeyForZoomSpanUpdatesRef.current !== videoLoadKey
+      lastVideoLoadKeyForZoomSpanUpdatesRef.current = videoLoadKey
 
-      video.setAttribute('data-video-mp4', streamUrlMp4)
-      videoSourceRef.current.src = streamUrlMp4
+      if (needsVideoReload) {
+        let hls = new Hls({
+          maxBufferLength: 5,
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90,
+          startLevel: 4,
+          autoStartLoad: false,
+        })
+        hls.attachMedia(video)
+        hls.loadSource(streamUrl)
+
+        video.setAttribute('data-video-mp4', streamUrlMp4)
+        videoSourceRef.current.src = streamUrlMp4
 
 
-      let startPosition = startTime ? startTime : 0
-      video.playsInline = true
-      video.currentTime = startPosition
-      hls.startLoad(startPosition)
+        let startPosition = startTime ? startTime : 0
+        video.playsInline = true
+        video.currentTime = startPosition
+        console.log('videoRef.current.currentTime = ' + startPosition + ' updated because of processStep')
+
+        hls.startLoad(startPosition)
 
 
-      let madeVisible = false
-      video.onloadeddata = function (e) {
-        // if (shownImageId.current !== '') {
-        //   video.play()
+        let madeVisible = false
+        video.onloadeddata = function (e) {
+          // if (shownImageId.current !== '') {
+          //   video.play()
 
-        if (!isInEditorRef.current) {
-          video.play()
+          if (!isInEditorRef.current) {
+            video.play()
+          }
+
+          video.playbackRate = currentStep.playbackRate ? currentStep.playbackRate : 1.2
+          // console.log('video playbackRate = ' + currentStep.playbackRate)
+
+
+          makeVisible(MAIN_VIEWS.VIDEO, {})
+
+          // let lastImage = document.getElementById(shownImageId.current)
+          // showElem(video)
+          //
+          // hideElem(lastImage)
+          // }
+
+
         }
 
-        video.playbackRate = currentStep.playbackRate ? currentStep.playbackRate : 1.2
-        // console.log('video playbackRate = ' + currentStep.playbackRate)
 
+        // hls.on(Hls.Events.MANIFEST_LOADED, () => {
+        //   makeVisible(MAIN_VIEWS.VIDEO, {})
+        // })
 
-        makeVisible(MAIN_VIEWS.VIDEO, {})
+        let savedCurrentStepIndex = currentStepIndex.current
 
-        // let lastImage = document.getElementById(shownImageId.current)
-        // showElem(video)
-        //
-        // hideElem(lastImage)
-        // }
+        async function checkIfAudioHasPlayedForVideo(callCount = 0) {
+          if (callCount > 30) {
+            return
+          }
 
-
-      }
-
-
-      // hls.on(Hls.Events.MANIFEST_LOADED, () => {
-      //   makeVisible(MAIN_VIEWS.VIDEO, {})
-      // })
-
-      let savedCurrentStepIndex = currentStepIndex.current
-
-      async function checkIfAudioHasPlayedForVideo(callCount = 0) {
-        if (callCount > 30) {
-          return
-        }
-
-        await delay(500)
-
-        if (audioHasPlayedRef.current) {
           await delay(500)
-          return
-        } else {
-          await checkIfAudioHasPlayedForVideo(++callCount)
-        }
-      }
 
-      async function onEnded() {
-        if (isInEditorRef.current) {
-          return
+          if (audioHasPlayedRef.current) {
+            await delay(500)
+            return
+          } else {
+            await checkIfAudioHasPlayedForVideo(++callCount)
+          }
         }
 
-
-        let isStillOnSamePage = savedCurrentStepIndex === currentStepIndex.current
-
-        if (isStillOnSamePage) {
-          currentStepIndex.current += 1
-          if (currentStepIndex.current < steps.length) {
+        async function onEnded() {
+          if (isInEditorRef.current) {
+            return
+          }
 
 
-            // On video finish check if audio has finished only if there was any audio playing during the video
-            if (!isInEditorRef.current) {
-              if (audioHasStartedRef.current) {
-                await checkIfAudioHasPlayedForVideo()
-                await changeStep(currentStepIndex.current, stepsInternalRef.current)
-              } else {
-                await changeStep(currentStepIndex.current, stepsInternalRef.current)
+          let isStillOnSamePage = savedCurrentStepIndex === currentStepIndex.current
+
+          if (isStillOnSamePage) {
+            currentStepIndex.current += 1
+            if (currentStepIndex.current < steps.length) {
+
+
+              // On video finish check if audio has finished only if there was any audio playing during the video
+              if (!isInEditorRef.current) {
+                if (audioHasStartedRef.current) {
+                  await checkIfAudioHasPlayedForVideo()
+                  await changeStep(currentStepIndex.current, stepsInternalRef.current)
+                } else {
+                  await changeStep(currentStepIndex.current, stepsInternalRef.current)
+                }
+
               }
+            }
+          }
 
+
+        }
+
+
+        video.ontimeupdate = (e) => {
+          // console.log(event)
+
+
+          let timestampInSeconds = video.currentTime
+
+          // console.log('timestampInSeconds')
+          // console.log(timestampInSeconds)
+
+          if (video.currentTime >= endTime) {
+            video.pause()
+            if (!isInEditorRef.current) {
+              onEnded()
             }
           }
         }
 
 
-      }
 
-
-      video.ontimeupdate = (e) => {
-        // console.log(event)
-
-
-        let timestampInSeconds = video.currentTime
-
-        // console.log('timestampInSeconds')
-        // console.log(timestampInSeconds)
-
-        if (video.currentTime >= endTime) {
-          video.pause()
-          if (!isInEditorRef.current) {
-            onEnded()
-          }
+        video.onended = function () {
+          onEnded()
         }
-      }
 
+        video.load()
 
-
-      video.onended = function () {
-        onEnded()
-      }
-
-      video.load()
-
+      } // end needsVideoReload
 
       // makeVisible(MAIN_VIEWS.VIDEO, {})
       // console.log('after make visible')
@@ -2405,7 +2421,7 @@ function WalkthroughComponent({
       />
     } else if (step.view.viewType === STEP_VIEWS.POINTER) {
 
-      if(isMobile) {
+      if (isMobile) {
         return ''
       }
 
@@ -3025,41 +3041,41 @@ function WalkthroughComponent({
 
       {isMobile ? (
         <WS.MobileBottomWrapper $isOverlayEnabled={stepIsOverlayEnabled}>
-        {watermarkElement}
-        <WS.MobileTabsWrapper
-          $backgroundColor={themeStepBackgroundColor}
-          $color={themeTextColor}
-        >
-          <WS.MobileTabs__StepCount>
-            {currentStepIndexRef.current + 1}/{stepsInternalRef.current.length}
-          </WS.MobileTabs__StepCount>
-
-          <WS.MobileTabs__TextArea>
-            <WS.MobileTabs__TextFade $backgroundColor={themeStepBackgroundColor} />
-            <WS.MobileTabs__Text
-              dangerouslySetInnerHTML={{
-                __html: step && step.view && step.view.viewType !== STEP_VIEWS.POPUP
-                  ? (step.view.content || '')
-                  : ''
-              }}
-            />
-          </WS.MobileTabs__TextArea>
-
-          <WS.MobileTabs__NavBtn
-            onClick={onBack}
-            $dimmed={currentStepIndexRef.current === 0}
+          {watermarkElement}
+          <WS.MobileTabsWrapper
+            $backgroundColor={themeStepBackgroundColor}
+            $color={themeTextColor}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24">
-              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7.667-6.333L5 12m6.333 6.333L5 12" vectorEffect="non-scaling-stroke"/>
-            </svg>
-          </WS.MobileTabs__NavBtn>
+            <WS.MobileTabs__StepCount>
+              {currentStepIndexRef.current + 1}/{stepsInternalRef.current.length}
+            </WS.MobileTabs__StepCount>
 
-          <WS.MobileTabs__NavBtn onClick={onNext}>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24">
-              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 12H5m7.667 6.333L19 12m-6.333-6.333L19 12" vectorEffect="non-scaling-stroke"/>
-            </svg>
-          </WS.MobileTabs__NavBtn>
-        </WS.MobileTabsWrapper>
+            <WS.MobileTabs__TextArea>
+              <WS.MobileTabs__TextFade $backgroundColor={themeStepBackgroundColor} />
+              <WS.MobileTabs__Text
+                dangerouslySetInnerHTML={{
+                  __html: step && step.view && step.view.viewType !== STEP_VIEWS.POPUP
+                    ? (step.view.content || '')
+                    : ''
+                }}
+              />
+            </WS.MobileTabs__TextArea>
+
+            <WS.MobileTabs__NavBtn
+              onClick={onBack}
+              $dimmed={currentStepIndexRef.current === 0}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7.667-6.333L5 12m6.333 6.333L5 12" vectorEffect="non-scaling-stroke" />
+              </svg>
+            </WS.MobileTabs__NavBtn>
+
+            <WS.MobileTabs__NavBtn onClick={onNext}>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 12H5m7.667 6.333L19 12m-6.333-6.333L19 12" vectorEffect="non-scaling-stroke" />
+              </svg>
+            </WS.MobileTabs__NavBtn>
+          </WS.MobileTabsWrapper>
         </WS.MobileBottomWrapper>
       ) : ''}
 

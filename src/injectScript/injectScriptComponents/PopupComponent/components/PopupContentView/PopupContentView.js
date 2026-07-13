@@ -252,8 +252,8 @@ const C = {
             text-overflow: ellipsis;
         }
 
-        p:first-child { white-space: break-spaces; }
-        p:not(:last-child) { white-space: break-spaces; }
+        p:first-child { white-space: inherit; }
+        p:not(:last-child) { white-space: inherit; }
 
         && p { margin: 0; }
 
