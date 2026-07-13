@@ -22,6 +22,9 @@ const HANDLER_TYPES = {
   TRACKER: 'TRACKER',
 }
 
+// Sentinel for `previousScreenIdRef`'s initial value - guaranteed to never equal a real screen id.
+const VIDEO_EDITOR_INITIAL_SCREEN_ID = Symbol('video-editor-initial-screen-id')
+
 function Tip({ children, ...props }) {
 
   return <S.Tippy {...props}>{children}</S.Tippy>
@@ -218,7 +221,13 @@ const VideoEditor = (props) => {
   // currently-open screen (e.g. dragging a zoom span, which produces a new `currentScreen`
   // reference from the reducer) don't re-trigger a tracker/handle reset - only an actual
   // screen switch should do that. Tracker position otherwise stays fully local to VideoEditor.
-  let previousScreenIdRef = useRef(currentScreen && currentScreen._id)
+  //
+  // Initialized to a sentinel that can never equal a real screen id (not `currentScreen._id`
+  // itself) - VideoEditor fully unmounts/remounts when toggling away from and back to a video
+  // step (see `isZoomEnabled` in StoryDemoPage/Toolbar), so on every fresh mount this ref must
+  // NOT already "match" the current screen, otherwise the very first effect run treats the
+  // mount as a no-op edit and skips the startTime/endTime/handle setup entirely.
+  let previousScreenIdRef = useRef(VIDEO_EDITOR_INITIAL_SCREEN_ID)
 
   useEffect(() => {
 
