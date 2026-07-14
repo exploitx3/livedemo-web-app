@@ -1415,7 +1415,7 @@ function WalkthroughComponent({
       let needsVideoReload = lastVideoLoadKeyForZoomSpanUpdatesRef.current !== videoLoadKey
       lastVideoLoadKeyForZoomSpanUpdatesRef.current = videoLoadKey
 
-      if (needsVideoReload) {
+      if (needsVideoReload || !isInEditorRef.current) {
         let hls = new Hls({
           maxBufferLength: 5,
           enableWorker: true,
@@ -1540,6 +1540,13 @@ function WalkthroughComponent({
 
         video.load()
 
+      } else {
+        // Reload skipped (same screen/asset/start/end as last time - e.g. a zoom-span-only edit,
+        // or navigating away to a screenshot step and back). Video already has data loaded, so
+        // `video.onloadeddata` won't fire again to flip visibility - do it directly here instead,
+        // otherwise the video wrapper stays CSS-hidden (from the screenshot step's makeVisible
+        // call) and playback looks broken even though `.play()`/`.pause()` still work fine.
+        makeVisible(MAIN_VIEWS.VIDEO, {})
       } // end needsVideoReload
 
       // makeVisible(MAIN_VIEWS.VIDEO, {})
