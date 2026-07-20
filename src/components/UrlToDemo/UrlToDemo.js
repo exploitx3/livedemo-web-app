@@ -73,34 +73,10 @@ export default function UrlToDemo({ inModal = false, onSuccess }) {
             return
         }
         setLoading(true)
-        try {
-            const res = await fetch(`${CONFIG.API_URL}/urldemos`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url, browserSessionId }),
-            })
-            let responseData = null
-            try {
-                responseData = await res.json()
-            } catch {
-                setError('Something went wrong. Please try again.')
-            }
-            if (responseData && responseData._id) {
-                window.open(
-                    `${CONFIG.APP_URL}/preview?urlDemoId=${responseData._id}&browserSessionId=${responseData.browserSessionId}`,
-                    '_blank'
-                )
-                if (onSuccess) {
-                    onSuccess()
-                }
-            } else {
-                setError('Something went wrong. Please try again.')
-            }
-        } catch {
-            setError('Something went wrong. Please try again.')
-        } finally {
-            setLoading(false)
+        if (onSuccess) {
+            onSuccess()
         }
+        window.location.href = `${CONFIG.APP_URL}/url-to-demo?url=${encodeURIComponent(url)}&browserSessionId=${encodeURIComponent(browserSessionId)}`
     }
 
     return (
