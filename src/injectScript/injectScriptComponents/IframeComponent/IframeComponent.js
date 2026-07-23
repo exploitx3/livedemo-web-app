@@ -1,49 +1,61 @@
 import React, { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
-function IframeComponent({ screenId, iframeSrc, iframeRef, iframeSize, omniBarHeight, isFullScreen  }) {
-  // let [iframeSrc, setIframeSrc] = useState('about:blank')
+function getScaleParent(iframeRef) {
+  if (!(iframeRef && iframeRef.current && iframeRef.current.parentElement && iframeRef.current.parentElement.parentElement)) {
+    return null
+  }
+  return iframeRef.current.parentElement.parentElement
+}
 
-  let width = iframeSize && iframeSize.width  ? iframeSize.width : 0
-  let height = iframeSize && iframeSize.height ? iframeSize.height : 0
-
-  if(isFullScreen) {
-    width = window.innerWidth
-    height = window.innerHeight
+/**
+ * Scale recorded page size to fill the #main parent.
+ * Always prefer parent rect over window — fullscreen still has OmniBar / chrome
+ * above #main, so window.innerHeight overshoots and leaves a white gap.
+ */
+function computeScaleStyles(iframeSize, width, height, iframeRef, omniBarHeight) {
+  if (!(width && height)) {
+    return {}
   }
 
-  let innerWidth = window.innerWidth
-  let innerHeight = window.innerHeight
+  let scaleX = (window.innerWidth / width) * 100
+  let scaleY = ((window.innerHeight - (omniBarHeight || 0)) / height) * 100
 
-  let ratio = height / width
+  const parent = getScaleParent(iframeRef)
+  if (parent) {
+    const parentSize = parent.getBoundingClientRect()
+    if (parentSize && parentSize.width && parentSize.height) {
+      scaleX = (parentSize.width / width) * 100
+      scaleY = (parentSize.height / height) * 100
+    }
+  }
 
-  let scalePercentageWidth = (innerWidth / width) * 100
-  let scalePercentageHeight = ((innerHeight - omniBarHeight) / height) * 100
-
-  let additionalStyles = !(iframeSize  && iframeSize.width) ? {} : {
+  return {
     transformOrigin: 'top left',
-    transform: `scale(${scalePercentageWidth}%, ${scalePercentageHeight}%)`
+    transform: `scale(${scaleX}%, ${scaleY}%)`,
   }
+}
 
-  let [additionalStylesComputed, setAdditionalStylesComputed] = useState(additionalStyles)
+function IframeComponent({ screenId, iframeSrc, iframeRef, iframeSize, omniBarHeight, isFullScreen  }) {
+  // Keep recorded dimensions for the iframe/rrweb mirror. Stretch via transform
+  // to the parent — do NOT swap in window size on fullscreen (that made scaleY
+  // < 100% once OmniBar shortened #main).
+  const width = iframeSize && iframeSize.width ? iframeSize.width : 0
+  const height = iframeSize && iframeSize.height ? iframeSize.height : 0
+
+  let [scaleStyles, setScaleStyles] = useState(() => computeScaleStyles(iframeSize, width, height, iframeRef, omniBarHeight))
 
   useEffect(() => {
-    if(iframeRef.current) {
-      let parentSize = iframeRef.current.parentElement.parentElement.getBoundingClientRect()
-
-      if(parentSize && parentSize.width) {
-        setAdditionalStylesComputed(!(iframeSize  && iframeSize.width) ? additionalStyles : {
-          transformOrigin: 'top left',
-          // width: parentSize.width,
-          // height: parentSize.height,
-          // transform: `scale(${(width / parentSize.width ) * 100}%, ${(height / parentSize.height) * 100}%)`,
-          transform: `scale(${(parentSize.width / width ) * 100}%, ${(parentSize.height / height) * 100}%)`,
-        })
-      }
-
+    function refreshLayout() {
+      setScaleStyles(computeScaleStyles(iframeSize, width, height, iframeRef, omniBarHeight))
     }
 
-  }, [iframeRef, iframeRef.current])
+    refreshLayout()
+    window.addEventListener('resize', refreshLayout)
+    return function () {
+      window.removeEventListener('resize', refreshLayout)
+    }
+  }, [iframeRef, iframeSize, width, height, omniBarHeight, isFullScreen])
 
   useEffect(() => {
 
@@ -52,9 +64,6 @@ function IframeComponent({ screenId, iframeSrc, iframeRef, iframeSize, omniBarHe
 
         iframeRef.current.contentWindow.location.replace(iframeSrc)
       }
-      // iframeRef.current.contentWindow.location.replace('http:////research.stlouisfed.org/fred2/graph/graph-landing.php?g=GEt')
-
-
     }
 
   }, [iframeSrc])
@@ -63,6 +72,7 @@ function IframeComponent({ screenId, iframeSrc, iframeRef, iframeSize, omniBarHe
     <SI.IframeWrapper
       height={height}
       width={width}
+      $fillParent={true}
     >
     <SI.Iframe
       src={'about:blank'}
@@ -72,24 +82,13 @@ function IframeComponent({ screenId, iframeSrc, iframeRef, iframeSize, omniBarHe
       style={{
         height: height,
         width: width,
-        ...additionalStyles
-        // position: 'absolute',
-        // border: 'none'
+        ...scaleStyles
       }}
       onLoad={function() {
 
 
 
         if (iframeSrc !== 'about:blank') {
-
-
-          // iframeRef.current.addEventListener('load', function() {
-          //   iframeRef.current.style.height = iframeRef.current.contentDocument.body.scrollHeight / 2 + 'px';
-          //   iframeRef.current.style.width = iframeRef.current.contentDocument.body.scrollWidth / 2 + 'px';
-
-            // iframeRef.current.style.height = iframeRef.current.contentDocument.body.scrollHeight + 'px';
-            // iframeRef.current.style.width = iframeRef.current.contentDocument.body.scrollWidth + 'px';
-          // });
 
 
           iframeRef.current.setAttribute('screenId', screenId)
@@ -100,56 +99,77 @@ function IframeComponent({ screenId, iframeSrc, iframeRef, iframeSize, omniBarHe
       }}
       ref={iframeRef}
     />
+    <SI.RrwebRoot
+      id={'story_rrweb_root'}
+      className={'hidden'}
+      style={{
+        height: height,
+        width: width,
+        ...scaleStyles
+      }}
+    />
     </SI.IframeWrapper>
   </React.Fragment>
 }
 
 const SI = {
   IframeWrapper: styled.div.withConfig({
-    shouldForwardProp: (prop) => !['height', 'width'].includes(prop),
+    shouldForwardProp: (prop) => !['height', 'width', '$fillParent'].includes(prop),
   })`
     position: absolute;
     top: 0;
     left: 0;
-    
-    
     overflow: hidden;
-    //width: 600px;
-    //height: 390px;
-    padding-bottom: ${(props) => ((props.height) / props.width) * 100}%; /* 16:9 */
-    //padding-top: 25px;
-    height: 0;
     width: 100%;
-    
     transform-origin: top left;
-    //transform: scale(1.700293, 1.475);
-    
-    
-    //padding-bottom: ${() => 6/13 * 100}%; 
-    //padding-bottom: 56.25%; /* 16:9, for an aspect ratio of 1:1 change to this value to 100% */ 
+
+    ${({ $fillParent, height, width }) => {
+      if ($fillParent) {
+        // Always fill #main (editor, preview, fullscreen) — aspect-ratio
+        // letterboxing left a white gap under page/rrweb content.
+        return `
+          height: 100%;
+          padding-bottom: 0;
+          bottom: 0;
+          right: 0;
+        `
+      }
+
+      const ratio = width > 0 ? (height / width) * 100 : 0
+      return `
+          height: 0;
+          padding-bottom: ${ratio}%;
+        `
+    }}
   `,
   Iframe: styled.iframe` 
     position: absolute;
     top: 0;
     left: 0;
     visibility: visible;
-    //right: 0;
-    //bottom: 0;
-    //height: 100%;
-    //width: 100%;
-    
-    //transform: translate(-215px, -84px) scale(0.7);
-    
-    
-    //transform: scale(0.5)
-    
-    //zoom: 0.50; 
-    //-moz-transform: scale(0.50);
-    //-moz-transform-origin: 0 0;
-    //transform: scale(0.50);
-    //
-    //width: 1000px;
-    //height: 650px;
+  `,
+  RrwebRoot: styled.div`
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    /* Do not set visibility here — .hidden from WalkthroughComponent must win */
+
+    .replayer-wrapper {
+      width: 100%;
+      height: 100%;
+    }
+
+    .replayer-wrapper > iframe {
+      border: 0;
+    }
+
+    .replayer-mouse,
+    .replayer-mouse-tail {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
   `
 }
 

@@ -296,7 +296,8 @@ export const htmlSerialize = (nodes) => {
 
 const APP_IDS = [
   "dnlnaeifccbhdnbppjjgleapjadjklbe",
-  'bmdppjnfoimgmgbmmdphnopadjejbdpm'
+  'bmdppjnfoimgmgbmmdphnopadjejbdpm',
+  
 ]
 
 export function checkIfIsAuthenticated() {

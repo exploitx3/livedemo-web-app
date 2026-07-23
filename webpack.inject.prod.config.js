@@ -65,7 +65,7 @@ export default {
       'react-confetti': path.resolve(__dirname, 'node_modules/react-confetti/dist/react-confetti.cjs'),
       // Match vite.config.js alias for antd v6 ES modules
       'antd/lib': 'antd/es',
-      'antd/reset': path.resolve(__dirname, 'node_modules/antd/dist/reset.css')
+      'antd/reset': path.resolve(__dirname, 'node_modules/antd/dist/reset.css'),
     }
   },
   devServer: {

@@ -1,4 +1,5 @@
 import React, { createRef, useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 // import Joyride, { ACTIONS, EVENTS, STATUS } from 'react-joyride'
 import styled from 'styled-components'
 import { CaretRightOutlined, ForwardOutlined, LockFilled, ReloadOutlined } from '@ant-design/icons'
@@ -25,13 +26,16 @@ import * as storyHelpers from '../utils/storyHelpers.js'
 
 import {
   deriveRenderSteps,
+  getDemoDocument,
   getIframeLoadedScreenId,
   getScreenIndex,
   getStepAndScreenByStepIndex,
   setupSessionRecording,
+  checkoutSessionRecording,
   waitForElementInTop
 } from './helpers.js'
 import IframeComponent from './injectScriptComponents/IframeComponent/IframeComponent.js'
+import * as chainManager from './rrwebChainManager.js'
 // import {useStateWithCallbackLazy} from 'use-state-with-callback'
 import PopupComponenet from "./injectScriptComponents/PopupComponent/PopupComponent.js";
 import RoundAudioPlayer from './injectScriptComponents/RoundAudioPlayer/RoundAudioPlayer.js'
@@ -65,7 +69,8 @@ const ENABLE_DEBUG_CURSOR = false
 const MAIN_VIEWS = {
   IMAGES: 'IMAGES',
   VIDEO: 'VIDEO',
-  IFRAME: 'IFRAME'
+  IFRAME: 'IFRAME',
+  RRWEB: 'RRWEB'
 }
 
 const STEP_VIEWS = {
@@ -93,7 +98,7 @@ let checkForElement = function (selector) {
 
     int = setInterval(() => {
 
-      let elem = window.frames[0].document.querySelector(selector)
+      let elem = getDemoDocument().querySelector(selector)
       if (elem) {
         clearInterval(int)
         resolve(elem)
@@ -319,8 +324,8 @@ function WalkthroughComponent({
 
   }, [storyDemo])
 
-  let fullWidth = (storyDemoInternalRef.current.windowMeasures && storyDemoInternalRef.current.windowMeasures.innerWidth) || storyDemoInternalRef.current.tabInfo.width
-  let fullHeight = (storyDemoInternalRef.current.windowMeasures && storyDemoInternalRef.current.windowMeasures.innerHeight) || storyDemoInternalRef.current.tabInfo.height
+  let fullWidth = (storyDemoInternalRef.current.windowMeasures && storyDemoInternalRef.current.windowMeasures.innerWidth) || (storyDemoInternalRef.current.tabInfo && storyDemoInternalRef.current.tabInfo.width) || (storyDemoInternalRef.current.rrweb && storyDemoInternalRef.current.rrweb.viewport && storyDemoInternalRef.current.rrweb.viewport.width) || (storyDemoInternalRef.current.screens && storyDemoInternalRef.current.screens[0] && storyDemoInternalRef.current.screens[0].width) || 1366
+  let fullHeight = (storyDemoInternalRef.current.windowMeasures && storyDemoInternalRef.current.windowMeasures.innerHeight) || (storyDemoInternalRef.current.tabInfo && storyDemoInternalRef.current.tabInfo.height) || (storyDemoInternalRef.current.rrweb && storyDemoInternalRef.current.rrweb.viewport && storyDemoInternalRef.current.rrweb.viewport.height) || (storyDemoInternalRef.current.screens && storyDemoInternalRef.current.screens[0] && storyDemoInternalRef.current.screens[0].height) || 664
 
   let [videoRatioWidth, setVideoRatioWidth] = useState(window.innerWidth)
   let [videoRatioHeight, setVideoRatioHeight] = useState(window.innerHeight)
@@ -493,6 +498,21 @@ function WalkthroughComponent({
   // actual video (screen/asset/start/end) changed - only zoomSpans did.
   let lastVideoLoadKeyForZoomSpanUpdatesRef = useRef(null)
 
+  // Bumped whenever we leave a video step (or start a new video bind). Stale
+  // video.onloadeddata from a previous step must not call makeVisible(VIDEO) after
+  // the user has already switched to Screenshot/Page — that hides the new layer.
+  let videoViewGenerationRef = useRef(0)
+
+  function detachVideoViewHandlers(videoEl) {
+    videoViewGenerationRef.current += 1
+    if (!videoEl) {
+      return
+    }
+    videoEl.onloadeddata = null
+    videoEl.ontimeupdate = null
+    videoEl.onended = null
+  }
+
   const currentStepIndexRef = useRef(storyConfig.currentStepIndex || 0)
 
   function setCurrentStepIndexRef(value) {
@@ -580,8 +600,8 @@ function WalkthroughComponent({
   let [transitionPointerInfos, setTransitionPointerInfos] = useState([])
 
 
-  let originalWidth = (storyDemoInternalRef.current.windowMeasures && storyDemoInternalRef.current.windowMeasures.innerWidth) || storyDemoInternalRef.current.tabInfo.width
-  let originalHeight = (storyDemoInternalRef.current.windowMeasures && storyDemoInternalRef.current.windowMeasures.innerHeight) || storyDemoInternalRef.current.tabInfo.height
+  let originalWidth = (storyDemoInternalRef.current.windowMeasures && storyDemoInternalRef.current.windowMeasures.innerWidth) || (storyDemoInternalRef.current.tabInfo && storyDemoInternalRef.current.tabInfo.width) || (storyDemoInternalRef.current.rrweb && storyDemoInternalRef.current.rrweb.viewport && storyDemoInternalRef.current.rrweb.viewport.width) || (storyDemoInternalRef.current.screens && storyDemoInternalRef.current.screens[0] && storyDemoInternalRef.current.screens[0].width) || 1366
+  let originalHeight = (storyDemoInternalRef.current.windowMeasures && storyDemoInternalRef.current.windowMeasures.innerHeight) || (storyDemoInternalRef.current.tabInfo && storyDemoInternalRef.current.tabInfo.height) || (storyDemoInternalRef.current.rrweb && storyDemoInternalRef.current.rrweb.viewport && storyDemoInternalRef.current.rrweb.viewport.height) || (storyDemoInternalRef.current.screens && storyDemoInternalRef.current.screens[0] && storyDemoInternalRef.current.screens[0].height) || 664
 
   let widthDimensionPercentage = innerWidth / originalWidth
   let heightDimensionPercentage = innerHeight / originalHeight
@@ -762,6 +782,23 @@ function WalkthroughComponent({
       originalMainRefRect.current = mainRef.current.getBoundingClientRect()
     }
   }, [mainRef, mainRef.current, window.innerHeight, window.innerWidth]);
+
+  useEffect(() => {
+    window.reloadRrwebAfterTextEdit = function () {
+      const demo = storyDemoInternalRef.current
+      const screen = demo && demo.screens && demo.screens.find((s) => String(s._id) === String(currentScreenIdRef.current))
+      if (!screen || !screen.recordingRole) {
+        return Promise.resolve(null)
+      }
+      const workspaceId = window.config && window.config.workspaceId
+      const storyId = window.config && window.config.storyId
+      return chainManager.reloadAfterTextEdit(screen, demo, workspaceId, storyId)
+    }
+    return () => {
+      delete window.reloadRrwebAfterTextEdit
+    }
+  }, [])
+
   useEffect(() => {
 
     storyConfig.run = showTooltip
@@ -777,6 +814,14 @@ function WalkthroughComponent({
 
   // Handle left and right arrow clicks to change step
   useEffect(() => {
+
+    function navigateByArrow(dir) {
+      if (dir === 'back') {
+        onBack()
+      } else if (dir === 'next') {
+        onNext()
+      }
+    }
 
     function handle(event) {
 
@@ -804,17 +849,22 @@ function WalkthroughComponent({
 
       if (event.keyCode === 37) {
         // Left arrow key pressed
-        onBack()
+        navigateByArrow('back')
       } else if (event.keyCode === 39) {
         // Right arrow key pressed
-        onNext()
+        navigateByArrow('next')
       }
     }
 
+    // rrweb iframe forwards arrows here when it has focus (before hotspot click).
+    window.__livedemoStepArrowKey = navigateByArrow
     document.addEventListener('keydown', handle);
 
     return function () {
       document.removeEventListener('keydown', handle)
+      if (window.__livedemoStepArrowKey === navigateByArrow) {
+        delete window.__livedemoStepArrowKey
+      }
     }
   }, [])
 
@@ -826,9 +876,9 @@ function WalkthroughComponent({
 
   useEffect(() => {
 
-    let screen = storyDemoInternalRef.current.screens.find(scr => scr._id === iframeScreenId)
+    let screen = storyDemoInternalRef.current.screens.find(scr => String(scr._id) === String(iframeScreenId))
 
-    if (screen.width) {
+    if (screen && screen.width) {
 
       setIframeSize({
         width: screen.width,
@@ -1146,6 +1196,7 @@ function WalkthroughComponent({
       document.removeEventListener('mozfullscreenchange', exitHandler, false);
       document.removeEventListener('MSFullscreenChange', exitHandler, false);
       document.removeEventListener('webkitfullscreenchange', exitHandler, false);
+      chainManager.destroyAllChains()
     }
   }, [])
 
@@ -1341,6 +1392,8 @@ function WalkthroughComponent({
     console.log('middlePromise')
 
     if (currentStep.screenType === 'Screen_Page') {
+      // Cancel any in-flight video onloadeddata from the previous step.
+      detachVideoViewHandlers(video)
 
       // if (!(prevStep && currentStep.screenId === prevStep.screenId)) {
 
@@ -1354,13 +1407,31 @@ function WalkthroughComponent({
       // }
 
 
-      if (currentStepIndex.current === 0 || (prevStep && currentStep.screenId !== prevStep.screenId)) {
-        await changeIframeScreen(workspaceId, storyId, currentStep.screenId, getIframeLoadedScreenId)
-      } else if (!stepBlobs[currentStep.screenId]) {
-        await changeIframeScreen(workspaceId, storyId, currentStep.screenId, getIframeLoadedScreenId)
-      }
+      if (screen && screen.recordingRole) {
+        setIframeScreenId(currentStep.screenId)
+        if (screen.width) {
+          setIframeSize({
+            width: screen.width,
+            height: screen.height
+          })
+        }
+        // Always sync the persistent rrweb player: forward adds event suffixes,
+        // backward truncates events between steps, then pause(toTimeMs).
+        await chainManager.showScreen(screen, storyDoc, workspaceId, storyId)
+        makeVisible(MAIN_VIEWS.RRWEB, {})
+        // One debounced checkout after nested Replayer content is ready.
+        checkoutSessionRecording(500)
+      } else {
+        chainManager.clearActiveReplayer()
 
-      makeVisible(MAIN_VIEWS.IFRAME, {})
+        if (currentStepIndex.current === 0 || (prevStep && currentStep.screenId !== prevStep.screenId)) {
+          await changeIframeScreen(workspaceId, storyId, currentStep.screenId, getIframeLoadedScreenId)
+        } else if (!stepBlobs[currentStep.screenId]) {
+          await changeIframeScreen(workspaceId, storyId, currentStep.screenId, getIframeLoadedScreenId)
+        }
+
+        makeVisible(MAIN_VIEWS.IFRAME, {})
+      }
       // React 18 automatically batches state updates, so no need for unstable_batchedUpdates
       if (!showTooltip) {
         setShowTooltip(true)
@@ -1439,28 +1510,24 @@ function WalkthroughComponent({
         hls.startLoad(startPosition)
 
 
-        let madeVisible = false
+        const videoBindGeneration = ++videoViewGenerationRef.current
         video.onloadeddata = function (e) {
-          // if (shownImageId.current !== '') {
-          //   video.play()
+          // Stale callback after navigating away from this video step.
+          if (videoBindGeneration !== videoViewGenerationRef.current) {
+            return
+          }
+          const stillVideoStep = stepsInternalRef.current[currentStepIndex.current]
+          if (!stillVideoStep || stillVideoStep.screenType !== 'Screen_Video') {
+            return
+          }
 
           if (!isInEditorRef.current) {
             video.play()
           }
 
           video.playbackRate = currentStep.playbackRate ? currentStep.playbackRate : 1.2
-          // console.log('video playbackRate = ' + currentStep.playbackRate)
-
 
           makeVisible(MAIN_VIEWS.VIDEO, {})
-
-          // let lastImage = document.getElementById(shownImageId.current)
-          // showElem(video)
-          //
-          // hideElem(lastImage)
-          // }
-
-
         }
 
 
@@ -1489,7 +1556,9 @@ function WalkthroughComponent({
           if (isInEditorRef.current) {
             return
           }
-
+          if (videoBindGeneration !== videoViewGenerationRef.current) {
+            return
+          }
 
           let isStillOnSamePage = savedCurrentStepIndex === currentStepIndex.current
 
@@ -1571,6 +1640,9 @@ function WalkthroughComponent({
 
     }
     if (currentStep.screenType === 'Screen_Screenshot') {
+      // Cancel any in-flight video onloadeddata from the previous step — otherwise
+      // a late loadeddata can makeVisible(VIDEO) and blank this screenshot.
+      detachVideoViewHandlers(video)
 
       if (screen.customTransitions) {
 
@@ -1581,10 +1653,6 @@ function WalkthroughComponent({
 
         setShowTransitions(false)
         clearTransitions()
-      }
-
-
-      video.ontimeupdate = () => {
       }
 
       let imageToShow = document.getElementById(currentStep.screenId)
@@ -1761,6 +1829,17 @@ function WalkthroughComponent({
         .then(res => {
           let screenData = res.data
 
+          // rrweb screens return { events }, not HTML content — do not blob undefined
+          if (screenData.screenDoc && screenData.screenDoc.recordingRole) {
+            setShowSpinner(false)
+            return screenData
+          }
+
+          if (typeof screenData.content !== 'string') {
+            setShowSpinner(false)
+            throw new Error('Screen preview missing HTML content')
+          }
+
           const blobContent = new Blob([screenData.content], { type: 'text/html' })
 
           let blobUrl = URL.createObjectURL(blobContent)
@@ -1818,18 +1897,39 @@ function WalkthroughComponent({
 
 
     let iframeElem = document.getElementById('story_iframe')
+    let rrwebElem = document.getElementById('story_rrweb_root')
     let videoElem = document.getElementById('story_video_wrapper')
     let imagesElem = document.getElementById('story_images')
 
     if (view === MAIN_VIEWS.IFRAME) {
       iframeElem.classList.add('zIndex2')
+      if (rrwebElem) {
+        rrwebElem.classList.remove('zIndex2')
+      }
       videoElem.classList.remove('zIndex2')
       imagesElem.classList.remove('zIndex2')
 
       iframeElem.classList.remove('hidden')
+      if (rrwebElem) {
+        rrwebElem.classList.add('hidden')
+      }
       videoElem.classList.add('hidden')
       imagesElem.classList.add('hidden')
 
+    } else if (view === MAIN_VIEWS.RRWEB) {
+      if (rrwebElem) {
+        rrwebElem.classList.add('zIndex2')
+      }
+      iframeElem.classList.remove('zIndex2')
+      videoElem.classList.remove('zIndex2')
+      imagesElem.classList.remove('zIndex2')
+
+      if (rrwebElem) {
+        rrwebElem.classList.remove('hidden')
+      }
+      iframeElem.classList.add('hidden')
+      videoElem.classList.add('hidden')
+      imagesElem.classList.add('hidden')
 
     } else if (view === MAIN_VIEWS.IMAGES) {
       let imageId = ''
@@ -1856,21 +1956,33 @@ function WalkthroughComponent({
       imagesElem.classList.add('zIndex2')
       videoElem.classList.remove('zIndex2')
       iframeElem.classList.remove('zIndex2')
+      if (rrwebElem) {
+        rrwebElem.classList.remove('zIndex2')
+      }
 
 
       imagesElem.classList.remove('hidden')
       videoElem.classList.add('hidden')
       iframeElem.classList.add('hidden')
+      if (rrwebElem) {
+        rrwebElem.classList.add('hidden')
+      }
 
 
     } else if (view === MAIN_VIEWS.VIDEO) {
 
       videoElem.classList.add('zIndex2')
       iframeElem.classList.remove('zIndex2')
+      if (rrwebElem) {
+        rrwebElem.classList.remove('zIndex2')
+      }
       imagesElem.classList.remove('zIndex2')
 
       videoElem.classList.remove('hidden')
       iframeElem.classList.add('hidden')
+      if (rrwebElem) {
+        rrwebElem.classList.add('hidden')
+      }
       imagesElem.classList.add('hidden')
     }
   }

@@ -7,7 +7,7 @@ import TippyModule from '@tippyjs/react'
 
 // Ensure we get the actual component (handle both default and named exports)
 const Tippy = TippyModule?.default || TippyModule
-import { topPostMessage } from '../../helpers.js'
+import { topPostMessage, getDemoDocument } from '../../helpers.js'
 
 import RegionLite from '../RegionLite/RegionLite.js'
 
@@ -27,7 +27,7 @@ let checkForElement = function (selector) {
 
     int = setInterval(() => {
 
-      let elem = window.frames[0].document.querySelector(selector)
+      let elem = getDemoDocument().querySelector(selector)
       if (elem) {
         clearInterval(int)
         resolve(elem)

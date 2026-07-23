@@ -1,7 +1,15 @@
 import validator from 'validator'
 import axios from 'axios'
+import { record as rrwebRecord } from 'rrweb'
 import ENV from './config.json'
 import ScreenTypes from '../constants/ScreenTypes.js'
+import { createSessionRecordingFlattenEmit } from './sessionRecordingFlatten.js'
+
+export function getDemoDocument() {
+    return window.__livedemoActiveReplayer
+        ? window.__livedemoActiveReplayer.iframe.contentDocument
+        : document.getElementById('story_iframe').contentDocument
+}
 
 export function waitForElement(query, refreshRate, limit) {
     return new Promise((resolve, reject) => {
@@ -10,7 +18,7 @@ export function waitForElement(query, refreshRate, limit) {
 
         let looper = setInterval(() => {
 
-            let elem = window.frames[0].document.querySelector(query)
+            let elem = getDemoDocument().querySelector(query)
             if (elem) {
 
                 clearInterval(looper)
@@ -112,6 +120,29 @@ export function topPostMessage(messageObj) {
     topWindow.postMessage(messageObj, '*')
 }
 
+let checkoutSessionRecordingTimer = null
+
+/**
+ * Debounced checkout while session recording is active.
+ * Important: do NOT spam takeFullSnapshot on every step — repeated checkouts
+ * reset the mirror to empty iframe shells and wipe flattened demo content.
+ */
+export function checkoutSessionRecording(delayMs = 400) {
+    if (checkoutSessionRecordingTimer) {
+        clearTimeout(checkoutSessionRecordingTimer)
+    }
+    checkoutSessionRecordingTimer = setTimeout(() => {
+        checkoutSessionRecordingTimer = null
+        try {
+            if (typeof rrwebRecord.takeFullSnapshot === 'function') {
+                rrwebRecord.takeFullSnapshot(true)
+            }
+        } catch (e) {
+            // record() not started yet — ignore
+        }
+    }, delayMs)
+}
+
 export function setupSessionRecording(eventsRef, currentStepIndexRef) {
 
     const workspaceId = window.config.workspaceId
@@ -134,18 +165,32 @@ export function setupSessionRecording(eventsRef, currentStepIndexRef) {
 
             window.config.sessionId = sessionId
 
-            let stopFn = rrwebRecord({
-                emit(event) {
-
-                    if (eventsRef.current.length > 1000) {
-                        // stop after 100 events
+            // Flatten nested #story_iframe / Replayer iframes in the emit
+            // stream so Analytics never has to rebuild nested iframe documents.
+            let stopFn
+            const emitFlat = createSessionRecordingFlattenEmit((event) => {
+                if (eventsRef.current.length > 1000) {
+                    // stop after buffer grows too large
+                    if (stopFn) {
                         stopFn()
                     }
+                }
 
-                    event.stepIndex = (currentStepIndexRef && currentStepIndexRef.current) || 0
-                    // push event into the events array
-                    eventsRef.current.push(event)
+                event.stepIndex = (currentStepIndexRef && currentStepIndexRef.current) || 0
+                eventsRef.current.push(event)
+            })
+
+            stopFn = rrwebRecord({
+                emit: emitFlat,
+                // Keep pointer traffic sparse so iframe-attach mutations are not
+                // drowned before the periodic save / Analytics fetch.
+                sampling: {
+                    mousemove: 150,
+                    mouseInteraction: true,
+                    scroll: 100,
+                    input: 'last',
                 },
+                inlineStylesheet: true,
             })
 
             // this function will send events to the backend and reset the events array
@@ -237,6 +282,12 @@ export function deriveRenderSteps(storyDemo) {
                     step.screenType = screen.type
                     step.screenWidth = screen.width
                     step.screenHeight = screen.height
+                    if (screen.recordingRole) {
+                        step.recordingRole = screen.recordingRole
+                        step.baseScreenId = screen.baseScreenId
+                        step.fromTimeMs = screen.fromTimeMs
+                        step.toTimeMs = screen.toTimeMs
+                    }
 
 
                     return step
@@ -247,7 +298,13 @@ export function deriveRenderSteps(storyDemo) {
                         screenId: screen._id,
                         screenWidth: screen.width,
                         screenHeight: screen.height,
-                        screenType: screen.type
+                        screenType: screen.type,
+                        ...(screen.recordingRole ? {
+                            recordingRole: screen.recordingRole,
+                            baseScreenId: screen.baseScreenId,
+                            fromTimeMs: screen.fromTimeMs,
+                            toTimeMs: screen.toTimeMs,
+                        } : {})
                     })
                 }
 

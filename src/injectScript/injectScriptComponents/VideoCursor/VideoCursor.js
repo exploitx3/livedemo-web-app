@@ -111,8 +111,8 @@ function toViewport(frameX, frameY, paintedRect, tabW, tabH) {
  * `getVideoPaintedRect` / `toViewport` yield viewport (client) coordinates. CoreCursor
  * uses `position: fixed` inside WalkthroughComponent's `<Main>`, which has a CSS
  * `transform` (scaleMain). Transformed ancestors create the containing block for fixed
- * descendants, so cursor `translate(x,y)` is relative to Main's top-left — subtract
- * Main's getBoundingClientRect() so targets match the painted video.
+ * descendants, so cursor `translate(x,y)` is Main-local — subtract Main's
+ * getBoundingClientRect() and divide by live scale (rect size / offset size).
  */
 function VideoCursor({ cursorPositions, videoRef, mainRef, tabInfoWidth, tabInfoHeight, active }) {
   const sorted = useMemo(() => {
@@ -137,12 +137,15 @@ function VideoCursor({ cursorPositions, videoRef, mainRef, tabInfoWidth, tabInfo
     }
 
     let target = toViewport(raw.x, raw.y, paintedRect, tabW, tabH)
-    const mainEl = mainRef && mainRef.current
-    if (mainEl) {
-      const mr = mainEl.getBoundingClientRect()
+    const mainElement = mainRef && mainRef.current
+    if (mainElement) {
+      // getBoundingClientRect = viewport (post-scale); fixed translate = Main local (pre-scale)
+      const mainRect = mainElement.getBoundingClientRect()
+      const scaleX = mainRect.width / (mainElement.offsetWidth || 1) || 1
+      const scaleY = mainRect.height / (mainElement.offsetHeight || 1) || 1
       target = {
-        x: target.x - mr.left,
-        y: target.y - mr.top,
+        x: (target.x - mainRect.left) / scaleX,
+        y: (target.y - mainRect.top) / scaleY,
       }
     }
     if (!video.paused) {

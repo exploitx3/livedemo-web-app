@@ -28,6 +28,18 @@ import {bindActionCreators} from 'redux'
 
 const {confirm} = Modal
 
+function getEditorDemoDocument(iframeRef) {
+  const win = iframeRef.current && iframeRef.current.contentWindow
+  if (!win) {
+    return null
+  }
+  if (win.__livedemoActiveReplayer && win.__livedemoActiveReplayer.iframe) {
+    return win.__livedemoActiveReplayer.iframe.contentDocument
+  }
+  const storyIframe = win.document.getElementById('story_iframe')
+  return storyIframe ? storyIframe.contentDocument : null
+}
+
 
 const ScreenPage = ({
                       storyDemo, iframeRef, setScreens, setStoryDemo, tabsWidth, authData, changeStep, reloadStoryDemo,
@@ -85,9 +97,13 @@ const ScreenPage = ({
       function onClick(element) {
 
 
-        const simmer = new Simmer(iframeRef.current.contentWindow.frames[0].document)
+        const demoDoc = getEditorDemoDocument(iframeRef)
+        const simmer = new Simmer(demoDoc)
 
-        let selector = `[livedemo_id="${element.getAttribute('livedemo_id')}"`
+        let livedemoId = element.getAttribute('livedemo_id')
+        let selector = livedemoId
+          ? `[livedemo_id="${livedemoId}"]`
+          : simmer(element)
 
         let elementBounds = element.getBoundingClientRect()
         let selectorLocation = {
@@ -106,7 +122,7 @@ const ScreenPage = ({
       }
 
       iframeRef.current.contentWindow.elementPicker.init({
-        document: iframeRef.current.contentWindow.frames[0].document,
+        document: getEditorDemoDocument(iframeRef),
         onClick,
         backgroundColor: Colors.primaryColor
       })
@@ -166,58 +182,9 @@ const ScreenPage = ({
     })
   }
 
-  function onEditText(workspaceId, storyDemoId, authToken) {
-
-    if (isTextEditing) {
-      setIsTextEditing(false)
-      iframeRef.current.contentWindow.resetEditText()
-
-      return
-    }
-
-    return new Promise((resolve, reject) => {
-      setIsTextEditing(true)
-
-      function onFinishEditting(result) {
-        resolve(result)
-      }
-
-      setTimeout(() => {
-        reject()
-      }, 300 * 1000)
-
-      iframeRef.current.contentWindow.editText(onFinishEditting)
-
-    })
-      .then((result) => {
-        if (result.action === 'save' && result.text !== result.oldText) {
-          let screenId = result.screenId
-          let newText = result.text
-          let liveDemoTagId = result.liveDemoTagId
-
-
-          return axios.post(`${ENV.STORIES_API}/workspaces/${storyDemo.workspaceId}/stories/${storyDemo._id}/screens/${screenId}/editText`,
-            {
-              'selector': `[livedemo_id="${liveDemoTagId}"]`,
-              'text': newText
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${authToken}`
-              }
-            })
-            .then((res) => {
-              return res.data
-            })
-        } else {
-          return Promise.resolve({})
-        }
-
-      })
-      .then((result) => {
-        setIsTextEditing(false)
-        // console.log(result)
-      })
+  function onEditText() {
+    // Legacy static HTML EditText removed. Use Toolbar Edit for DOM/rrweb screens.
+    return
   }
 
   function reorderArray(array, from, to) {
@@ -549,7 +516,7 @@ const ScreenPage = ({
         setShowTransition(true)
       }
     },
-    {
+    ...(screenInternal.recordingRole ? [] : [{
       key: 'duplicate',
       label: 'Duplicate',
       onClick: () => {
@@ -563,21 +530,39 @@ const ScreenPage = ({
               })
           })
       }
-    },
-    {
-      key: 'delete',
-      label: 'Delete',
-      onClick: () => {
-        let deleteClosure = function () {
-          deleteScreen(storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
-            .then(() => {
-              reloadStoryDemo()
-            })
+    }]),
+    ...((() => {
+      if (screenInternal.recordingRole === 'base') {
+        const hasDeltas = screens.some((s) => s.recordingRole === 'delta' && String(s.baseScreenId) === String(screenInternal._id))
+        if (hasDeltas) {
+          return []
         }
-
-        showDeleteScreenConfirm(deleteClosure)
       }
-    }
+      if (screenInternal.recordingRole === 'delta') {
+        const laterDelta = screens.some((s) =>
+          s.recordingRole === 'delta' &&
+          String(s.baseScreenId) === String(screenInternal.baseScreenId) &&
+          s.index > screenInternal.index
+        )
+        if (laterDelta) {
+          return []
+        }
+      }
+      return [{
+        key: 'delete',
+        label: 'Delete',
+        onClick: () => {
+          let deleteClosure = function () {
+            deleteScreen(storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
+              .then(() => {
+                reloadStoryDemo()
+              })
+          }
+
+          showDeleteScreenConfirm(deleteClosure)
+        }
+      }]
+    })())
   ]
 
   function getScreenIcon(screen) {
@@ -620,7 +605,12 @@ const ScreenPage = ({
     <SC.Wrapper id={viewName}>
 
       {isLoading ? <Spinner/> : (
-        <Draggable key={currentScreen._id} draggableId={currentScreen._id} index={screenIndex}>
+        <Draggable
+          key={currentScreen._id}
+          draggableId={currentScreen._id}
+          index={screenIndex}
+          isDragDisabled={!!currentScreen.recordingRole}
+        >
           {(provided, snapshot) => (
             <div
               ref={provided.innerRef}
@@ -680,6 +670,11 @@ const ScreenPage = ({
                         }
                       }}
                     >{screenInternal.name}</SC.ScreenTitle>
+                    {screenInternal.recordingRole ? (
+                      <SC.RecordingRoleBadge $role={screenInternal.recordingRole}>
+                        {screenInternal.recordingRole === 'base' ? 'Base' : 'Delta'}
+                      </SC.RecordingRoleBadge>
+                    ) : null}
                   </SC.HeaderMain>
                   <Dropdown trigger={['click']} menu={{ items: screenMenuItems }}>
                     <SC.MenuButton>
@@ -1040,6 +1035,32 @@ const SC = {
       cursor: text;
       border-bottom: 1px solid black;
     }
+  `,
+  RecordingRoleBadge: styled.span.withConfig({
+    shouldForwardProp: (prop) => prop !== '$role',
+  })`
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: 8px;
+    padding: 0 6px;
+    height: 18px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    border-radius: 3px;
+    border: 1px solid ${({ $role }) => (
+      $role === 'base' ? Colors.primaryColor : Colors.fourthColor
+    )};
+    color: ${({ $role }) => (
+      $role === 'base' ? Colors.primaryColorDarker : Colors.sixthColor
+    )};
+    background: ${({ $role }) => (
+      $role === 'base' ? 'rgba(16, 112, 255, 0.08)' : 'rgba(194, 194, 194, 0.22)'
+    )};
+    vertical-align: middle;
+    user-select: none;
   `,
   ReloadButton: styled(Button)`
     && {

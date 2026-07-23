@@ -18,6 +18,12 @@ export function deriveRenderSteps(storyDemo) {
           step.screenType = screen.type
           step.screenWidth = screen.width
           step.screenHeight = screen.height
+          if (screen.recordingRole) {
+            step.recordingRole = screen.recordingRole
+            step.baseScreenId = screen.baseScreenId
+            step.fromTimeMs = screen.fromTimeMs
+            step.toTimeMs = screen.toTimeMs
+          }
 
 
           return step
@@ -28,7 +34,13 @@ export function deriveRenderSteps(storyDemo) {
             screenId: screen._id,
             screenWidth: screen.width,
             screenHeight: screen.height,
-            screenType: screen.type
+            screenType: screen.type,
+            ...(screen.recordingRole ? {
+              recordingRole: screen.recordingRole,
+              baseScreenId: screen.baseScreenId,
+              fromTimeMs: screen.fromTimeMs,
+              toTimeMs: screen.toTimeMs,
+            } : {})
           })
         }
 

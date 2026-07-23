@@ -95,6 +95,61 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
 
     let newScreensArray = reorderArray(screens, oldIndex, newIndex)
 
+    // Client-side guard: do not allow breaking rrweb chain order
+    const proposed = newScreensArray.map((screen, index) => ({
+      _id: screen._id,
+      index,
+      recordingRole: screen.recordingRole,
+      baseScreenId: screen.baseScreenId,
+      fromTimeMs: screen.fromTimeMs,
+    }))
+    for (const screen of proposed) {
+      if (screen.recordingRole !== 'delta' || !screen.baseScreenId) continue
+      const base = proposed.find((s) => String(s._id) === String(screen.baseScreenId))
+      if (!base || screen.index <= base.index) {
+        console.warn('Blocked reorder that would break rrweb chain')
+        return
+      }
+    }
+    // Contiguity + relative capture order within each chain (mirrors server guard)
+    const chains = new Map()
+    for (const screen of proposed) {
+      if (!screen.recordingRole) continue
+      const chainId = screen.recordingRole === 'base'
+        ? String(screen._id)
+        : String(screen.baseScreenId)
+      if (!chains.has(chainId)) chains.set(chainId, [])
+      chains.get(chainId).push(screen)
+    }
+    const sortedProposed = [...proposed].sort((a, b) => a.index - b.index)
+    for (const [, members] of chains) {
+      members.sort((a, b) => a.index - b.index)
+      if (members[0].recordingRole !== 'base') {
+        console.warn('Blocked reorder that would break rrweb chain')
+        return
+      }
+      for (let i = 1; i < members.length; i++) {
+        if (
+          members[i - 1].fromTimeMs != null &&
+          members[i].fromTimeMs != null &&
+          members[i].fromTimeMs < members[i - 1].fromTimeMs
+        ) {
+          console.warn('Blocked reorder that would break rrweb chain')
+          return
+        }
+      }
+      const memberIds = new Set(members.map((m) => String(m._id)))
+      const positions = sortedProposed
+        .map((s, i) => (memberIds.has(String(s._id)) ? i : -1))
+        .filter((i) => i >= 0)
+      for (let i = 1; i < positions.length; i++) {
+        if (positions[i] !== positions[i - 1] + 1) {
+          console.warn('Blocked reorder that would break rrweb chain')
+          return
+        }
+      }
+    }
+
     // setScreens(newScreensArray)
 
 

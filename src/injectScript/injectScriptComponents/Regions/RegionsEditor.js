@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { ReloadOutlined, LockFilled, ForwardOutlined } from '@ant-design/icons'
 import Colors from '../../../constants/mainColors.js'
 import Tippy from '@tippyjs/react'
-import { topPostMessage } from '../../helpers.js'
+import { topPostMessage, getDemoDocument } from '../../helpers.js'
 
 import RegionLite from '../RegionLite/RegionLite.js'
 
@@ -24,7 +24,7 @@ let checkForElement = function (selector) {
 
     int = setInterval(() => {
 
-      let elem = window.frames[0].document.querySelector(selector)
+      let elem = getDemoDocument().querySelector(selector)
       if (elem) {
         clearInterval(int)
         resolve(elem)

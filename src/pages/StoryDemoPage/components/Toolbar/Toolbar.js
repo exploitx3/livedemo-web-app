@@ -69,6 +69,11 @@ const Toolbar = ({
 
   function onEditText(workspaceId, storyDemoId, screenId, authToken) {
 
+    // EditText only for DOM/rrweb screens. Legacy static PageScreens are retired.
+    if (!(currentStep && currentStep.recordingRole)) {
+      return
+    }
+
     if (isTextEditing) {
       setIsTextEditing(false)
       iframeRef.current.contentWindow.resetEditText()
@@ -94,12 +99,16 @@ const Toolbar = ({
         if (result.action === 'save' && result.text !== result.oldText) {
           let screenId = result.screenId
           let newText = result.text
-          let liveDemoTagId = result.liveDemoTagId
+          let nodeId = result.rrwebNodeId
 
+          if (nodeId == null) {
+            console.error('EditText: missing rrweb node id')
+            return Promise.resolve({})
+          }
 
           return axios.post(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyDemoId}/screens/${screenId}/editText`,
             {
-              'selector': liveDemoTagId,
+              'selector': String(nodeId),
               'text': newText
             },
             {
@@ -108,6 +117,9 @@ const Toolbar = ({
               }
             })
             .then((res) => {
+              if (iframeRef.current && iframeRef.current.contentWindow && iframeRef.current.contentWindow.reloadRrwebAfterTextEdit) {
+                return iframeRef.current.contentWindow.reloadRrwebAfterTextEdit().then(() => res.data)
+              }
               return res.data
             })
         } else {
@@ -119,7 +131,16 @@ const Toolbar = ({
         setIsTextEditing(false)
         // console.log(result)
       })
+      .catch((err) => {
+        console.error('EditText failed', err)
+        setIsTextEditing(false)
+        if (iframeRef.current && iframeRef.current.contentWindow && iframeRef.current.contentWindow.resetEditText) {
+          iframeRef.current.contentWindow.resetEditText()
+        }
+      })
   }
+
+  const canEditDomText = !!(currentStep && currentStep.recordingRole)
 
   function removeZoomSpan() {
     // if(currentStep.screenType === ScreenTypes.SCREEN_VIDEO) {
@@ -203,18 +224,21 @@ const Toolbar = ({
     <div>
       <TB.ToolbarButtonWrapper>
 
-        {/* <TB.ToolbarButton
+        <TB.ToolbarButton
           onClick={() => {
+            if (!canEditDomText) {
+              return
+            }
             onEditText(workspaceId, storyDemoId, screenId, authData.token)
           }}
-          isDisabled={!isPage}>
+          isDisabled={!canEditDomText}>
           <TB.ToolbarIcon>
             <TB.Toolbar__EditIcon
               type={isTextEditing ? 'close-circle' : 'edit'}
             />
           </TB.ToolbarIcon>
           <TB.ToolbarText>Edit</TB.ToolbarText>
-        </TB.ToolbarButton> */}
+        </TB.ToolbarButton>
         {currentStep && currentStep.screenType === ScreenTypes.SCREEN_VIDEO ? (
           <FrameToScreenToolbarButton
             workspaceId={workspaceId}
