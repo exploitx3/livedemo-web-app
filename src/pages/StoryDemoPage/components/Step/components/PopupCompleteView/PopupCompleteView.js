@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import Select from 'antd/es/select'
 import Colors from '../../../../../../constants/mainColors'
 import FormTypes from '../../../../../../constants/FormTypes'
+import PopupAlignments from '../../../../../../constants/PopupAlignments'
 import PopupView from '../PopupView/PopupView'
 import FormView from '../FormView/FormView'
 import HubspotFormView from '../HubspotFormView/HubspotFormView'
@@ -25,8 +26,8 @@ const POPUP_TYPES = {
 
 const POPUP_TYPES_LIMITED = {
   POST: 'popup',
-  EMBED: 'embed',
   FORM: 'form',
+  EMBED: 'embed'
 }
 
 const PopupCompleteView = ({
@@ -87,8 +88,11 @@ const PopupCompleteView = ({
       const newForm = res.data
       const newStep = { ...internalStepRef.current }
       newStep.view.popup.formId = newForm
+      newStep.view.popup.alignment = PopupAlignments.center
+      newStep.view.popup.showPreviewImage = false
       setFormData(newForm)
       setInternalStep(newStep)
+      setAlignment(PopupAlignments.center)
       setIsCreatingForm(false)
     })
   }
@@ -113,8 +117,10 @@ const PopupCompleteView = ({
             }}>
             {Object.entries(POPUP_TYPES_LIMITED).map(([key, value], index, array) => {
               let isLast = index === array.length - 1
+              let isFormLocked = featureFlags && featureFlags.allowForms === false && key === 'FORM'
+              let isEmbedLocked = featureFlags && featureFlags.allowEmbed === false && key === 'EMBED'
 
-              if (featureFlags && featureFlags.allowForms === false && key === "FORM") {
+              if (isFormLocked || isEmbedLocked) {
                 return (
                   <Option
                     disabled
@@ -174,7 +180,6 @@ const PopupCompleteView = ({
               <ST.TypeSelect
                 value={formType}
                 onChange={(value) => {
-                  debugger
                   setFormType(value)
                   setFormHasChanged(true)
                   const updatedFormData = { ...formData, type: value }
@@ -206,6 +211,15 @@ const PopupCompleteView = ({
                 setFormData={setFormDataByUser}
                 internalStep={internalStep}
                 setInternalStep={setInternalStep}
+                popupDescriptionValue={popupDescriptionValue}
+                setPopupDescriptionValue={setPopupDescriptionValue}
+                storyDemo={storyDemo}
+                storyDemoId={storyDemoId}
+                screenId={screenId}
+                workspaceId={workspaceId}
+                authData={authData}
+                alignment={alignment}
+                setAlignment={setAlignment}
               />
             )}
           </React.Fragment>

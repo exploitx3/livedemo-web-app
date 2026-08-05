@@ -79,7 +79,7 @@ function TooltipContentEditor(props) {
   }
 
   // let showForm = false
-  let showForm = !!(view && view.popup && view.popup.type === 'form' && view.popup.formId && view.popup.formId.title)
+  let showForm = !!(view && view.popup && view.popup.type === 'form' && view.popup.formId && view.popup.formId._id)
   let [fieldsObj, updateFieldsObj] = useState({})
   let [isLoading, setIsLoading] = useState(false)
 

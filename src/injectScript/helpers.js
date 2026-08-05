@@ -60,13 +60,71 @@ export function waitForElementInTop(query, refreshRate, limit) {
 
 export function validateField(fieldName, value) {
     if (fieldName === 'email') {
-
-        return validator.isEmail(value)
+        return validator.isEmail(value || '')
     }
 
     if (fieldName === 'name') {
+        let str = value || ''
+        return (str.length > 3 && str.length < 255)
+    }
 
-        return (value.length > 3 && value.length < 255)
+    // company / website / custom / selector / checkbox: no client validation for now
+    return true
+}
+
+/** Returns { message, invalidNames } if form cannot submit; null if ready. */
+export function getFormSubmitIssue(formData, fieldsObj) {
+    let fields = (formData && formData.fields) || []
+    let invalidNames = []
+    let firstMessage = null
+
+    fields.forEach((field) => {
+        if (!field || !field.name) return
+
+        let entry = fieldsObj && fieldsObj[field.name]
+        let value = entry ? entry.value : undefined
+        let label = field.label || field.name
+        let isCheckbox = field.type === 'checkbox'
+        let isEmpty = isCheckbox
+            ? !(value === true || value === 'true')
+            : value === undefined || value === null || String(value).length === 0
+
+        // name/email always required — custom format validation depends on a value
+        let isRequired = !!field.required
+            || field.name === 'name'
+            || field.name === 'email'
+
+        if (isRequired && isEmpty) {
+            invalidNames.push(field.name)
+            if (!firstMessage) {
+                firstMessage = isCheckbox
+                    ? `Please check "${label}" to continue.`
+                    : `Please fill in "${label}" to continue.`
+            }
+            return
+        }
+
+        if (!isEmpty && !validateField(field.name, value)) {
+            invalidNames.push(field.name)
+            if (!firstMessage) {
+                if (field.name === 'email') {
+                    firstMessage = 'Please enter a valid email address.'
+                } else if (field.name === 'name') {
+                    firstMessage = 'Name must be between 4 and 255 characters.'
+                } else {
+                    firstMessage = `Please check "${label}".`
+                }
+            }
+        }
+    })
+
+    if (!firstMessage) return null
+
+    return {
+        message: invalidNames.length > 1
+            ? `${firstMessage} (${invalidNames.length} fields need attention)`
+            : firstMessage,
+        invalidNames,
     }
 }
 

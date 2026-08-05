@@ -394,6 +394,17 @@ function WalkthroughComponent({
     AutoPlayDelay = DEFAULT_AUTOPLAY_DELAY
   }
 
+  function isFormPopupStep(step) {
+    return !!(
+      step &&
+      step.view &&
+      step.view.viewType === 'popup' &&
+      step.view.popup &&
+      step.view.popup.type === 'form' &&
+      step.view.popup.formId
+    )
+  }
+
   function setIsAutoPlayActive(newValue) {
     _setIsAutoPlayActive(newValue)
     isAutoPlayActiveRef.current = newValue
@@ -401,6 +412,10 @@ function WalkthroughComponent({
     if (newValue) {
 
       setTimeout(() => {
+        let step = stepsInternalRef.current[currentStepIndexRef.current]
+        if (isFormPopupStep(step)) {
+          return
+        }
         onNext()
       }, AutoPlayDelay)
     }
@@ -897,6 +912,10 @@ function WalkthroughComponent({
     if (isAutoPlayActive) {
 
       setTimeout(() => {
+        let step = stepsInternalRef.current[currentStepIndexRef.current]
+        if (isFormPopupStep(step)) {
+          return
+        }
         onNext()
       }, AutoPlayDelay)
     }
@@ -2267,6 +2286,12 @@ function WalkthroughComponent({
       currentAutoPlayTimerRef.current = null
     }
 
+    // Forms require user input — never auto-advance past them
+    if (isFormPopupStep(step)) {
+      console.log('afterChangeStep - skip autoplay on form step')
+      return
+    }
+
     if (!isAutoPlayActiveRef.current) {
       // If autoplay is not active, only proceed if we're not at the last step
       if (currentStepIndexRef.current === steps.length - 1) {
@@ -2866,7 +2891,7 @@ function WalkthroughComponent({
     width={width ? width + 'px' : '100%'}
     height={height ? height + 'px' : '100%'}
     onClick={() => {
-      if (!hasAutoStartedAudioRef.current) {
+      if (!isInEditorRef.current && !hasAutoStartedAudioRef.current) {
         hasAutoStartedAudioRef.current = true
         setIsAudioEnabled(true)
         playBgMusic()

@@ -8,6 +8,7 @@ import ENV from "../../config.json";
 import FormView from "./FormView.js";
 import ReCAPTCHAModule from "react-google-recaptcha";
 import Spinner from "../Spinner/Spinner.js";
+import { getFormSubmitIssue } from '../../helpers.js'
 
 // Ensure we get the actual component (handle both default and named exports)
 const ReCAPTCHA = ReCAPTCHAModule?.default || ReCAPTCHAModule
@@ -16,7 +17,10 @@ function Form({
                   step,
                   onNext,
                   onBack,
+                  changeToScreen,
+                  liveDemo,
                   size,
+                  wrapperWidth,
                   themeBackgroundColor,
                   themeTextColor,
                   themeButtonBackgroundColor,
@@ -24,69 +28,71 @@ function Form({
                   themeOverlayBackgroundColor
               }) {
 
-    let nextButtonText = (step.view && step.view.nextButtonText) || 'Next'
-    let showStepNumbers = (step.view && step.view.showStepNumbers) || (step.view && step.view.showStepNumbers)
-
-    let nextButtonTextString = (nextButtonText ? nextButtonText : 'Next')
-    let stepNumbersString = (showStepNumbers ? `(${step.index + 1}/${size})` : '')
-
-
-    let showForm = !!(step.view && step.view.viewType === 'popup' && step.view.popup.type === 'form' && step.view.popup && step.view.popup.formId && step.view.popup.formId.title)
+    let formDoc = step.view && step.view.popup && step.view.popup.formId
+    let showForm = !!(step.view && step.view.viewType === 'popup' && step.view.popup.type === 'form' && formDoc && formDoc._id)
 
     let [fieldsObj, updateFieldsObj] = useState({})
-    let showFooter = step.view.showFooter
 
+    let formDataInternal = formDoc
+    let popupTitle = (step.view.popup && step.view.popup.title) || ''
+    let popupDescription = (step.view.popup && step.view.popup.description) || ''
+    let popupButtons = (step.view.popup && step.view.popup.buttons) || []
+    // Same gate as popup content: hide preview image on very narrow viewports
+    let showPreviewImage = !!(step.view.popup && step.view.popup.showPreviewImage)
+      && (wrapperWidth === undefined || wrapperWidth >= 540)
+    let previewImageUrl = (step.view.popup && step.view.popup.previewImageUrl) || ''
+    let hasPreviewLayout = !!(showPreviewImage && previewImageUrl)
+    const ALIGNMENT_MAP = {
+        left: 'start',
+        right: 'end',
+        center: 'center',
+    }
+    let rawAlignment = (step.view.popup && step.view.popup.alignment) || 'center'
+    let alignment = ALIGNMENT_MAP[rawAlignment] || 'center'
+    // Left/right need full-bleed shell (same as preview) or the ~400px card stays centered
+    let hasFullLayout = hasPreviewLayout || rawAlignment === 'left' || rawAlignment === 'right'
 
-    let formDataInternal = step.view.popup.formId
+    let titleFontSize = '2.2vw'
+    let textFontSize = '1.7vw'
+    let buttonFontSize = '2vw'
+    if (wrapperWidth <= 1040) {
+        titleFontSize = '4vw'
+        textFontSize = '2.7vw'
+        buttonFontSize = '2.5vw'
+    } else if (wrapperWidth > 1040) {
+        titleFontSize = '3.5vw'
+        textFontSize = '1.6vw'
+        buttonFontSize = '2vw'
+    }
+    if (wrapperWidth < 540) {
+        titleFontSize = '5.5vw'
+        textFontSize = '3.5vw'
+        buttonFontSize = '4vw'
+    }
+
+    // Existing forms may have no buttons yet — keep a Next so submit still works
+    if (!popupButtons.length) {
+        popupButtons = [{
+            index: 0,
+            text: 'Next',
+            gotoType: 'next',
+            textColor: themeButtonTextColor || '#FFFFFF',
+            backgroundColor: themeButtonBackgroundColor || '#1070ff',
+        }]
+    }
+    let useCaptcha = !!(formDataInternal && formDataInternal.useCaptcha)
+    // Missing on old forms → show labels (same as schema default true)
+    let showTopLabels = !(formDataInternal && formDataInternal.showTopLabels === false)
+    // Missing on old forms → show background (same as schema default true)
+    let showBackground = !(formDataInternal && formDataInternal.showBackground === false)
     let [isLoading, setIsLoading] = useState(false)
+    let [submitError, setSubmitError] = useState(null)
+    let [invalidFieldNames, setInvalidFieldNames] = useState([])
 
     let recaptchaRef = useRef(null)
 
-    let onNextHandlerClosure = (formData, fieldsObj, recaptchaRef) => function (...args) {
-
-
-        let promise = Promise.resolve()
-        if (showForm) {
-            promise = promise.then(() => {
-
-                console.log(Object.entries(fieldsObj))
-                setIsLoading(true)
-
-                return recaptchaRef.current.executeAsync()
-                    .then(captchaToken => {
-                        recaptchaRef.current.reset()
-
-                        fieldsObj['captchaToken'] = {
-                            name: 'captchaToken',
-                            value: captchaToken
-                        }
-
-
-                        return sendFormData(formData._id, fieldsObj)
-
-                    })
-
-
-            })
-        }
-
-        promise = promise.then(() => {
-            setIsLoading(false)
-
-
-            return onNext(...args)
-        })
-            .catch(() => {
-
-                setIsLoading(false)
-            })
-
-        return promise
-    }
-
-
-    function sendFormData(formId, fieldsObj) {
-        let formBody = Object.values(fieldsObj).reduce((accum, fieldObj) => {
+    function sendFormData(formId, currentFieldsObj) {
+        let formBody = Object.values(currentFieldsObj).reduce((accum, fieldObj) => {
             accum[fieldObj.name] = fieldObj.value
 
             return accum
@@ -100,17 +106,134 @@ function Form({
         })
     }
 
+    /** Validate + captcha + POST lead. Does not run button navigation. */
+    function submitFormLead(formData, currentFieldsObj) {
+        let promise = Promise.resolve()
+
+        if (showForm) {
+            promise = promise.then(() => {
+                let issue = getFormSubmitIssue(formData, currentFieldsObj)
+                if (issue) {
+                    setSubmitError(issue.message)
+                    setInvalidFieldNames(issue.invalidNames)
+                    let validationError = new Error(issue.message)
+                    validationError.isFormValidation = true
+                    return Promise.reject(validationError)
+                }
+
+                setSubmitError(null)
+                setInvalidFieldNames([])
+                setIsLoading(true)
+
+                if (useCaptcha) {
+                    return recaptchaRef.current.executeAsync()
+                        .then(captchaToken => {
+                            recaptchaRef.current.reset()
+
+                            currentFieldsObj['captchaToken'] = {
+                                name: 'captchaToken',
+                                value: captchaToken
+                            }
+
+                            return sendFormData(formData._id, currentFieldsObj)
+                        })
+                }
+
+                return sendFormData(formData._id, currentFieldsObj)
+            })
+        }
+
+        return promise
+            .then((result) => {
+                setIsLoading(false)
+                setSubmitError(null)
+                setInvalidFieldNames([])
+                return result
+            })
+            .catch((error) => {
+                setIsLoading(false)
+                if (!(error && error.isFormValidation) && showForm) {
+                    setSubmitError('Could not submit the form. Please check your answers and try again.')
+                }
+                return Promise.reject(error)
+            })
+    }
+
+    function runConfiguredButtonAction(popupButton, ...args) {
+        let gotoType = (popupButton && popupButton.gotoType) || 'next'
+
+        if (gotoType === 'screen' && changeToScreen && popupButton.gotoScreen) {
+            return changeToScreen(popupButton.gotoScreen)
+        }
+
+        if (gotoType === 'website' && popupButton.gotoWebsite) {
+            window.open(popupButton.gotoWebsite, '_blank')
+            return
+        }
+
+        return onNext(...args)
+    }
+
+    /** Any form button: validate/submit first, then configured goto action. */
+    function handleButtonClick(popupButton) {
+        return submitFormLead(formDataInternal, fieldsObj)
+            .then(() => runConfiguredButtonAction(popupButton))
+            .catch((error) => {
+                if (error && error.isFormValidation) {
+                    return
+                }
+            })
+    }
+
+    /** Enter / form submit acts like a Next button. */
+    function handleFormSubmit(...args) {
+        return submitFormLead(formDataInternal, fieldsObj)
+            .then(() => onNext(...args))
+            .catch((error) => {
+                if (error && error.isFormValidation) {
+                    return
+                }
+            })
+    }
+
+    function handleFieldsObjUpdate(nextFieldsObj) {
+        updateFieldsObj(nextFieldsObj)
+        if (submitError || invalidFieldNames.length) {
+            setSubmitError(null)
+            setInvalidFieldNames([])
+        }
+    }
+
     return <F.Wrapper themeBackgroundColor={themeBackgroundColor}
                       arrowColor={themeBackgroundColor}
+                      hasPreviewLayout={hasFullLayout}
     >
-        <F.WrapperInner>
-            <F.ContentWrapper>
+        <F.WrapperInner hasPreviewLayout={hasFullLayout}>
+            <F.ContentWrapper hasPreviewLayout={hasFullLayout}>
                 {isLoading ? (<F.SpinnerWrapper><Spinner/></F.SpinnerWrapper>) : (
                     <React.Fragment>
                         <FormView formData={formDataInternal}
-                                  onNextHandler={onNextHandlerClosure(formDataInternal, fieldsObj, recaptchaRef)}
+                                  onNextHandler={handleFormSubmit}
+                                  onButtonClick={handleButtonClick}
                                   themeTextColor={themeTextColor}
-                                  updateFieldsObj={updateFieldsObj}
+                                  themeBackgroundColor={themeBackgroundColor}
+                                  updateFieldsObj={handleFieldsObjUpdate}
+                                  showTopLabels={showTopLabels}
+                                  showBackground={showBackground}
+                                  invalidFieldNames={invalidFieldNames}
+                                  title={popupTitle}
+                                  description={popupDescription}
+                                  buttons={popupButtons}
+                                  changeToScreen={changeToScreen}
+                                  liveDemo={liveDemo}
+                                  submitError={submitError}
+                                  showPreviewImage={showPreviewImage}
+                                  previewImageUrl={previewImageUrl}
+                                  alignment={alignment}
+                                  rawAlignment={rawAlignment}
+                                  titleFontSize={titleFontSize}
+                                  textFontSize={textFontSize}
+                                  buttonFontSize={buttonFontSize}
                         />
                         {/*<F.CaptchaNotice>This site is protected by reCAPTCHA and the Google*/}
 
@@ -119,59 +242,20 @@ function Form({
                         {/*</F.CaptchaNotice>*/}
                     </React.Fragment>
                 )}
-                <F.CaptchaWrapper>
-                    <F.ReCAPTCHA
-                        ref={recaptchaRef}
-                        badge={'inline'}
-                        sitekey={ENV.CAPTCHA_SITE_KEY}
-                        size="invisible"
-                    />
-                </F.CaptchaWrapper>
+                {useCaptcha && (
+                    <F.CaptchaWrapper>
+                        <F.ReCAPTCHA
+                            ref={recaptchaRef}
+                            badge={'inline'}
+                            sitekey={ENV.CAPTCHA_SITE_KEY}
+                            size="invisible"
+                        />
+                    </F.CaptchaWrapper>
+                )}
             </F.ContentWrapper>
-            {showFooter ? (<F.TooltipFooter>
-
-                <React.Fragment>
-                    <F.LeftButtonsWrapper>
-
-                        {/*<F.SkipButton onClick={onSkip}>*/}
-                        {/*  <F.FormattedMessage id="close">*/}
-                        {/*    Skip*/}
-                        {/*  </F.FormattedMessage>*/}
-                        {/*</F.SkipButton>*/}
-
-                    </F.LeftButtonsWrapper>
-                    <F.RightButtonsWrapper>
-                        {step && step.index > 0 && (
-                            <F.BackButton
-                                className={'TooltipContent__Button'}
-                                themeBackgroundColor={themeBackgroundColor}
-                                themeTextColor={themeTextColor}
-
-                                onClick={onBack}>
-                                <F.FormattedMessage id="back">
-                                    Back
-                                </F.FormattedMessage>
-                            </F.BackButton>
-                        )}
-                        <F.NextButton
-                            className={'TooltipContent__Button'}
-                            themeBackgroundColor={themeBackgroundColor}
-                            themeTextColor={themeTextColor}
-                            themeButtonBackgroundColor={themeButtonBackgroundColor}
-                            themeButtonTextColor={themeButtonTextColor}
-                            onClick={onNextHandlerClosure(formDataInternal,fieldsObj, recaptchaRef)}>
-                            <F.FormattedMessage id="next">
-                                {nextButtonTextString + " " + stepNumbersString}
-                            </F.FormattedMessage>
-                        </F.NextButton>
-                    </F.RightButtonsWrapper>
-                </React.Fragment>
-
-
-            </F.TooltipFooter>) : (
-                <F.EmptyFooter addPadding={showForm}>
-                </F.EmptyFooter>
-            )}
+            {useCaptcha && !hasPreviewLayout ? (
+                <F.EmptyFooter addPadding={showForm && useCaptcha} />
+            ) : null}
         </F.WrapperInner>
     </F.Wrapper>
 
@@ -200,38 +284,47 @@ const F = {
     CaptchaNotice: styled.p`
         font-size: 0.8em;
     `,
-    ContentWrapper: styled.div`
+    ContentWrapper: styled.div.withConfig({
+        shouldForwardProp: (prop) => prop !== 'hasPreviewLayout',
+    })`
         width: 100%;
-        overflow-y: auto;
+        overflow-y: ${({ hasPreviewLayout }) => (hasPreviewLayout ? 'hidden' : 'auto')};
         overflow-x: hidden;
-        max-height: 230px;
         display: block;
-        font-size: 1.4vw;
-        height: 70%;
-        padding: 5px 20px;
+        flex: 1 1 auto;
+        min-height: 0;
+        height: ${({ hasPreviewLayout }) => (hasPreviewLayout ? '100%' : 'auto')};
+        max-height: ${({ hasPreviewLayout }) => (hasPreviewLayout ? 'none' : 'min(58vh, 520px)')};
+        font-size: clamp(13px, 1.35vw, 16px);
+        padding: ${({ hasPreviewLayout }) => (hasPreviewLayout ? '0' : '4px 16px 8px')};
 
-        @media (min-width: 1200px) {
-            max-height: 240px;
+        @media (max-width: 640px) {
+            max-height: ${({ hasPreviewLayout }) => (hasPreviewLayout ? 'none' : 'min(62vh, 460px)')};
+            padding: ${({ hasPreviewLayout }) => (hasPreviewLayout ? '0' : '4px 12px 8px')};
         }
 
+        @media (max-height: 560px) {
+            max-height: ${({ hasPreviewLayout }) => (hasPreviewLayout ? 'none' : 'min(48vh, 320px)')};
+        }
+
+        @media (max-height: 420px) {
+            max-height: ${({ hasPreviewLayout }) => (hasPreviewLayout ? 'none' : 'min(42vh, 240px)')};
+        }
 
         &&::-webkit-scrollbar-track {
-            //-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
             border-radius: 10px;
-            background-color: #F9F9F9;
+            background-color: transparent;
         }
 
         &&::-webkit-scrollbar {
-            width: 5px;
-            background-color: #F9F9F9;
+            width: 4px;
+            background-color: transparent;
         }
 
         &&::-webkit-scrollbar-thumb {
             border-radius: 10px;
-            background-color: ${({scrollbarColor}) => scrollbarColor};
+            background-color: rgba(255, 255, 255, 0.35);
         }
-
-
     `,
     FormContainer: styled.div`
     `,
@@ -253,40 +346,42 @@ const F = {
 
 
     `,
-    WrapperInner: styled.div`
-
+    WrapperInner: styled.div.withConfig({
+        shouldForwardProp: (prop) => prop !== 'hasPreviewLayout',
+    })`
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        max-height: inherit;
+        width: 100%;
+        height: ${({ hasPreviewLayout }) => (hasPreviewLayout ? '100%' : 'auto')};
     `,
     Wrapper: styled.div.withConfig({
-        shouldForwardProp: (prop) => !['themeBackgroundColor', 'themeTextColor', 'arrowColor'].includes(prop),
+        shouldForwardProp: (prop) => !['themeBackgroundColor', 'themeTextColor', 'arrowColor', 'hasPreviewLayout'].includes(prop),
     })`
         transition: 0.5s all ease-out;
 
         transform-origin: top left;
 
-        font-size: 1.5vw;
+        font-size: clamp(13px, 1.5vw, 16px);
         font-family: ${Colors.fontFamilyApple};
-        //width: 29vw;
-        min-width: 32vw;
-        max-width: 80vw;
-        width: max-content;
-        //width: 29vw;
-        height: auto;
-        max-height: 90%;
+        min-width: ${({ hasPreviewLayout }) => (hasPreviewLayout ? '100%' : 'min(300px, 92vw)')};
+        max-width: ${({ hasPreviewLayout }) => (hasPreviewLayout ? 'none' : 'min(440px, 94vw)')};
+        width: ${({ hasPreviewLayout }) => (hasPreviewLayout ? '100%' : 'min(400px, 92vw)')};
+        height: ${({ hasPreviewLayout }) => (hasPreviewLayout ? '100%' : 'auto')};
+        max-height: ${({ hasPreviewLayout }) => (hasPreviewLayout ? 'none' : 'min(90vh, 720px)')};
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
 
-        //padding: 20px;
-        padding: 1.5vw;
-
-        // && p {
-        //   font-size: 1.5vw;
-            //   font-family: ${Colors.fontFamilyApple};
-        //   margin: 0px;
-        // }
-
-        background: ${({themeBackgroundColor}) => themeBackgroundColor};
-        border-radius: 5px;
+        /* Background lives on FormPanel only — shell stays transparent */
+        padding: 0;
+        background: transparent;
+        border-radius: 0;
         box-sizing: border-box;
         color: ${({themeTextColor}) => themeTextColor};
-        border: 1px solid ${({themeBackgroundColor}) => themeBackgroundColor};
+        border: 1px solid transparent;
+        overflow: ${({ hasPreviewLayout }) => (hasPreviewLayout ? 'hidden' : 'auto')};
 
         #arrow,
         #arrow::before {
@@ -453,9 +548,9 @@ const F = {
         align-items: center;
         display: flex;
         justify-content: space-between;
-        margin-top: 15px;
-        height: 30%;
-        padding: 5px 15px 15px 15px;
+        margin-top: 10px;
+        flex-shrink: 0;
+        padding: 4px 4px 0;
 
 
         && .TooltipContent__Button {

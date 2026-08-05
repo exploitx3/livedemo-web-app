@@ -202,7 +202,7 @@ function TooltipComponent(props) {
     })
   }
 
-  let showForm = !!(step.view.viewType === 'Form' && step.view.formId && step.view.formId.title)
+  let showForm = !!(step.view.viewType === 'Form' && step.view.formId && step.view.formId._id)
   let [fieldsObj, updateFieldsObj] = useState({})
   let [isLoading, setIsLoading] = useState(false)
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import Colors from '../../../../../../constants/mainColors'
-import FormView from '../../../../components/FormView/FormView'
+import FormView from '../../../Step/components/FormView/FormView'
 //import { Button, Icon, Input, Modal, Select } from 'antd'
 
 import Button from 'antd/es/button'
@@ -144,7 +144,9 @@ const PopupsView = function ({ screen, setScreen, storyDemo, setIsNavUpdating, a
       promiseChain = promiseChain.then(() => {
         return updateForm(
           {
-            title: formData.title
+            useCaptcha: !!formData.useCaptcha,
+            showTopLabels: formData.showTopLabels !== false,
+            showBackground: formData.showBackground !== false,
           },
           storyDemo.workspaceId, formData._id, authData.token)
       })
@@ -170,6 +172,8 @@ const PopupsView = function ({ screen, setScreen, storyDemo, setIsNavUpdating, a
             setFormHasChanged={setFormHasChanged}
             formData={formData}
             setFormData={setFormData}
+            workspaceId={storyDemo.workspaceId}
+            authData={authData}
           />
         </NAV.FormStyleWrapper>
       )

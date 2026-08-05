@@ -51,7 +51,8 @@ const Toolbar = ({
 
   // Currently if there are no Steps I cannot add a ZoomSpan,
   // For example if there are only transitions I cannot add a ZoomSpan
-  const addZoomVisible = isVideoOrScreenshot && !currentStep.zoomSpans
+  const isPopupStep = !!(currentStep && currentStep.view && currentStep.view.viewType === 'popup')
+  const addZoomVisible = isVideoOrScreenshot && !currentStep.zoomSpans && !isPopupStep
 
   const stepZoomSpanExists = !!currentStep?.zoomSpan
 
@@ -257,6 +258,7 @@ const Toolbar = ({
               <TB.Toolbar__ZoomIcon/>
             </TB.ToolbarIcon>
             <TB.ToolbarText onClick={() => {
+              if (!addZoomVisible) return
               if(stepZoomSpanExists) {
                 removeZoomSpan()
               } else {

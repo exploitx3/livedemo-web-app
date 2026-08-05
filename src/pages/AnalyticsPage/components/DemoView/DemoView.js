@@ -1,16 +1,28 @@
 import React from 'react'
 import styled from 'styled-components'
+import { useNavigate } from 'react-router-dom'
 import { MdTouchApp, MdPerson, MdPercent, MdDescription, MdInfo, MdExitToApp } from 'react-icons/md'
 import Breadcrumb from 'antd/es/breadcrumb'
-import Tippy from '@tippyjs/react'
-import 'tippy.js/dist/tippy.css'
-import 'tippy.js/animations/shift-away.css'
+import Tooltip from 'antd/es/tooltip'
 import mainColors from '../../../../constants/mainColors'
 import 'antd/es/breadcrumb/style'
+import 'antd/es/tooltip/style'
 
 import SessionsView from '../SessionsView/SessionsView'
 
 const DemoView = ({ demo, advanceInsights, sessionsData, tableSessions, storyLines, currentViewType, onBack }) => {
+  const navigate = useNavigate()
+
+  function openDemo() {
+    let workspaceId = demo.workspaceId && demo.workspaceId._id
+      ? demo.workspaceId._id
+      : demo.workspaceId
+    let storyDemoId = demo._id
+
+    if (!workspaceId || !storyDemoId) return
+
+    navigate(`/workspace/${workspaceId}/storydemo/${storyDemoId}`)
+  }
 
   const metrics = [
     {
@@ -70,7 +82,9 @@ const DemoView = ({ demo, advanceInsights, sessionsData, tableSessions, storyLin
             <Breadcrumb.Item>
               <S.BreadcrumbLink onClick={onBack}>All Demos</S.BreadcrumbLink>
             </Breadcrumb.Item>
-            <Breadcrumb.Item>{demo.name}</Breadcrumb.Item>
+            <Breadcrumb.Item>
+              <S.BreadcrumbCurrent onClick={openDemo}>{demo.name}</S.BreadcrumbCurrent>
+            </Breadcrumb.Item>
           </Breadcrumb>
         </S.BreadcrumbWrapper>
       </S.Header>
@@ -87,16 +101,11 @@ const DemoView = ({ demo, advanceInsights, sessionsData, tableSessions, storyLin
               </S.IconWrapper>
               <S.MetricTitle>{metric.title}</S.MetricTitle>
               <S.InfoIcon>
-              <Tippy
-                content={metric.tooltip}
-                animation="shift-away"
-                placement="top"
-                arrow={true}
-              >
+              <Tooltip title={metric.tooltip} placement="top">
                 <span style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <MdInfo size={18} />
                 </span>
-              </Tippy>
+              </Tooltip>
             </S.InfoIcon>
             </S.MetricHeader>
             
@@ -126,8 +135,6 @@ const S = {
     margin-bottom: 24px;
   `,
   BreadcrumbWrapper: styled.div`
-    margin-bottom: 16px;
-    
     .ant-breadcrumb {
       font-size: 16px;
     }
@@ -135,17 +142,23 @@ const S = {
     .ant-breadcrumb-separator {
       color: #8c8c8c;
     }
-    
-    .ant-breadcrumb > span:last-child {
-      color: #262626;
-      font-weight: 500;
-    }
   `,
   BreadcrumbLink: styled.span`
     color: #1890ff;
     cursor: pointer;
     transition: color 0.2s;
     
+    &:hover {
+      color: #40a9ff;
+    }
+  `,
+  BreadcrumbCurrent: styled.span`
+    color: #1890ff;
+    font-weight: 500;
+    cursor: pointer;
+    // text-decoration: underline;
+    transition: color 0.2s;
+
     &:hover {
       color: #40a9ff;
     }

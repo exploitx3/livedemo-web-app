@@ -276,7 +276,7 @@ function TooltipComponent(props) {
     })
   }
 
-  let showForm = !!(step.view && step.view.viewType === 'Form' && step.view && step.view.formId && step.view.formId.title) || !!(step.popups && step.popups.formId)
+  let showForm = !!(step.view && step.view.viewType === 'Form' && step.view && step.view.formId && step.view.formId._id) || !!(step.popups && step.popups.formId)
   let [fieldsObj, updateFieldsObj] = useState({})
 
   let initFormStepData = step.view && step.view.formId

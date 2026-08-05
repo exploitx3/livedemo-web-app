@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { CSSTransition, TransitionGroup, } from 'react-transition-group'
 
 import Header from '../../../../components/Header/Header'
@@ -130,9 +131,31 @@ const LeadsView = function ({ leadsData, tableLeads, leadsLines, currentViewType
   const columns = [
     { title: 'Name', dataIndex: 'name', key: 'name', width: 250 },
     { title: 'Email', dataIndex: 'leadEmail', key: 'leadEmail' },
-    { title: 'LiveDemo', dataIndex: 'liveDemoName', key: 'liveDemoName' },
-    { title: 'Country', dataIndex: 'country', key: 'country' },
+    {
+      title: 'LiveDemo',
+      dataIndex: 'liveDemoName',
+      key: 'liveDemoName',
+      render: (liveDemoName, record) => {
+        let workspaceId = record.workspaceId && record.workspaceId._id
+          ? record.workspaceId._id
+          : record.workspaceId
+        let liveDemoId = record.liveDemoId && record.liveDemoId._id
+          ? record.liveDemoId._id
+          : record.liveDemoId
+
+        if (!workspaceId || !liveDemoId) {
+          return liveDemoName
+        }
+
+        return (
+          <Link to={`/workspace/${workspaceId}/storydemo/${liveDemoId}`}>
+            {liveDemoName}
+          </Link>
+        )
+      },
+    },
     { title: 'Capture Date', dataIndex: 'createdAt', key: 'createdAt' },
+    { title: 'Data', dataIndex: 'data', key: 'data' },
   ]
 
   function exportToFile(leadsTable, fileTitle) {
@@ -142,16 +165,16 @@ const LeadsView = function ({ leadsData, tableLeads, leadsLines, currentViewType
         leadName: item.leadName,
         leadEmail: item.leadEmail,
         liveDemoName: item.liveDemoName,
-        country: item.country,
         createdAt: item.createdAt,
+        data: item.data,
       }
     })
     let headers = {
       leadName: 'Name',
       leadEmail: 'Email',
       liveDemoName: 'LiveDemo',
-      country: 'Country',
       createdAt: 'Capture Date',
+      data: 'Data',
     }
 
     exportCSVFile(headers, table, fileTitle); // call the exportCSVFile() function to process the JSON and trigger the download

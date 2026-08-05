@@ -598,7 +598,12 @@ class Sidebar extends Component {
         key: 'Billing',
         icon: <S.MenuIcon><CreditCardOutlined /></S.MenuIcon>,
         label: 'Billing'
-      },
+      }
+    ]
+  }
+
+  getBottomMenuItems = () => {
+    return [
       {
         key: this.state.isDemo ? 'ExitDemo' : 'Logout',
         icon: <S.MenuIcon><LogoutOutlined /></S.MenuIcon>,
@@ -644,7 +649,7 @@ class Sidebar extends Component {
               }
               this.props.onCollapse(collapsedValue)
             }}>
-            <span style={{ width: '100%', height: '60px' }}>
+            <div style={{ width: '100%', flexShrink: 0 }}>
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -665,7 +670,7 @@ class Sidebar extends Component {
 
 
               </div>
-            </span>
+            </div>
 
             <S.Menu
               onClick={this.onSelectItem}
@@ -675,6 +680,14 @@ class Sidebar extends Component {
               mode="inline"
               items={this.getMenuItems()}
               theme="dark"
+            />
+            <S.Menu
+              onClick={this.onSelectItem}
+              selectedKeys={selectedKeys}
+              mode="inline"
+              items={this.getBottomMenuItems()}
+              theme="dark"
+              style={{ marginTop: 'auto' }}
             />
           </S.Sider>
         </span>
@@ -745,6 +758,12 @@ const S = {
   Sider: styled(Sider)`
       && {
         background-color: ${Colors.App.sidebarColor};
+      }
+
+      && .ant-layout-sider-children {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
       }
 
       && div.ant-layout-sider-trigger {

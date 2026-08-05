@@ -150,7 +150,10 @@ const PopupOptionsView = ({
           {Object.entries(POPUP_TYPES_LIMITED).map(([key, value], index, array) => {
             let isLast = index === array.length - 1
 
-            if (featureFlags.allowForms === false && key === "FORM") {
+            let isFormLocked = featureFlags && featureFlags.allowForms === false && key === 'FORM'
+            let isEmbedLocked = featureFlags && featureFlags.allowEmbed === false && key === 'EMBED'
+
+            if (isFormLocked || isEmbedLocked) {
               return (
                 <Option
                   disabled

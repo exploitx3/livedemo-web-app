@@ -48,8 +48,8 @@ const POPUP_TYPES = {
 
 const POPUP_TYPES_LIMITED = {
   POST: 'popup',
-  EMBED: 'embed',
   FORM: 'form',
+  EMBED: 'embed'
 }
 
 const OPEN_VIEWS = {

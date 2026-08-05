@@ -15,6 +15,7 @@ function PopupButton(props) {
         storyDemo,
         changeToScreen,
         onNext,
+        onClick,
         fontSize,
         alignment = 'center'
     } = props
@@ -53,7 +54,7 @@ function PopupButton(props) {
         alignment={alignment}
         className={'popup-button cursor-pointer'}
         backgroundColor={buttonBackgroundColor}
-        onClick={onClickFunction}
+        onClick={onClick || onClickFunction}
         fontSize={parseFloat(fontSize.replace(/rem/,''))}
     >
 

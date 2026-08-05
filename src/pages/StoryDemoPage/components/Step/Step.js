@@ -188,7 +188,29 @@ const Step = ({
     // Sync formData when stepObj changes to keep it in sync with backend
     if (stepObj?.view?.popup?.formId) {
       const newFormData = stepObj.view.popup.formId
-      setFormData(newFormData)
+      // Keep local field edits for ids that still exist on the server, but drop
+      // fields removed via DELETE /fields (prev.fields alone would resurrect them).
+      setFormData((prev) => {
+        if (
+          prev &&
+          prev._id &&
+          newFormData &&
+          newFormData._id &&
+          String(prev._id) === String(newFormData._id) &&
+          Array.isArray(prev.fields) &&
+          Array.isArray(newFormData.fields)
+        ) {
+          let prevById = new Map(
+            prev.fields.map((field) => [String(field._id), field])
+          )
+          let mergedFields = newFormData.fields.map((serverField) => {
+            let local = prevById.get(String(serverField._id))
+            return local ? { ...serverField, ...local, index: serverField.index } : serverField
+          })
+          return { ...newFormData, fields: mergedFields }
+        }
+        return newFormData
+      })
       // Reset formHasChanged when syncing from backend to avoid false positives
       setFormHasChanged(false)
     }
@@ -212,8 +234,10 @@ const Step = ({
 
       let newStep = { ...internalStepRef.current }
       newStep.view.popup.formId = newForm
+      newStep.view.popup.alignment = PopupAlignments.center
+      newStep.view.popup.showPreviewImage = false
 
-
+      setAlignment(PopupAlignments.center)
       setFormData(newForm)
       setInternalStep(newStep)
       setIsUpdating(false)
@@ -396,6 +420,7 @@ const Step = ({
           showOverlay: (internalStep.view.popup && internalStep.view.popup.showOverlay),
           overlayBackgroundColor: (internalStep.view.popup && internalStep.view.popup.overlayBackgroundColor),
           showPreviewImage: (internalStep.view.popup && internalStep.view.popup.showPreviewImage),
+          previewImageUrl: (internalStep.view.popup && internalStep.view.popup.previewImageUrl) || '',
           title: (internalStep.view.popup && internalStep.view.popup.title),
           description: (internalStep.view.popup && popupDescription),
           buttons: (buttons),
@@ -418,7 +443,9 @@ const Step = ({
 
         // Build form update object based on formData structure
         let formUpdateObj = {
-          title: formData.title || 'Get in touch with us'
+          useCaptcha: !!formData.useCaptcha,
+          showTopLabels: formData.showTopLabels !== false,
+          showBackground: formData.showBackground !== false,
         }
 
         // Always include type if it's set in formData
@@ -519,7 +546,7 @@ const Step = ({
           storyDemoId={storyDemoId}
           screenId={screenId}
           formData={formData}
-          setFormData={setFormData}
+          setFormData={setFormDataByUser}
           formHasChanged={formHasChanged}
           setFormHasChanged={setFormHasChanged}
           formType={formType}

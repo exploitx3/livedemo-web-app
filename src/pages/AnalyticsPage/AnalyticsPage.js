@@ -384,13 +384,13 @@ debugger
       return {
 
         name: name,
-        leadName: lead.data.name,
-        leadEmail: lead.data.email,
+        leadName: lead.data && lead.data.name,
+        leadEmail: lead.data && lead.data.email,
         liveDemoName: lead.storyId.name,
         liveDemoId: lead.storyId._id,
         sessionId: lead.sessionId && lead.sessionId._id ? lead.sessionId._id : '',
         workspaceId: lead.workspaceId,
-        country: lead.sessionId && lead.sessionId.clientIpData.country ? lead.sessionId.clientIpData.country : '',
+        data: JSON.stringify(lead.data || {}),
         createdAt: moment(lead.createdAt).format('hh:mm:ss A, D MMMM YYYY'),
       }
 

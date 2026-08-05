@@ -460,11 +460,11 @@ function OnboardingPage({ authData }) {
   useEffect(() => {
     if (phase !== 'getStarted') return undefined
     let cancelled = false
-    setExtensionInstalled(true)
+    setExtensionInstalled(null)
     setExtensionToolbarPinned(null)
     pingLiveDemoExtension(ENV.CHROME_APP_ID).then((installed) => {
       if (cancelled) return
-      setExtensionInstalled(true)
+      setExtensionInstalled(installed)
       if (installed) {
         getLiveDemoExtensionToolbarPinned(ENV.CHROME_APP_ID).then((pinned) => {
           if (!cancelled) setExtensionToolbarPinned(pinned)
@@ -477,6 +477,22 @@ function OnboardingPage({ authData }) {
       cancelled = true
     }
   }, [phase])
+
+  useEffect(() => {
+    if (phase !== 'getStarted') return undefined
+    if (extensionInstalled === true) return undefined
+    const tick = () => {
+      pingLiveDemoExtension(ENV.CHROME_APP_ID).then((installed) => {
+        if (!installed) return
+        setExtensionInstalled(true)
+        getLiveDemoExtensionToolbarPinned(ENV.CHROME_APP_ID).then((pinned) => {
+          setExtensionToolbarPinned(pinned)
+        })
+      })
+    }
+    const id = window.setInterval(tick, 5000)
+    return () => window.clearInterval(id)
+  }, [phase, extensionInstalled])
 
   useEffect(() => {
     if (phase !== 'getStarted') return undefined
@@ -631,10 +647,14 @@ function OnboardingPage({ authData }) {
           <MdArrowBack size={18} aria-hidden />
           Back
         </S.TextButton>
-        <S.TextButton type="button" $emphasis $introPrimary={isIntroWhite} onClick={goDashboard}>
-          Skip to dashboard
-          <MdArrowForward size={18} aria-hidden />
-        </S.TextButton>
+        {phase !== 'getStarted' ? (
+          <S.TextButton type="button" $emphasis $introPrimary={isIntroWhite} onClick={goDashboard}>
+            Skip to dashboard
+            <MdArrowForward size={18} aria-hidden />
+          </S.TextButton>
+        ) : (
+          <span />
+        )}
       </S.TopBar>
 
       <S.Main $whiteIntro={isIntroWhite} $explore={phase === 'explore'}>

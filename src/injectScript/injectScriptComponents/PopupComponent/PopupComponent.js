@@ -92,7 +92,7 @@ function PopupComponenet(props) {
     const rawAlignment = step.view.popup.alignment || 'center'
     const alignment = (ALIGNMENT_MAP[rawAlignment]) ? ALIGNMENT_MAP[rawAlignment] : 'center'
 
-    let showForm = !!(step.view && step.view.viewType === 'popup' && step.view.popup.type === 'form' && step.view.popup && step.view.popup.formId && step.view.popup.formId.title)
+    let showForm = !!(step.view && step.view.viewType === 'popup' && step.view.popup.type === 'form' && step.view.popup && step.view.popup.formId && step.view.popup.formId._id)
 
     /*
                   dangerouslySetInnerHTML={{ __html: `<span>${(view && view.content) || (view && view.content)}</span>` }}></TC.TooltipContent>
@@ -185,7 +185,10 @@ function PopupComponenet(props) {
                         step={step}
                         onNext={onNext}
                         onBack={onBack}
+                        changeToScreen={changeToScreen}
+                        liveDemo={liveDemo}
                         size={size}
+                        wrapperWidth={wrapperWidth}
                         themeBackgroundColor={themeBackgroundColor}
                         themeTextColor={themeTextColor}
                         themeButtonBackgroundColor={themeButtonBackgroundColor}
@@ -216,13 +219,21 @@ const P = {
       height: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      /* flex-start + child margin-block:auto — center when short, no top clip when tall */
+      justify-content: flex-start;
       align-items: center;
       border-bottom-left-radius: 20px;
       border-bottom-right-radius: 20px;
       overflow: hidden;
+      overflow-y: auto;
       position: relative;
       z-index: 4 !important;
+
+      & > * {
+        margin-block: auto;
+        max-height: 100%;
+        min-height: 0;
+      }
 
       ${({isOverlayEnabled, overlayBackgroundColor}) => {
         if(isOverlayEnabled) {

@@ -302,7 +302,7 @@ function TooltipComponent(props) {
     step.view.viewType === StepViewTypes.POPUP &&
     step.view.popup.type === ScreenPopupTypes.FORM &&
     step.view.popup.formId &&
-    step.view.popup.formId.title
+    step.view.popup.formId._id
   )
   let [fieldsObj, updateFieldsObj] = useState({})
   let [isLoading, setIsLoading] = useState(false)
