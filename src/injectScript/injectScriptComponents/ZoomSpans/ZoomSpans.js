@@ -267,7 +267,7 @@ function ZoomSpans({
         currentStepRef.current = currentStep
 
 
-    }, [currentStep, isFullScreen])
+    }, [currentStep])
 
     useEffect(() => {
 
@@ -403,8 +403,8 @@ function ZoomSpans({
         }
 
 
-        let localInnerWidth = window.innerWidth
-        let localInnerHeight = window.innerHeight
+        let localInnerWidth = innerWidthRef.current
+        let localInnerHeight = innerHeightRef.current
 
         let browserScaleValueW = (localInnerWidth / zoomSpan.editorWidth)
         let browserScaleValueH = (localInnerHeight / zoomSpan.editorHeight)
@@ -413,7 +413,7 @@ function ZoomSpans({
         let scaleValueX = localInnerWidth / boxWidth
         let scaleValueY = localInnerHeight / boxHeight
         let left = zoomSpan.offsetX * browserScaleValueW
-        let top = Math.min(Math.max((zoomSpan.offsetY * browserScaleValueH), 0), innerHeightRef.current)
+        let top = Math.min(Math.max((zoomSpan.offsetY * browserScaleValueH), 0), localInnerHeight)
 
 
         // boxRef.current.addEventListener('onclick', () => {
@@ -513,8 +513,8 @@ function ZoomSpans({
                     }}
                     onPreview={() => {
 
-                        let localInnerWidth = window.innerWidth
-                        let localInnerHeight = window.innerHeight
+                        let localInnerWidth = innerWidthRef.current
+                        let localInnerHeight = innerHeightRef.current
 
                         let browserScaleValueW = (localInnerWidth / zoomSpan.editorWidth)
                         let browserScaleValueH = (localInnerHeight / zoomSpan.editorHeight)
@@ -523,7 +523,7 @@ function ZoomSpans({
                         let scaleValueX = localInnerWidth / boxWidth
                         let scaleValueY = localInnerHeight / boxHeight
                         let left = zoomSpan.offsetX * browserScaleValueW
-                        let top = Math.min(Math.max((zoomSpan.offsetY * browserScaleValueH), 0), innerHeightRef.current)
+                        let top = Math.min(Math.max((zoomSpan.offsetY * browserScaleValueH), 0), localInnerHeight)
 
                         scaleMain(scaleValueX, left, top)
 

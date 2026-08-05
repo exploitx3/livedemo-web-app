@@ -288,12 +288,6 @@ const FormView = ({
 
   function handleDeleteField(field) {
     if (!field || !field._id || deletingFieldId) return
-    if (
-      field.name === LOCKED_FIELD_NAMES.NAME
-      || field.name === LOCKED_FIELD_NAMES.EMAIL
-    ) {
-      return
-    }
 
     let fieldId = field._id
     setDeletingFieldId(fieldId)
@@ -673,15 +667,13 @@ const FormView = ({
                               {deletingFieldId === field._id ? ' · deleting…' : ''}
                             </ST.FieldTypeHint>
                           </ST.FieldMeta>
-                          {!alwaysRequired && (
-                            <ST.DeleteIcon
-                              type={'delete'}
-                              theme={'filled'}
-                              title={'Delete field'}
-                              disabled={deletingFieldId === field._id}
-                              onClick={() => handleDeleteField(field)}
-                            />
-                          )}
+                          <ST.DeleteIcon
+                            type={'delete'}
+                            theme={'filled'}
+                            title={'Delete field'}
+                            disabled={deletingFieldId === field._id}
+                            onClick={() => handleDeleteField(field)}
+                          />
                         </ST.FieldHeader>
 
                         {isSelector && (

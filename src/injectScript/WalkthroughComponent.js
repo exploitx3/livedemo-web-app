@@ -965,23 +965,9 @@ function WalkthroughComponent({
     document.addEventListener('webkitfullscreenchange', exitHandler, false);
 
     function exitHandler() {
-      if (!document.webkitIsFullScreen && !document.mozFullScreen && !document.msFullscreenElement) {
+      if (!document.fullscreenElement && !document.webkitIsFullScreen && !document.mozFullScreen && !document.msFullscreenElement) {
         setIsFullScreen(false)
-
-        scaleMain(1, 0, 0)
-        //
-        // let videoMuxAsset = currentStep.asset
-        // let ratioArr = videoMuxAsset.aspect_ratio.split(':')
-        //
-        //
-        // setVideoRatioWidth(parseInt(ratioArr[0]))
-        // setVideoRatioHeight(parseInt(ratioArr[1]))
-
-
-        // setVideoRatioWidth(window.innerWidth)
-        // setVideoRatioHeight(window.innerHeight)
-        //
-        // scaleVideo(isEmbed, videoMuxAsset, videoRef)
+        refreshScaleAfterLayoutChange()
       }
     }
 
@@ -2667,6 +2653,19 @@ function WalkthroughComponent({
     setShowTransitions(false)
   }
 
+  function refreshScaleAfterLayoutChange() {
+    setTimeout(() => {
+      if (mainRef.current) {
+        mainRefRect.current = mainRef.current.getBoundingClientRect()
+      }
+      if (wrapperRef.current) {
+        wrapperRefRect.current = wrapperRef.current.getBoundingClientRect()
+      }
+      forceUpdate()
+      scaleMain(1, 0, 0)
+    }, 250)
+  }
+
   function onFullScreenButtonClick() {
     if (isInEditorRef.current) {
       return
@@ -2686,19 +2685,17 @@ function WalkthroughComponent({
     }
 
     setIsFullScreen(true)
-
-    setTimeout(() => {
-      forceUpdate()
-      scaleMain(1, 0, 0)
-
-    }, 250)
+    refreshScaleAfterLayoutChange()
   }
 
   function scaleMain(scaleValueX, left, top) {
-    if (!mainRef.current || !mainRefRect.current || !wrapperRefRect.current) {
-      console.log('scaleMain - mainRef, mainRefRect, or wrapperRefRect not set yet')
+    if (!mainRef.current || !wrapperRef.current) {
+      console.log('scaleMain - mainRef or wrapperRef not set yet')
       return
     }
+
+    mainRefRect.current = mainRef.current.getBoundingClientRect()
+    wrapperRefRect.current = wrapperRef.current.getBoundingClientRect()
 
     top = Math.min(top, wrapperRefRect.current.height)
     left = Math.min(left, wrapperRefRect.current.width)
@@ -2952,12 +2949,12 @@ function WalkthroughComponent({
         onExitFullScreen={() => {
           document.exitFullscreen()
           setIsFullScreen(false)
-          setTimeout(() => { forceUpdate() }, 250)
+          refreshScaleAfterLayoutChange()
         }}
         onMinimize={() => {
           document.exitFullscreen()
           setIsFullScreen(false)
-          setTimeout(() => { forceUpdate() }, 250)
+          refreshScaleAfterLayoutChange()
         }}
         onFullScreenButtonClick={onFullScreenButtonClick}
         onReload={() => { changeStep(0, stepsInternalRef.current) }}
