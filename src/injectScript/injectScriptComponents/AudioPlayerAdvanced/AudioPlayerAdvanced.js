@@ -1,9 +1,8 @@
 import React, {useEffect, useRef, useState} from 'react'
 import styled from 'styled-components'
 import Colors from '../../../constants/mainColors.js'
-import {MdOutlineZoomIn, MdPause} from 'react-icons/md'
-import axios from '../../../utils/axiosInstance.js'
-import ENV from '../../config.json'
+import {MdPause} from 'react-icons/md'
+import {ReloadOutlined} from '@ant-design/icons'
 
 import Spinner from '../Spinner/Spinner.js'
 import {connect} from 'react-redux'
@@ -21,10 +20,11 @@ const AudioPlayerAdvanced = (props) => {
         voiceType,
         text,
         regenerateAIAudio,
+        shouldRegenerate: shouldRegenerateProp,
     } = props
 
 
-    let [shouldRegenerate, setShouldRegenerate] = useState(false)
+    let [shouldRegenerateLocal, setShouldRegenerateLocal] = useState(false)
     let [isRegenerating, setIsRegenerating] = useState(false)
 
     let [isPlaying, setIsPlaying] = useState(false)
@@ -40,13 +40,19 @@ const AudioPlayerAdvanced = (props) => {
 
     let _videoTimeChangeAttached = useRef(false)
 
+    let parentControlsRegenerate = shouldRegenerateProp !== undefined
+    let shouldRegenerate = parentControlsRegenerate ? shouldRegenerateProp : shouldRegenerateLocal
+
     useEffect(() => {
-        if (stepAudio && (text !== stepAudio.text || voiceType !== stepAudio.voiceType)) {
-            setShouldRegenerate(true)
-        } else {
-            setShouldRegenerate(false)
+        if (parentControlsRegenerate) {
+            return
         }
-    }, [text, voiceType, stepAudio]);
+        if (stepAudio && (text !== stepAudio.text || voiceType !== stepAudio.voiceType)) {
+            setShouldRegenerateLocal(true)
+        } else {
+            setShouldRegenerateLocal(false)
+        }
+    }, [text, voiceType, stepAudio, parentControlsRegenerate]);
 
     useEffect(() => {
         if (videoInternalRef.current) {
@@ -55,11 +61,17 @@ const AudioPlayerAdvanced = (props) => {
     }, [videoInternalRef, videoInternalRef.current])
 
     useEffect(() => {
+        if (!trackerRef.current) {
+            return
+        }
 
-        // trackerRef.current.style.marginLeft = 0 + 'px'
         trackerRef.current.style.transform = `translateX(0px)`
 
         setIsPlaying(false)
+        if (videoInternalRef.current) {
+            videoInternalRef.current.pause()
+            videoInternalRef.current.currentTime = 0
+        }
 
     }, [audioUrl]);
 
@@ -77,16 +89,10 @@ const AudioPlayerAdvanced = (props) => {
 
         let width = internalTimelineRightPosition.current - internalTimelineLeftPosition.current - 4
 
-        // let timestampInSeconds = event.timeStamp / 10000
-        // let timestampPercentage = timestampInSeconds / event.currentTarget.duration
-        // let singleMarginSize = (event.currentTarget.duration / width)
-        // let newMargin =  (width * timestampPercentage)
-
         let timestampInSeconds = videoInternalRef.current.currentTime
         let timePercentage = videoInternalRef.current.currentTime / videoInternalRef.current.duration
         let newMargin = width * timePercentage
 
-        // trackerRef.current.style.marginLeft = newMargin + 'px'
         trackerRef.current.style.transform = 'translateX(' + newMargin + 'px)'
     }
 
@@ -104,80 +110,69 @@ const AudioPlayerAdvanced = (props) => {
         internalTimelineRightPosition.current = cordinates.left + cordinates.width
     }
 
+    function onRegenerateClick() {
+        if (!regenerateAIAudio || isRegenerating) {
+            return
+        }
+
+        setIsPlaying(false)
+        if (videoInternalRef.current) {
+            videoInternalRef.current.pause()
+        }
+
+        setIsRegenerating(true)
+        regenerateAIAudio()
+            .then(() => {
+                setIsRegenerating(false)
+            })
+            .catch(() => {
+                setIsRegenerating(false)
+            })
+    }
+
     return (
         <S.Wrapper>
             <S.VideoWrapper>
-                {isRegenerating ? <Spinner/> : (shouldRegenerate ? (
-                        <S.Button
-                            style={{marginRight: 5}}
-                            onClick={() => {
-                                setIsRegenerating(true)
+                {!isPlaying ? (
+                    <S.Button
+                        style={{marginRight: 5}}
+                        onClick={() => {
+                            if (!videoInternalRef.current || !audioUrl) {
+                                return
+                            }
 
-                                // setTimeout(() => {
-                                //     setIsRegenerating(false)
-                                // }, 10000)
+                            setIsPlaying(true)
 
-                                regenerateAIAudio()
-                                    .then(() => {
-                                        setIsRegenerating(false)
-                                    })
-                                    .catch(err => {
-                                        setIsRegenerating(false)
-                                    })
-                            }}
-                        >
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <g clip-path="url(#clip0_0_3)">
-                                    <path
-                                        d="M4.69159 2.94011C4.39202 2.74947 4 2.96466 4 3.31975V8.68025C4 9.03534 4.39202 9.25053 4.69159 9.05989L8.90341 6.37965C9.18128 6.20282 9.18129 5.79718 8.90341 5.62035L4.69159 2.94011Z"
-                                        fill={'gray'}/>
-                                </g>
-                                <defs>
-                                    <clipPath id="clip0_0_3">
-                                        <rect width="12" height="12" fill="white"/>
-                                    </clipPath>
-                                </defs>
-                            </svg>
-                        </S.Button>) :
-                    (!isPlaying ? (
-                        <S.Button
-                            style={{marginRight: 5}}
-                            onClick={() => {
-
-                                setIsPlaying(true)
-
-                                if (!videoInternalRef.current.ended) {
-
-                                    videoInternalRef.current.play()
-                                } else {
-                                    videoInternalRef.current.currentTime = 0
-
-                                    videoInternalRef.current.play()
-                                }
-                            }}
-                        >
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
-                                 xmlns="http://www.w3.org/2000/svg">
-                                <g clip-path="url(#clip0_0_3)">
-                                    <path
-                                        d="M4.69159 2.94011C4.39202 2.74947 4 2.96466 4 3.31975V8.68025C4 9.03534 4.39202 9.25053 4.69159 9.05989L8.90341 6.37965C9.18128 6.20282 9.18129 5.79718 8.90341 5.62035L4.69159 2.94011Z"
-                                        fill={'black'}/>
-                                </g>
-                                <defs>
-                                    <clipPath id="clip0_0_3">
-                                        <rect width="12" height="12" fill="white"/>
-                                    </clipPath>
-                                </defs>
-                            </svg>
-                        </S.Button>
-                    ) : (
-                        <S.PauseButton
-                            style={{marginRight: 5}}
-                            onClick={() => {
-                                videoInternalRef.current.pause()
-                                setIsPlaying(false)
-                            }}/>
-                    )))}
+                            if (!videoInternalRef.current.ended) {
+                                videoInternalRef.current.play()
+                            } else {
+                                videoInternalRef.current.currentTime = 0
+                                videoInternalRef.current.play()
+                            }
+                        }}
+                    >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <g clipPath="url(#clip0_0_3)">
+                                <path
+                                    d="M4.69159 2.94011C4.39202 2.74947 4 2.96466 4 3.31975V8.68025C4 9.03534 4.39202 9.25053 4.69159 9.05989L8.90341 6.37965C9.18128 6.20282 9.18129 5.79718 8.90341 5.62035L4.69159 2.94011Z"
+                                    fill={'black'}/>
+                            </g>
+                            <defs>
+                                <clipPath id="clip0_0_3">
+                                    <rect width="12" height="12" fill="white"/>
+                                </clipPath>
+                            </defs>
+                        </svg>
+                    </S.Button>
+                ) : (
+                    <S.PauseButton
+                        style={{marginRight: 5}}
+                        onClick={() => {
+                            videoInternalRef.current.pause()
+                            setIsPlaying(false)
+                        }}/>
+                )}
 
 
                 <S.TimelineWrapper>
@@ -204,6 +199,21 @@ const AudioPlayerAdvanced = (props) => {
                     <audio preload={'auto'} ref={videoInternalRef} src={audioUrl}></audio>
                 </S.TimelineWrapper>
 
+                {shouldRegenerate ? (
+                    <S.Button
+                        style={{marginLeft: 5}}
+                        title="Regenerate voiceover"
+                        onClick={onRegenerateClick}
+                    >
+                        {isRegenerating ? (
+                            <S.RefreshSpinner>
+                                <Spinner/>
+                            </S.RefreshSpinner>
+                        ) : (
+                            <S.RefreshIcon/>
+                        )}
+                    </S.Button>
+                ) : null}
 
             </S.VideoWrapper>
         </S.Wrapper>
@@ -466,6 +476,38 @@ const S = {
 
       &&:hover {
         background: #F1F3FE;
+      }
+    `,
+    RefreshIcon: styled(ReloadOutlined)`
+      && {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        font-size: 16px;
+        color: #111827;
+      }
+
+      && svg {
+        width: 16px !important;
+        height: 16px !important;
+      }
+    `,
+    RefreshSpinner: styled.div`
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+
+      && .spinner {
+        position: relative !important;
+        left: 0 !important;
+        width: 18px !important;
+        height: 18px !important;
+        top: 0 !important;
+        margin: 0 !important;
       }
     `,
     Wrapper: styled.div`

@@ -163,6 +163,11 @@ const Toolbar = ({
     // }
   }
   function addZoomSpan() {
+    const boxWidth = 300
+    const boxHeight = 300
+    const offsetX = Math.max(0, (innerWidth - boxWidth) / 2)
+    const offsetY = Math.max(0, (innerHeight - boxHeight) / 2)
+
     if (currentStep.screenType === ScreenTypes.SCREEN_VIDEO) {
       storyDemoActions.addZoomSpan(
         workspaceId,
@@ -170,12 +175,12 @@ const Toolbar = ({
         screenId,
         0,
         1,
-        100,
-        100,
+        boxWidth,
+        boxHeight,
         innerWidth,
         innerHeight,
-        0,
-        0,
+        offsetX,
+        offsetY,
         authData.token
       )
     } else {
@@ -186,12 +191,12 @@ const Toolbar = ({
         currentStep._id,
         0.5,
         1.5,
-        100,
-        100,
+        boxWidth,
+        boxHeight,
         innerWidth,
         innerHeight,
-        0,
-        0,
+        offsetX,
+        offsetY,
         authData.token
       )
     }

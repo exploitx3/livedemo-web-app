@@ -28,6 +28,31 @@ const AudioTypes = {
   AI: 'AI',
   PERSON: 'PERSON'
 }
+
+const EMPTY_VOICE = {
+  voice_id: '',
+  name: '',
+  description: '',
+  preview_url: ''
+}
+
+/** Prefer saved voice; otherwise second in list (fallback first). */
+function resolveDefaultVoice(stepAudio, voices) {
+  let list = Array.isArray(voices) ? voices : []
+  if (!list.length) {
+    return EMPTY_VOICE
+  }
+
+  if (stepAudio && stepAudio.voiceType) {
+    let matched = list.find(voiceItem => voiceItem.voice_id === stepAudio.voiceType)
+    if (matched) {
+      return matched
+    }
+  }
+
+  return list[1] || list[0]
+}
+
 const AiVoiceTab = ({
                       stepAudio,
                       setStepAudio,
@@ -63,14 +88,7 @@ const AiVoiceTab = ({
 
   let [internalStepAudio, setInternalStepAudio] = useState(getInternalStepAudio(stepAudio))
 
-  let defaultVoice = (stepAudio.voiceType && voices.find(voiceItem => voiceItem.voice_id === stepAudio.voiceType)) ? voices.find(voiceItem => voiceItem.voice_id === stepAudio.voiceType) : {
-    voice_id: '',
-    name: '',
-    description: '',
-    preview_url: ''
-  }
-
-  let [selectedAIVoice, setSelectedAIVoice] = useState(defaultVoice)
+  let [selectedAIVoice, setSelectedAIVoice] = useState(() => resolveDefaultVoice(stepAudio, voices))
   let [isLoading, setIsLoading] = useState(false)
 
   let [text, setText] = useState(stepAudio.text)
@@ -80,22 +98,19 @@ const AiVoiceTab = ({
 
   useEffect(() => {
 
-    if (text !== stepAudio.text || (selectedAIVoice && selectedAIVoice.voice_id) !== internalStepAudio.voiceType || !internalStepAudio.audioUrl) {
+    if (
+      text !== (internalStepAudio.text || '') ||
+      (selectedAIVoice && selectedAIVoice.voice_id) !== internalStepAudio.voiceType ||
+      !internalStepAudio.audioUrl
+    ) {
       setShouldRegenerate(true)
     } else {
       setShouldRegenerate(false)
     }
-  }, [text, selectedAIVoice, internalStepAudio, stepAudio]);
+  }, [text, selectedAIVoice, internalStepAudio]);
 
   useEffect(() => {
-    let defaultVoice = (stepAudio.voiceType && voices.find(voiceItem => voiceItem.voice_id === stepAudio.voiceType)) ? voices.find(voiceItem => voiceItem.voice_id === stepAudio.voiceType) : {
-      voice_id: '',
-      name: '',
-      description: '',
-      preview_url: ''
-    }
-
-    setSelectedAIVoice(defaultVoice)
+    setSelectedAIVoice(resolveDefaultVoice(stepAudio, voices))
     setText(stepAudio.text)
 
     setInternalStepAudio(getInternalStepAudio(stepAudio))
@@ -128,6 +143,44 @@ const AiVoiceTab = ({
       .then(res => res.data)
   }
 
+  let hasGeneratedAudio = !!(internalStepAudio && internalStepAudio.audioUrl)
+  // New / stale voice: play sample. Matching generated audio: play that.
+  let playbackUrl = (!shouldRegenerate && hasGeneratedAudio)
+    ? internalStepAudio.audioUrl
+    : (selectedAIVoice && selectedAIVoice.preview_url) || internalStepAudio.audioUrl || ''
+
+  function regenerateForPreview() {
+    return regenerateAIAudio(text, selectedAIVoice.voice_id, workspaceId, storyDemoId, authData.token)
+      .then((audioDoc) => {
+        let newAudio = {
+          ...internalStepAudio,
+          ...audioDoc,
+          text,
+          voiceType: selectedAIVoice.voice_id,
+          audioType: 'ai',
+        }
+
+        // Keep modal open — only refresh local playback data for preview
+        setInternalStepAudio(newAudio)
+        return newAudio
+      })
+  }
+
+  function regenerateAndSave() {
+    return regenerateForPreview()
+      .then((newAudio) => {
+        return saveStepAudio(newAudio, workspaceId, storyDemoId, screenId, step._id, authData.token)
+          .then((stepDoc) => {
+            let savedAudio = (stepDoc && stepDoc.stepAudioId) ? stepDoc.stepAudioId : newAudio
+            setInternalStepAudio(savedAudio)
+            if (setStepAudio) {
+              setStepAudio(savedAudio)
+            }
+            return savedAudio
+          })
+      })
+  }
+
 
   return (
 
@@ -157,7 +210,7 @@ const AiVoiceTab = ({
 
                 // boxShadow: `0 0 0 2px ${Colors.primaryColor}`
               }}
-              value={selectedAIVoice.voice_id}
+              value={selectedAIVoice.voice_id || undefined}
               style={{
                 width: '100%'
               }}
@@ -165,7 +218,7 @@ const AiVoiceTab = ({
 
                 setSelectedAIVoice(voices.find(voiceItem => voiceItem.voice_id === voiceId))
               }}>
-              {voices.map((voice, index, array) => {
+              {(voices || []).map((voice, index, array) => {
                 let isLast = index === array.length - 1
                 return <Option style={{
                   background: 'none',
@@ -184,21 +237,9 @@ const AiVoiceTab = ({
           <T.HorizontalLine style={{width: '95%', marginBottom: 5}}>
             {!internalStepAudio ? ('') : (
               <AudioPlayerAdvanced
-                audioUrl={internalStepAudio.audioUrl}
+                audioUrl={playbackUrl}
                 shouldRegenerate={shouldRegenerate}
-                regenerateAIAudio={function () {
-
-                  return regenerateAIAudio(text, selectedAIVoice.voice_id, workspaceId, storyDemoId, authData.token)
-                    .then((audioDoc) => {
-
-                      let newAudio = {
-                        ...internalStepAudio,
-                        ...audioDoc
-                      }
-
-                      setInternalStepAudio(newAudio)
-                    })
-                }}
+                regenerateAIAudio={regenerateForPreview}
               />)}
 
           </T.HorizontalLine>
@@ -226,41 +267,39 @@ const AiVoiceTab = ({
               <T.ToolbarText
                 onClick={() => {
 
-                  setIsLoading(true)
-
-                  let promise = Promise.resolve()
-                  if (shouldRegenerate) {
-                    promise = promise.then(() => {
-                      return regenerateAIAudio(text, selectedAIVoice.voice_id, workspaceId, storyDemoId, authData.token)
-                        .then(stepAudioDoc => {
-                          setInternalStepAudio(stepAudioDoc)
-
-                          return stepAudioDoc
-                        })
-                    })
-                  }
-
-                  promise = promise.then((updatedStepAudioDoc) => {
-                    let savingStepAudioDoc = updatedStepAudioDoc ? updatedStepAudioDoc : internalStepAudio
-
-                    return saveStepAudio(savingStepAudioDoc, workspaceId, storyDemoId, screenId, step._id, authData.token)
+                  // Already generated via refresh — attach if needed, then close
+                  if (!shouldRegenerate) {
+                    setIsLoading(true)
+                    return saveStepAudio(internalStepAudio, workspaceId, storyDemoId, screenId, step._id, authData.token)
                       .then((stepDoc) => {
-                        setInternalStepAudio(stepDoc.stepAudioId)
-
-                        reloadStoryDemo()
+                        let savedAudio = (stepDoc && stepDoc.stepAudioId) ? stepDoc.stepAudioId : internalStepAudio
+                        if (setStepAudio) {
+                          setStepAudio(savedAudio)
+                        }
+                        return reloadStoryDemo()
                       })
                       .then(() => {
-
                         onCancel()
-
-
                         setIsLoading(false)
                       })
-
-                      .catch((err) => {
+                      .catch(() => {
                         setIsLoading(false)
                       })
-                  })
+                  }
+
+                  setIsLoading(true)
+
+                  regenerateAndSave()
+                    .then(() => {
+                      return reloadStoryDemo()
+                    })
+                    .then(() => {
+                      onCancel()
+                      setIsLoading(false)
+                    })
+                    .catch(() => {
+                      setIsLoading(false)
+                    })
 
 
                 }}>Save</T.ToolbarText>

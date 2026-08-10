@@ -43,7 +43,7 @@ function ZoomSpans({
 
     let timersRef = useRef([])
 
-    let initialZoomSpans = (currentStep && currentStep.zoomSpans ? currentStep.zoomSpans.map(span => {
+    let initialZoomSpans = (currentStep && currentStep.zoomSpans && currentStep.zoomSpans.length ? currentStep.zoomSpans.map(span => {
 
         let newSpan = {
             ...span,
@@ -174,14 +174,19 @@ function ZoomSpans({
             clearTimeout(timer)
         })
 
-        // duration === 0 never auto-rescales; clear flags only so the next
-        // zoom can hand off smoothly (scaleMain measures from identity)
+        // Screenshot→screenshot (duration 0): keep visual scale and only clear
+        // flags so scaleMain can hand off. Video zoomSpans must fully reset —
+        // leaving isScaled true after video→screenshot makes the next zoom a no-op.
+        const leavingVideoZoom = zoomSpansRef.current.some(s => typeof s.startTime === 'number')
         zoomSpansRef.current.forEach((zoomSpan) => {
+            if (leavingVideoZoom) {
+                rescaleZoomSpan(zoomSpan)
+            }
             zoomSpan.triggered = false
             zoomSpan.showed = false
         })
 
-        if (currentStep && currentStep.zoomSpans) {
+        if (currentStep && currentStep.zoomSpans && currentStep.zoomSpans.length) {
             let newZoomSpans = currentStep.zoomSpans.map(span => {
 
                 let newSpan = {
@@ -395,7 +400,7 @@ function ZoomSpans({
         }
     }
 
-    function triggerScaleForZoomSpan(zoomSpan) {
+    function triggerScaleForZoomSpan(zoomSpan, attempt = 0) {
 
         // scaleInProgressRef.current = true
         // Find the zoomSpan Object
@@ -405,7 +410,11 @@ function ZoomSpans({
         // }
 
         let boxRef = spanElementRefs.current[zoomSpan._id]
+        // After video→screenshot, ZoomRegion mounts one frame later than delay=0 timer
         if (!boxRef || !boxRef.current) {
+            if (attempt < 10) {
+                requestAnimationFrame(() => triggerScaleForZoomSpan(zoomSpan, attempt + 1))
+            }
             return
         }
 

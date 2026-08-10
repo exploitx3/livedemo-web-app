@@ -14,6 +14,7 @@ import * as storyDemoActionsImport from '../../actions/storyDemoActions'
 import ZoomSpan from './components/ZoomSpan/ZoomSpan'
 import { connect } from 'react-redux'
 import { bindActionCreators } from "redux";
+import { fitZoomSpanInGaps } from './fitZoomSpanInGaps.js'
 
 
 const HANDLER_TYPES = {
@@ -399,6 +400,19 @@ const VideoEditor = (props) => {
         //   }
         // })
 
+      }
+
+      if (event.data.type && event.data.type === 'zoomSpan_delete') {
+        deleteZoomSpan(
+          workspaceId,
+          storyDemoId,
+          event.data.screenId,
+          event.data.id,
+          authData.token
+        ).then((screenDoc) => {
+          let nextZoomSpans = (screenDoc && screenDoc.zoomSpans) ? screenDoc.zoomSpans : []
+          setZoomSpans(nextZoomSpans)
+        })
       }
     }
 
@@ -792,77 +806,66 @@ const VideoEditor = (props) => {
                     setIsTippyDisabled(false)
                   }, 100)
 
-
-                  let duration = 2.5
-
-                  let timelineWidth = internalTimelineRightPosition.current - internalTimelineLeftPosition.current - 4
-
-                  let spanWidth = timelineWidth * (duration / videoInternalRef.current.duration)
-
-                  let rightTimePos = e.clientX + (duration / videoInternalRef.current.duration) * timelineWidth
-
-                  if (rightTimePos >= internalTimelineRightPosition.current) {
-                    let difference = rightTimePos - internalTimelineRightPosition.current + 16
-
-                    duration -= videoInternalRef.current.duration * (difference / timelineWidth)
-                    spanWidth = timelineWidth * (duration / videoInternalRef.current.duration)
-
+                  if (!videoInternalRef.current || !internalTimelineRef.current) {
+                    return
                   }
 
-                  let leftStartTimePos = (e.clientX - internalTimelineLeftPosition.current + 16)
+                  setupTimelinePositions()
 
-                  let startTime = videoInternalRef.current.duration * (leftStartTimePos / timelineWidth)
-
-                  if (e.clientX + spanWidth > internalTimelineRightPosition.current) {
-                    spanWidth -= (e.clientX + spanWidth) - internalTimelineRightPosition.current
+                  let videoDuration = videoInternalRef.current.duration || videoDurationRef.current
+                  let timelineWidth = internalTimelineRightPosition.current - internalTimelineLeftPosition.current
+                  if (!videoDuration || timelineWidth <= 0) {
+                    return
                   }
 
+                  let startTime = videoDuration * ((e.clientX - internalTimelineLeftPosition.current) / timelineWidth)
+                  startTime = Math.max(0, Math.min(startTime, videoDuration))
 
-                  // TODO: pass a reference to ZoomSpan and check if you can add another zoom span
+                  let fitted = fitZoomSpanInGaps({
+                    preferredStart: startTime,
+                    preferredDuration: 2.5,
+                    videoDuration,
+                    existingSpans: zoomSpans,
+                  })
 
+                  if (!fitted) {
+                    return
+                  }
+
+                  let boxWidth = 300
+                  let boxHeight = 300
                   let newZoomSpan = {
-                    duration: duration,
+                    duration: fitted.duration,
                     editorWidth: innerWidth,
                     editorHeight: innerHeight,
-                    startTime,
-                    width: 100,
-                    height: 100,
-                    offsetX: 0,
-                    offsetY: 0,
+                    startTime: fitted.startTime,
+                    width: boxWidth,
+                    height: boxHeight,
+                    offsetX: Math.max(0, (innerWidth - boxWidth) / 2),
+                    offsetY: Math.max(0, (innerHeight - boxHeight) / 2),
                   }
 
                   let newZoomSpans = JSON.parse(JSON.stringify(zoomSpans))
 
-                  if (newZoomSpans.every(span => {
-                    let spanStartTime = span.startTime
-                    let spanEndTime = span.startTime + span.duration
+                  return storyDemoActions.addZoomSpan(workspaceId, storyDemoId, currentScreen._id,
+                    newZoomSpan.startTime,
+                    newZoomSpan.duration,
+                    newZoomSpan.width,
+                    newZoomSpan.height,
+                    newZoomSpan.editorWidth,
+                    newZoomSpan.editorHeight,
+                    newZoomSpan.offsetX,
+                    newZoomSpan.offsetY,
+                    authData.token
+                  )
+                    .then((zoomSpanDoc) => {
 
-                    return (newZoomSpan.startTime < spanStartTime && newZoomSpan.startTime + newZoomSpan.duration < spanStartTime) ||
-                      (newZoomSpan.startTime > spanEndTime && newZoomSpan.startTime + newZoomSpan.duration > spanEndTime)
-                  })) {
+                      newZoomSpans.push(zoomSpanDoc)
 
+                      setZoomSpans(newZoomSpans)
 
-                    return storyDemoActions.addZoomSpan(workspaceId, storyDemoId, currentScreen._id,
-                      newZoomSpan.startTime,
-                      newZoomSpan.duration,
-                      newZoomSpan.width,
-                      newZoomSpan.height,
-                      newZoomSpan.editorWidth,
-                      newZoomSpan.editorHeight,
-                      newZoomSpan.offsetX,
-                      newZoomSpan.offsetY,
-                      authData.token
-                    )
-                      .then((zoomSpanDoc) => {
-
-                        newZoomSpans.push(zoomSpanDoc)
-
-                        setZoomSpans(newZoomSpans)
-
-                        console.log(zoomSpanRefs)
-                      })
-                    // The new zoomSpan is not overlapping with any other span
-                  }
+                      console.log(zoomSpanRefs)
+                    })
 
                 }
                 }>
@@ -977,12 +980,17 @@ const S = {
     position: absolute;
     left: 0px;
     top: 0px;
+    pointer-events: none;
 
     border-radius: 12px;
 
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10 and IE 11 */
     user-select: none; /* Standard syntax */
+
+    && > * {
+      pointer-events: auto;
+    }
   `,
   ZoomSpan: styled.span`
     z-index: 2;

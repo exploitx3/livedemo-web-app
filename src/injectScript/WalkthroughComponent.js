@@ -2229,9 +2229,10 @@ function WalkthroughComponent({
 
     clearAutoCursor(newStep)
 
-    // Zoom out only when the next step has nothing to hand off to.
-    // If it has a zoomSpan, keep the current scale so scaleMain can animate zoom → zoom.
-    if (!newStep.zoomSpan) {
+    // Hand off zoom→zoom only between screenshot steps (singular zoomSpan).
+    // Video steps use zoomSpans; leaving them scaled breaks the next scaleMain
+    // (stale transform / isScaled), so screenshot zoom never appears to trigger.
+    if (!(step && step.zoomSpan && newStep.zoomSpan)) {
       scaleMain(1, 0, 0)
     }
 
@@ -3125,7 +3126,7 @@ function WalkthroughComponent({
 
           {isInEditor ? (
             <RoundAudioPlayerEditor
-              key={stepAudio && stepAudio.audioUrl}
+              key={step && step._id}
               stepAudio={stepAudio}
               setStepAudio={(newStepAudio) => {
                 let updatedStep = JSON.parse(JSON.stringify(stepsInternalRef.current[currentStepIndexState]))

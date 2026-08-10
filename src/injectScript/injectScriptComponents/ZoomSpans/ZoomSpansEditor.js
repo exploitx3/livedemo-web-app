@@ -43,11 +43,13 @@ function ZoomSpansEditor({
 
   let [showSingleZoomSpan, setShowSingleZoomSpan] = useState(false)
 
+  // Video zoomSpans: visibility is driven by video currentTime.
+  // Screenshot zoomSpan: always shown in editor for drag/resize.
   let initialZoomSpans = (currentStep && currentStep.zoomSpans ? currentStep.zoomSpans.map(span => {
 
     let newSpan = {
       ...span,
-      showed: !!isInEditor,
+      showed: false,
       triggered: false
     }
     return newSpan
@@ -133,6 +135,32 @@ function ZoomSpansEditor({
 
   }
 
+  function onRemoveHandler(span) {
+    if (!span || !span._id || !currentStep) {
+      return
+    }
+
+    if (currentStep.screenType === ScreenTypes.SCREEN_SCREENSHOT) {
+      storyDemoActions.deleteStepZoomSpan(
+        liveDemo.workspaceId,
+        liveDemo._id,
+        currentStep.screenId,
+        currentStep._id,
+        span._id,
+        authData.token
+      )
+      return
+    }
+
+    topPostMessage({
+      type: 'zoomSpan_delete',
+      id: span._id,
+      screenType: currentStep.screenType,
+      stepId: currentStep._id,
+      screenId: currentStep.screenId
+    })
+  }
+
   useEffect(() => {
     if (wrapperRef && wrapperRef.current && wrapperRef.current.getBoundingClientRect) {
       let wrapperPositions = wrapperRef.current.getBoundingClientRect()
@@ -157,8 +185,7 @@ function ZoomSpansEditor({
 
         let newSpan = {
           ...span,
-          // Editor always shows spans so they can be dragged; runtime uses timeline
-          showed: !!isInEditorInternalRef.current,
+          showed: false,
           triggered: false
         }
         return newSpan
@@ -191,28 +218,40 @@ function ZoomSpansEditor({
 
 
   useEffect(() => {
-    if (videoRef.current) {
-      attachVideoTimeChangeHandler(videoRef.current)
+    const video = videoRef && videoRef.current
+    if (video) {
+      attachVideoTimeChangeHandler(video)
+      // Scrub/seek while paused does not always fire timeupdate first paint
+      calculateShowHideZoomSpans()
     }
 
+    return () => {
+      if (video) {
+        dettachVideoTimeChangeHandler(video)
+      }
+    }
   }, [videoRef.current])
+
+  // Refs for newly added spans exist only after paint
+  useEffect(() => {
+    calculateShowHideZoomSpans()
+  }, [zoomSpans])
 
 
   function calculateShowHideZoomSpans() {
-    if (!videoRef || !videoRef.current) {
-      return
-    }
-
-    // Editor: keep all zoom regions visible for editing
-    if (isInEditorInternalRef.current) {
+    // Screenshot step zoom: always visible in editor
+    if (currentStep && currentStep.screenType !== ScreenTypes.SCREEN_VIDEO && currentStep.zoomSpan) {
       zoomSpansRef.current.forEach((zoomSpan) => {
         showZoomSpan(zoomSpan)
       })
       return
     }
 
+    if (!videoRef || !videoRef.current) {
+      return
+    }
+
     let timestampInSeconds = videoRef.current.currentTime
-    console.log('timestampInSeconds: ' + timestampInSeconds)
 
     zoomSpansRef.current.forEach((zoomSpan) => {
 
@@ -220,22 +259,19 @@ function ZoomSpansEditor({
         return
       }
 
-      if(currentStep.screenType !== ScreenTypes.SCREEN_VIDEO && currentStep.zoomSpan) {
-        showZoomSpan(zoomSpan)
-        return
-      }
-
-      if (
-        !currentStep.zoomSpan &&
+      let inRange =
         timestampInSeconds >= zoomSpan.startTime &&
         timestampInSeconds <= zoomSpan.startTime + zoomSpan.duration
-      ) {
 
-        triggerScaleForZoomSpan(zoomSpan)
-        zoomSpan.triggered = true
-
+      if (inRange) {
+        // Editor: show the region box only (no auto scale). Preview scales via ZoomSpans.
+        if (isInEditorInternalRef.current) {
+          showZoomSpan(zoomSpan)
+        } else {
+          triggerScaleForZoomSpan(zoomSpan)
+          zoomSpan.triggered = true
+        }
       } else {
-
         hideZoomSpan(zoomSpan)
         rescaleZoomSpan(zoomSpan)
       }
@@ -245,7 +281,14 @@ function ZoomSpansEditor({
 
   function attachVideoTimeChangeHandler(video) {
     video.addEventListener('timeupdate', onVideoTimeChange)
+    video.addEventListener('seeked', onVideoTimeChange)
     video.addEventListener('ended', onVideoEnded)
+  }
+
+  function dettachVideoTimeChangeHandler(video) {
+    video.removeEventListener('timeupdate', onVideoTimeChange)
+    video.removeEventListener('seeked', onVideoTimeChange)
+    video.removeEventListener('ended', onVideoEnded)
   }
 
   function onVideoEnded() {
@@ -261,6 +304,9 @@ function ZoomSpansEditor({
   function showZoomSpan(zoomSpan) {
     if (zoomSpan && !zoomSpan.showed) {
       let boxRef = spanElementRefs.current[zoomSpan._id]
+      if (!boxRef || !boxRef.current) {
+        return
+      }
 
       boxRef.current.style.visibility = 'visible'
       zoomSpan.showed = true
@@ -270,8 +316,9 @@ function ZoomSpansEditor({
   function hideZoomSpan(zoomSpan) {
     if (zoomSpan && zoomSpan.showed) {
       let boxRef = spanElementRefs.current[zoomSpan._id]
-
-      boxRef.current.style.visibility = 'hidden'
+      if (boxRef && boxRef.current) {
+        boxRef.current.style.visibility = 'hidden'
+      }
       zoomSpan.showed = false
 
 
@@ -329,6 +376,7 @@ function ZoomSpansEditor({
             editorHeight={span.editorHeight}
             omniBarHeight={omniBarHeight}
             onChangeHandler={onChangeHandler}
+            onRemoveHandler={onRemoveHandler}
             scaleMain={scaleMain}
             innerWidth={innerWidth}
             innerHeight={innerHeight}
@@ -355,16 +403,9 @@ const ZS = {
       height: 100%;
       /* Above StepsWrapper (998) so the box paints; pe-none lets clicks fall through empty area */
       z-index: 999;
-        // width: ${({fullWidth}) => fullWidth}px;
-        // height: ${({fullHeight}) => fullHeight}px;
       transform-origin: top left;
+      /* Hollow regions manage their own hit targets (corners/controls only) */
       pointer-events: none;
-        // transform: scaleX(${(props) => `${props.scalePercentageWidth}`}) scaleY(${(props) => `${props.scalePercentageHeight}`});
-
-    }
-
-    && > * {
-      pointer-events: auto;
     }
 
     && > div > div > div:nth-child(2) {
@@ -374,7 +415,6 @@ const ZS = {
       z-index: -1;
     }
   `,
-
 }
 
 

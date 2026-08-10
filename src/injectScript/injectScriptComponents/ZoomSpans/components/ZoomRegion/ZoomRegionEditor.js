@@ -1,7 +1,8 @@
 import React, {useRef, useState} from 'react'
 import styled from 'styled-components'
 import Colors from '../../../../../constants/mainColors.js'
-import {InputNumber, Button} from 'antd'
+import {InputNumber, Button, Checkbox} from 'antd'
+import {CloseOutlined, DragOutlined} from '@ant-design/icons'
 
 const resizeTypes = {
   topLeft: 'topLeft',
@@ -21,6 +22,8 @@ const ZoomRegion = React.forwardRef(({
                                        editorHeight,
                                        data = {},
                                        onChangeHandler = () => {
+                                       },
+                                       onRemoveHandler = () => {
                                        },
                                        omniBarHeight = 0,
                                        scaleWidth,
@@ -46,12 +49,11 @@ const ZoomRegion = React.forwardRef(({
   let boxHeight = useRef(calculatedBoxWidth * scaleWidth)
   let [delayState, setDelay] = useState(delay)
   let [durationState, setDuration] = useState(duration)
+  let [skipDelay, setSkipDelay] = useState(delay === 0)
+  let [skipDuration, setSkipDuration] = useState(duration === 0)
+  let lastDelayRef = useRef(delay > 0 ? delay : 0.5)
+  let lastDurationRef = useRef(duration > 0 ? duration : 1.5)
 
-
-  console.log('boxWidth')
-  console.log(boxWidth)
-  console.log('boxHeight')
-  console.log(boxHeight)
   let boxTransformX = useRef(x)
   let boxTransformY = useRef(y)
 
@@ -59,24 +61,48 @@ const ZoomRegion = React.forwardRef(({
   y = y * scaleMultiplier
 
 
-  function onChange() {
-    console.log('onChange triggered')
-
-    console.log('delayState')
-    console.log(delayState)
-    console.log('durationState')
-    console.log(durationState)
+  function onChange(overrides = {}) {
     let changeData = {
       x: boxTransformX.current,
       y: boxTransformY.current,
       width: boxWidth.current,
       height: boxHeight.current,
-      delay: delayState,
-      duration: durationState,
+      delay: overrides.delay !== undefined ? overrides.delay : delayState,
+      duration: overrides.duration !== undefined ? overrides.duration : durationState,
       data: data
     }
 
     onChangeHandler(changeData)
+  }
+
+  function onSkipDelayChange(checked) {
+    setSkipDelay(checked)
+    if (checked) {
+      if (delayState > 0) {
+        lastDelayRef.current = delayState
+      }
+      setDelay(0)
+      onChange({delay: 0})
+    } else {
+      let restored = lastDelayRef.current > 0 ? lastDelayRef.current : 0.5
+      setDelay(restored)
+      onChange({delay: restored})
+    }
+  }
+
+  function onSkipDurationChange(checked) {
+    setSkipDuration(checked)
+    if (checked) {
+      if (durationState > 0) {
+        lastDurationRef.current = durationState
+      }
+      setDuration(0)
+      onChange({duration: 0})
+    } else {
+      let restored = lastDurationRef.current > 0 ? lastDurationRef.current : 1.5
+      setDuration(restored)
+      onChange({duration: restored})
+    }
   }
 
   function dragMove(e) {
@@ -118,17 +144,17 @@ const ZoomRegion = React.forwardRef(({
 
   function dragAdd(e) {
     e.preventDefault()
+    e.stopPropagation()
 
-    const el = e.target
+    const el = ref.current
+    if (!el) {
+      return
+    }
+
     let elRect = el.getBoundingClientRect()
 
     offsetX = e.clientX - elRect.left
     offsetY = e.clientY - elRect.top + omniBarHeight
-
-    // let result = beforeMove({offsetX, offsetY})
-    // offsetX = result.offsetX
-    // offsetY = result.offsetY
-
 
     window.document.addEventListener('mousemove', dragMove)
     window.document.addEventListener('mouseup', dragRemove)
@@ -258,7 +284,7 @@ const ZoomRegion = React.forwardRef(({
 
   return <RL.Box $boxWidth={boxWidth.current} $boxHeight={boxHeight.current} ref={ref}
                  style={{transform: `translate(${x}px, ${y}px)`, visibility: showed ? 'visible' : 'hidden'}}>
-    <RL.InnerBox onMouseDown={dragAdd}/>
+    <RL.InnerBox/>
     <RL.LeftLine/>
     <RL.RightLine/>
     <RL.BottomLine/>
@@ -266,6 +292,19 @@ const ZoomRegion = React.forwardRef(({
     <RL.LeftTopCorner onMouseDown={resizeAdd(resizeTypes.topLeft)}/>
     <RL.LeftBottomCorner onMouseDown={resizeAdd(resizeTypes.bottomLeft)}/>
     <RL.RightTopCorner onMouseDown={resizeAdd(resizeTypes.topRight)}></RL.RightTopCorner>
+    <RL.CloseButton
+      title="Remove zoom"
+      onMouseDown={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+      }}
+      onClick={(e) => {
+        e.stopPropagation()
+        onRemoveHandler(data)
+      }}
+    >
+      <CloseOutlined/>
+    </RL.CloseButton>
     <RL.RightBottomCorner onMouseDown={resizeAdd(resizeTypes.bottomRight)}></RL.RightBottomCorner>
     <RL.ButtonsWrapper
       onMouseDown={(e) => {
@@ -273,46 +312,80 @@ const ZoomRegion = React.forwardRef(({
         e.stopPropagation()
       }}
     >
-      <RL.PreviewButton
-        onClick={() => {
-          // Match ZoomSpans (preview) / scaleMain: left/top are content coords
-          // (relative to Main), not wrapper — subtract omniBar from top.
-          let refCordinates = ref.current.getBoundingClientRect()
-          let scaleValue = innerWidth / refCordinates.width
-          let left = Math.max(refCordinates.left - wrapperLeftPos, 0)
-          let top = Math.max(refCordinates.top - wrapperTopPos - omniBarHeight, 0)
-          top = Math.min(top, innerHeight)
+      <RL.ActionColumn>
+        <RL.PreviewButton
+          onClick={() => {
+            // Match ZoomSpans (preview) / scaleMain: left/top are content coords
+            // (relative to Main), not wrapper — subtract omniBar from top.
+            let refCordinates = ref.current.getBoundingClientRect()
+            let scaleValue = innerWidth / refCordinates.width
+            let left = Math.max(refCordinates.left - wrapperLeftPos, 0)
+            let top = Math.max(refCordinates.top - wrapperTopPos - omniBarHeight, 0)
+            top = Math.min(top, innerHeight)
 
-          scaleMain(scaleValue, left, top)
+            scaleMain(scaleValue, left, top)
 
-          setTimeout(() => {
-            scaleMain(1, 0, 0)
-          }, 2000)
-        }}>
-        <RL.ButtonText>Zoom Preview</RL.ButtonText>
-      </RL.PreviewButton>
+            setTimeout(() => {
+              scaleMain(1, 0, 0)
+            }, 2000)
+          }}>
+          <RL.ButtonText>Zoom Preview</RL.ButtonText>
+        </RL.PreviewButton>
+        <RL.MoveButton
+          title="Drag to move zoom region"
+          onMouseDown={dragAdd}
+        >
+          <DragOutlined/>
+          <RL.ButtonText>Move</RL.ButtonText>
+        </RL.MoveButton>
+      </RL.ActionColumn>
       {!isScreenshot ? '' : (<RL.TextFieldWrapper>
         <RL.TextFieldRow>
           <RL.TextField>Delay:</RL.TextField>
-          <RL.InputNumber min={1} max={10} step={0.5} value={delayState ?? 0}
+          <RL.InputNumber min={0} max={10} step={0.5} value={delayState ?? 0}
+                          disabled={skipDelay}
                           onBlur={() => {
                             onChange()
                           }}
                           onChange={(newDelay) => {
-                            setDelay(newDelay ?? 0)
+                            let next = newDelay ?? 0
+                            setDelay(next)
+                            if (next > 0) {
+                              lastDelayRef.current = next
+                            }
                           }}/>
         </RL.TextFieldRow>
         <RL.TextFieldRow>
           <RL.TextField>Duration:</RL.TextField>
           <RL.InputNumber min={0} max={10} step={0.5} value={durationState ?? 0}
+                          disabled={skipDuration}
                           onBlur={() => {
                             onChange()
                           }}
                           onChange={(newDuration) => {
-                            setDuration(newDuration ?? 0)
+                            let next = newDuration ?? 0
+                            setDuration(next)
+                            if (next > 0) {
+                              lastDurationRef.current = next
+                            }
                           }}/>
         </RL.TextFieldRow>
-
+        <RL.SkipRow>
+          <RL.SkipCheckbox
+            checked={skipDelay}
+            onChange={(e) => onSkipDelayChange(e.target.checked)}
+          >
+            Skip delay
+          </RL.SkipCheckbox>
+        </RL.SkipRow>
+        <RL.SkipRow>
+          <RL.SkipCheckbox
+            checked={skipDuration}
+            onChange={(e) => onSkipDurationChange(e.target.checked)}
+          >
+            Skip duration
+          </RL.SkipCheckbox>
+        </RL.SkipRow>
       </RL.TextFieldWrapper>)}
 
     </RL.ButtonsWrapper>
@@ -324,12 +397,19 @@ ZoomRegion.displayName = 'ZoomRegion'
 const RL = {
   InputNumber: styled(InputNumber)`
     &&&& {
-      width: 55px;
-      height: 30px;
-      margin: 5px 0px;
+      width: 68px;
+      height: 34px;
+      margin: 4px 0;
       z-index: 3;
-      background: transparent;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 6px;
       color: #f9f9f9;
+    }
+
+    &&&&.ant-input-number-disabled {
+      opacity: 0.55;
+      background: rgba(0, 0, 0, 0.18);
     }
 
     .ant-input-number-handler-wrap {
@@ -349,59 +429,115 @@ const RL = {
     }
 
     .ant-input-number-input {
-      padding: 0px 5px;
+      padding: 0 8px;
+      height: 34px;
+      font-size: 14px;
       color: white !important;
     }
   `,
   TextField: styled.p`
-    text-align: center;
-    margin: 0px 15px;
-    font-size: 1em;
-    line-height: 2em;
+    text-align: left;
+    margin: 0 10px 0 0;
+    font-size: 14px;
+    line-height: 34px;
     color: #f9f9f9;
     font-weight: 550;
     font-family: ${Colors.fontFamily};
+    min-width: 72px;
   `,
   TextFieldWrapper: styled.div`
     &&&& {
       background: #1070ff;
-      padding: 0px 5px;
-      border-radius: 5px;
-      width: 170px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      width: 210px;
       height: auto;
       z-index: 3;
       margin-left: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
     }
   `,
   TextFieldRow: styled.div`
     display: flex;
-    align-content: center;
+    align-items: center;
     justify-content: space-between;
+    margin-bottom: 4px;
+  `,
+  SkipRow: styled.div`
+    display: flex;
+    align-items: center;
+    margin-top: 6px;
+  `,
+  SkipCheckbox: styled(Checkbox)`
+    && {
+      color: #f9f9f9;
+      font-family: ${Colors.fontFamily};
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    && .ant-checkbox {
+      top: 0;
+    }
+
+    && .ant-checkbox-inner {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border-color: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    && .ant-checkbox-checked .ant-checkbox-inner {
+      background: #fff;
+      border-color: #fff;
+    }
+
+    && .ant-checkbox-checked .ant-checkbox-inner::after {
+      border-color: #1070ff;
+    }
+
+    && .ant-checkbox + span {
+      padding-right: 0;
+      padding-left: 8px;
+      color: #f9f9f9;
+    }
+
+    &&:hover .ant-checkbox-inner {
+      border-color: #fff;
+    }
   `,
   ButtonsWrapper: styled.div`
     position: absolute;
     // sit inside the box so parent overflow can't clip the controls
     bottom: 8px;
-    left: 0;
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-end;
     flex-wrap: wrap;
-    gap: 6px;
-    width: 100%;
+    gap: 8px;
+    width: max-content;
+    max-width: calc(100% - 16px);
     height: auto;
     z-index: 4;
     pointer-events: auto;
   `,
   ButtonText: styled.p`
     text-align: center;
-    margin: 0px 15px;
-    font-size: 1em;
+    margin: 0;
+    font-size: 13px;
     color: white;
-    //font-weight: 550;
     font-family: ${Colors.fontFamily};
-
+  `,
+  ActionColumn: styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    pointer-events: auto;
   `,
   PreviewButton: styled(Button)(props => ({
 
@@ -409,13 +545,14 @@ const RL = {
     textAlign: 'center',
     display: 'flex',
     border: `solid 1px ${Colors.primaryColor}`,
-    height: '30px',
-    width: '110px',
-    borderRadius: '5px',
+    height: '34px',
+    width: '120px',
+    borderRadius: '6px',
     justifyContent: 'center',
     alignItems: 'center',
     boxShadow: '0 2px 5px rgb(0 0 0 / 5%)',
     cursor: 'pointer',
+    pointerEvents: 'auto',
 
     '&:hover': {
       border: `solid 1px #dae3f2`,
@@ -434,6 +571,41 @@ const RL = {
       height: '1.5em'
     },
   })),
+  MoveButton: styled(Button)`
+    &&& {
+      background: ${Colors.primaryColor};
+      text-align: center;
+      display: flex;
+      border: solid 1px ${Colors.primaryColor};
+      height: 34px;
+      width: 120px;
+      border-radius: 6px;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 5px rgb(0 0 0 / 5%);
+      cursor: grab;
+      pointer-events: auto;
+      color: white;
+    }
+
+    &&&:hover,
+    &&&:active,
+    &&&:focus {
+      border: solid 1px #dae3f2;
+      background: ${Colors.primaryColor} !important;
+      color: white;
+    }
+
+    &&&:active {
+      cursor: grabbing;
+    }
+
+    && .anticon {
+      font-size: 15px;
+      color: white;
+    }
+  `,
   Wrapper: styled.div`
     width: 100%;
     height: 100%;
@@ -452,16 +624,12 @@ const RL = {
     display: inline-block;
     top: 0px;
     left: 0px;
-
-
-    cursor: move;
-
+    /* Hollow: clicks pass through the interior to content underneath */
+    pointer-events: none !important;
+    cursor: default;
     z-index: 3;
-    //box-shadow: rgba(17, 24, 39, 0.5) 0px 0px 0px 100vmax;
     box-sizing: border-box;
-
     border: 2px solid ${Colors.primaryColor};
-
   `,
   InnerBox: styled.div`
     position: absolute;
@@ -470,35 +638,38 @@ const RL = {
     display: inline-block;
     top: 0px;
     left: 0px;
-    //cursor: move;
-
     width: 100%;
     height: 100%;
+    pointer-events: none;
+    cursor: default;
   `,
   LeftLine: styled.div`
     position: absolute;
     height: 100%;
     width: 10px;
     left: -5px;
-
+    pointer-events: none;
   `,
   RightLine: styled.div`
     position: absolute;
     height: 100%;
     width: 10px;
     right: -5px;
+    pointer-events: none;
   `,
   BottomLine: styled.div`
     position: absolute;
     height: 10px;
     width: 100%;
     bottom: -5px;
+    pointer-events: none;
   `,
   TopLine: styled.div`
     position: absolute;
     height: 10px;
     width: 100%;
     top: -5px;
+    pointer-events: none;
   `,
   LeftTopCorner: styled.div`
     position: absolute;
@@ -510,11 +681,9 @@ const RL = {
     cursor: nw-resize;
     border-width: 2px;
     border-radius: 9999px;
-
+    pointer-events: auto;
     background-color: ${Colors.primaryColor};
     border: 2px solid white;
-
-  }
   `,
   LeftBottomCorner: styled.div`
     position: absolute;
@@ -524,15 +693,12 @@ const RL = {
     left: -10px;
     bottom: -10px;
     cursor: sw-resize;
-
     border-width: 2px;
     border-radius: 9999px;
-
+    pointer-events: auto;
     background-color: ${Colors.primaryColor};
     border: 2px solid white;
   `,
-
-
   RightTopCorner: styled.div`
     position: absolute;
     user-select: none;
@@ -541,15 +707,39 @@ const RL = {
     right: -10px;
     top: -10px;
     cursor: ne-resize;
-
     border-width: 2px;
     border-radius: 9999px;
-
+    pointer-events: auto;
     background-color: ${Colors.primaryColor};
     border: 2px solid white;
   `,
-  RightBottomCorner: styled.div`
+  CloseButton: styled.button`
+    position: absolute;
+    right: -28px;
+    top: -36px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+    border-radius: 9999px;
+    border: 2px solid white;
+    background-color: transparent;
+    color: white;
+    line-height: 1;
+    box-sizing: border-box;
+    pointer-events: auto;
 
+    && .anticon {
+      font-size: 11px;
+      color: white;
+    }
+  `,
+  RightBottomCorner: styled.div`
     position: absolute;
     user-select: none;
     width: 20px;
@@ -557,10 +747,9 @@ const RL = {
     right: -10px;
     bottom: -10px;
     cursor: se-resize;
-
     border-width: 2px;
     border-radius: 9999px;
-
+    pointer-events: auto;
     background-color: ${Colors.primaryColor};
     border: 2px solid white;
   `
