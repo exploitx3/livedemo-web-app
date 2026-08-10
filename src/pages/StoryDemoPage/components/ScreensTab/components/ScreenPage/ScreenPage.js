@@ -53,6 +53,8 @@ const ScreenPage = ({
   let [addStepIsLoading, setAddStepIsLoading] = useState(false)
 
   let [isScreenOpen, setIsScreenOpen] = useState(false)
+  // last screen must stay open — add-step/transition UI lives in the open body
+  const isOpen = screenIndex === screens.length - 1 || isScreenOpen
   let [isTextEditing, setIsTextEditing] = useState(false)
   let [showTransition, setShowTransition] = useState(false)
   let [isNavUpdating, setIsNavUpdating] = useState(false)
@@ -500,7 +502,7 @@ const ScreenPage = ({
       key: 'steps',
       label: 'Steps',
       onClick: () => {
-        if(!isScreenOpen) {
+        if(!isOpen) {
           setIsScreenOpen(true)
         }
         setShowTransition(false)
@@ -510,7 +512,7 @@ const ScreenPage = ({
       key: 'transition',
       label: 'Transition',
       onClick: () => {
-        if(!isScreenOpen) {
+        if(!isOpen) {
           setIsScreenOpen(true)
         }
         setShowTransition(true)
@@ -618,7 +620,7 @@ const ScreenPage = ({
             >
 
               <SC.ScreenWrapper>
-                <SC.ScreenHeader isOpen={isScreenOpen}>
+                <SC.ScreenHeader isOpen={isOpen}>
                   <SC.DragWrapper {...provided.dragHandleProps}>
                     <SC.DragIcon width="12" height="13" viewBox="0 0 12 13" fill="none"
                                  xmlns="http://www.w3.org/2000/svg">
@@ -630,6 +632,8 @@ const ScreenPage = ({
                   <SC.HeaderMain onClick={() => {
                     changeStep(calculatedStepIndex)
 
+                    // last screen stays open so add controls remain visible
+                    if (screenIndex === screens.length - 1) return
                     if (calculatedStepIndex === previousStepIndex || !isScreenOpen) {
                       setIsScreenOpen(!isScreenOpen)
                     }
@@ -687,7 +691,7 @@ const ScreenPage = ({
                   </Dropdown>
 
                 </SC.ScreenHeader>
-                {isScreenOpen ?
+                {isOpen ?
                   showTransition ? renderAllTransitions(isNavUpdating, currentScreen.customTransitions) : (
 
                     <React.Fragment>
@@ -765,84 +769,33 @@ const ScreenPage = ({
 
                           onPointerClick={() => {
                             setAddStepIsLoading(true)
-                            let newStepIndex = getStepIndex(screenInternal.steps, screenInternal.steps[screenInternal.steps.length - 1]) + 1
+                            let newStepIndex = screenInternal.steps.length
 
                             return actions.addStep(newStepIndex, StepViewTypes.POINTER, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
-                              .then(newStepData => {
-                                let newScreen = {...screenInternal}
-
-                                let prevStepData = newScreen.steps[newScreen.steps.length - 1]
-                                newScreen.steps.push(newStepData)
-                                setScreenInternal(newScreen)
-
-                                // window.postMessage({
-                                //   type: 'add_step',
-                                //   newIndex: calculatedStepIndex,
-                                //   stepData: newStepData,
-                                //   prevStepData: prevStepData,
-                                //   screenType: ScreenTypes.SCREEN_PAGE,
-                                //   screenId: newScreen._id,
-                                //   screenWidth: newScreen.width,
-                                //   screenHeight: newScreen.height
-                                // }, '*')
-
+                              .then(() => {
                                 setAddStepIsLoading(false)
+                                setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
                               })
                           }}
 
                           onHotspotClick={() => {
-                            let newStepIndex = getStepIndex(screenInternal.steps, screenInternal.steps[screenInternal.steps.length - 1]) + 1
+                            setAddStepIsLoading(true)
+                            let newStepIndex = screenInternal.steps.length
                             return actions.addStep(newStepIndex, StepViewTypes.HOTSPOT, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
-                              .then(newStepData => {
-                                setAddStepIsLoading(true)
-
-                                let newScreen = {...screenInternal}
-
-                                let prevStepData = newScreen.steps[newScreen.steps.length - 1]
-                                newScreen.steps.push(newStepData)
-                                setScreenInternal(newScreen)
-
-
-                                // window.postMessage({
-                                //   type: 'add_step',
-                                //   newIndex: calculatedStepIndex,
-                                //   stepData: newStepData,
-                                //   prevStepData: prevStepData,
-                                //   screenType: ScreenTypes.SCREEN_PAGE,
-                                //   screenId: newScreen._id,
-                                //   screenWidth: newScreen.width,
-                                //   screenHeight: newScreen.height
-                                // }, '*')
-
+                              .then(() => {
                                 setAddStepIsLoading(false)
+                                setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
                               })
                           }}
 
                           onPopupClick={() => {
                             setAddStepIsLoading(true)
 
-                            let newStepIndex = getStepIndex(screenInternal.steps, screenInternal.steps[screenInternal.steps.length - 1]) + 1
+                            let newStepIndex = screenInternal.steps.length
                             return actions.addStep(newStepIndex, StepViewTypes.POPUP, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
-                              .then(newStepData => {
-                                let newScreen = {...screenInternal}
-
-                                let prevStepData = newScreen.steps[newScreen.steps.length - 1]
-                                newScreen.steps.push(newStepData)
-                                setScreenInternal(newScreen)
-
+                              .then(() => {
                                 setAddStepIsLoading(false)
-
-                                // window.postMessage({
-                                //   type: 'add_step',
-                                //   newIndex: calculatedStepIndex,
-                                //   stepData: newStepData,
-                                //   prevStepData: prevStepData,
-                                //   screenType: ScreenTypes.SCREEN_PAGE,
-                                //   screenId: newScreen._id,
-                                //   screenWidth: newScreen.width,
-                                //   screenHeight: newScreen.height
-                                // }, '*')
-
+                                setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
                               })
                           }}
 

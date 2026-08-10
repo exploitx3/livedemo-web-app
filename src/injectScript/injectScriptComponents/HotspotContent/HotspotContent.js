@@ -526,7 +526,6 @@ const HT = {
             max-width: 750px !important;
             border-radius: 6px;
             min-width: 220px;
-
         }
 
 

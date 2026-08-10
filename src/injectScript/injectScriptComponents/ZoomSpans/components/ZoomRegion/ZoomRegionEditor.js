@@ -267,13 +267,21 @@ const ZoomRegion = React.forwardRef(({
     <RL.LeftBottomCorner onMouseDown={resizeAdd(resizeTypes.bottomLeft)}/>
     <RL.RightTopCorner onMouseDown={resizeAdd(resizeTypes.topRight)}></RL.RightTopCorner>
     <RL.RightBottomCorner onMouseDown={resizeAdd(resizeTypes.bottomRight)}></RL.RightBottomCorner>
-    <RL.ButtonsWrapper>
+    <RL.ButtonsWrapper
+      onMouseDown={(e) => {
+        // keep clicks on controls from starting a region drag
+        e.stopPropagation()
+      }}
+    >
       <RL.PreviewButton
         onClick={() => {
+          // Match ZoomSpans (preview) / scaleMain: left/top are content coords
+          // (relative to Main), not wrapper — subtract omniBar from top.
           let refCordinates = ref.current.getBoundingClientRect()
           let scaleValue = innerWidth / refCordinates.width
           let left = Math.max(refCordinates.left - wrapperLeftPos, 0)
-          let top = Math.max((refCordinates.top) - wrapperTopPos, 0)
+          let top = Math.max(refCordinates.top - wrapperTopPos - omniBarHeight, 0)
+          top = Math.min(top, innerHeight)
 
           scaleMain(scaleValue, left, top)
 
@@ -372,13 +380,19 @@ const RL = {
   `,
   ButtonsWrapper: styled.div`
     position: absolute;
-    bottom: -60px;
+    // sit inside the box so parent overflow can't clip the controls
+    bottom: 8px;
+    left: 0;
+    right: 0;
     display: flex;
     justify-content: center;
-    align-items: start;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
     width: 100%;
-    height: 50px;
-
+    height: auto;
+    z-index: 4;
+    pointer-events: auto;
   `,
   ButtonText: styled.p`
     text-align: center;
@@ -431,7 +445,8 @@ const RL = {
   `,
   Box: styled.div`
     position: absolute;
-    user-select: auto;
+    user-select: none;
+    -webkit-user-select: none;
     width: ${({$boxWidth}) => $boxWidth}px;
     height: ${({$boxHeight}) => $boxHeight}px;
     display: inline-block;
@@ -450,7 +465,8 @@ const RL = {
   `,
   InnerBox: styled.div`
     position: absolute;
-    user-select: auto;
+    user-select: none;
+    -webkit-user-select: none;
     display: inline-block;
     top: 0px;
     left: 0px;

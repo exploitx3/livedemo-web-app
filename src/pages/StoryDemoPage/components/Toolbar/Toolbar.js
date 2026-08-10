@@ -1,8 +1,8 @@
-import React, {useEffect, useState} from 'react'
-import {bindActionCreators} from "redux";
-import {connect} from 'react-redux'
+import React, { useEffect, useState } from 'react'
+import { bindActionCreators } from "redux";
+import { connect } from 'react-redux'
 import styled from 'styled-components'
-import {MdAddPhotoAlternate, MdOutlineVideoLibrary, MdZoomIn} from 'react-icons/md'
+import { MdAddPhotoAlternate, MdOutlineVideoLibrary, MdZoomIn } from 'react-icons/md'
 import 'tippy.js/dist/tippy.css' // optional
 import 'tippy.js/animations/shift-away.css'
 import Tippy from '@tippyjs/react'
@@ -17,36 +17,36 @@ import ScreenTypes from '../../../../constants/ScreenTypes'
 import Colors from "../../../../constants/mainColors";
 import FrameToScreenToolbarButton from './FrameToScreenToolbarButton'
 
-function Tip({children, ...props}) {
+function Tip({ children, ...props }) {
 
   return <TB.Tippy {...props}>{children}</TB.Tippy>
 }
 
 const IconWrapper = React.forwardRef(function (props, ref) {
 
-  return <TB.LibraryIcon/>
+  return <TB.LibraryIcon />
 
 })
 
 const Toolbar = ({
-                   workspaceId,
-                   storyDemoId,
-                   screenId,
-                   authData,
-                   isPage,
-                   isVideoOrScreenshot,
-                   innerWidth,
-                   innerHeight,
-                   onLibraryClick,
-                   onAIEnhanceClick,
-                   afterScreenUpload,
-                   isZoomEnabled,
-                   setIsZoomEnabled,
-                   iframeRef,
-                   currentStep,
-                   storyDemoActions,
-                   onFrameToScreenSuccess,
-                 }) => {
+  workspaceId,
+  storyDemoId,
+  screenId,
+  authData,
+  isPage,
+  isVideoOrScreenshot,
+  innerWidth,
+  innerHeight,
+  onLibraryClick,
+  onAIEnhanceClick,
+  afterScreenUpload,
+  isZoomEnabled,
+  setIsZoomEnabled,
+  iframeRef,
+  currentStep,
+  storyDemoActions,
+  onFrameToScreenSuccess,
+}) => {
   const [isTextEditing, setIsTextEditing] = useState(false)
 
   // Currently if there are no Steps I cannot add a ZoomSpan,
@@ -145,25 +145,25 @@ const Toolbar = ({
 
   function removeZoomSpan() {
     // if(currentStep.screenType === ScreenTypes.SCREEN_VIDEO) {
-      // storyDemoActions.deleteZoomSpan(
-      //   workspaceId,
-      //   storyDemoId,
-      //   screenId,
-      //   authData.token
-      // )
+    // storyDemoActions.deleteZoomSpan(
+    //   workspaceId,
+    //   storyDemoId,
+    //   screenId,
+    //   authData.token
+    // )
     // } else {
-      storyDemoActions.deleteStepZoomSpan(
-        workspaceId,
-        storyDemoId,
-        screenId,
-        currentStep._id,
-        currentStep?.zoomSpan?._id,
-        authData.token
-      )
+    storyDemoActions.deleteStepZoomSpan(
+      workspaceId,
+      storyDemoId,
+      screenId,
+      currentStep._id,
+      currentStep?.zoomSpan?._id,
+      authData.token
+    )
     // }
   }
   function addZoomSpan() {
-    if(currentStep.screenType === ScreenTypes.SCREEN_VIDEO) {
+    if (currentStep.screenType === ScreenTypes.SCREEN_VIDEO) {
       storyDemoActions.addZoomSpan(
         workspaceId,
         storyDemoId,
@@ -255,11 +255,11 @@ const Toolbar = ({
             isDisabled={!addZoomVisible}
           >
             <TB.ToolbarIcon>
-              <TB.Toolbar__ZoomIcon/>
+              <TB.Toolbar__ZoomIcon />
             </TB.ToolbarIcon>
             <TB.ToolbarText onClick={() => {
               if (!addZoomVisible) return
-              if(stepZoomSpanExists) {
+              if (stepZoomSpanExists) {
                 removeZoomSpan()
               } else {
                 addZoomSpan()
@@ -273,14 +273,14 @@ const Toolbar = ({
           }}
         >
           <TB.ToolbarIcon>
-            <TB.Toolbar__LibraryIcon/>
+            <TB.Toolbar__LibraryIcon />
           </TB.ToolbarIcon>
           <TB.ToolbarText>Show Library</TB.ToolbarText>
         </TB.ToolbarButton>
         <Upload {...uploadProps}>
           <TB.ToolbarButton>
             <TB.ToolbarIcon>
-              <TB.Toolbar__UploadIcon/>
+              <TB.Toolbar__UploadIcon />
             </TB.ToolbarIcon>
             <TB.ToolbarText>Upload</TB.ToolbarText>
           </TB.ToolbarButton>
@@ -459,13 +459,13 @@ const TB = {
 
     border-radius: 4px;
 
-    cursor: ${({isDisabled}) => isDisabled ? 'not-allowed' : 'pointer'};
+    cursor: ${({ isDisabled }) => isDisabled ? 'not-allowed' : 'pointer'};
 
     svg, span > i > svg {
-      fill: ${({isDisabled}) => isDisabled ? '#ccc' : '#111'} !important;
+      fill: ${({ isDisabled }) => isDisabled ? '#ccc' : '#111'} !important;
     }
 
-    color: ${({isDisabled}) => isDisabled ? '#ccc' : '#111'};
+    color: ${({ isDisabled }) => isDisabled ? '#ccc' : '#111'};
 
     &:hover {
       background: #F3F4F6;
@@ -493,20 +493,20 @@ const TB = {
       width: 100%;
       height: 100%;
       fill: ${Colors.primaryColor};
-        //fill: ${({isDisabled}) => isDisabled ? '#000' : '#111'};
+        //fill: ${({ isDisabled }) => isDisabled ? '#000' : '#111'};
     }
 
-      //cursor: ${({isDisabled}) => isDisabled ? 'not-allowed' : 'pointer'};
+      //cursor: ${({ isDisabled }) => isDisabled ? 'not-allowed' : 'pointer'};
 
   `,
   Toolbar__ZoomIcon: styled(MdZoomIn)`
     height: 15px;
     width: 15px;
 
-      // fill: ${({isDisabled}) => isDisabled ? '#ccc' : '#fff'};
+      // fill: ${({ isDisabled }) => isDisabled ? '#ccc' : '#fff'};
     fill: ${Colors.primaryColor}
 
-      // cursor: ${({isDisabled}) => isDisabled ? 'not-allowed' : 'pointer'};
+      // cursor: ${({ isDisabled }) => isDisabled ? 'not-allowed' : 'pointer'};
 
   `,
   Toolbar__StopEditIcon: styled(Icon)`
@@ -516,7 +516,7 @@ const TB = {
     && svg {
       width: 100%;
       height: 100%;
-      fill: ${({isDisabled}) => isDisabled ? '#ccc' : '#fff'};
+      fill: ${({ isDisabled }) => isDisabled ? '#ccc' : '#fff'};
     }
 
   `,
@@ -536,6 +536,8 @@ const TB = {
   `,
   ToolbarText: styled.div`
     font-family: ${Colors.fontFamily};
+    text-overflow: ellipsis;
+    white-space: nowrap;
   `,
   Wrapper: styled.div`
     display: flex;
@@ -580,10 +582,10 @@ const TB = {
     && svg {
       width: 100%;
       height: 100%;
-      fill: ${({isDisabled}) => isDisabled ? '#ccc' : '#fff'};
+      fill: ${({ isDisabled }) => isDisabled ? '#ccc' : '#fff'};
     }
 
-    cursor: ${({isDisabled}) => isDisabled ? 'not-allowed' : 'pointer'};
+    cursor: ${({ isDisabled }) => isDisabled ? 'not-allowed' : 'pointer'};
 
     &:hover {
       transform: scale(1.1);
@@ -596,19 +598,19 @@ const TB = {
     && svg {
       width: 100%;
       height: 100%;
-      fill: ${({isDisabled}) => isDisabled ? '#ccc' : '#fff'};
+      fill: ${({ isDisabled }) => isDisabled ? '#ccc' : '#fff'};
     }
 
-    cursor: ${({isDisabled}) => isDisabled ? 'not-allowed' : 'pointer'};
+    cursor: ${({ isDisabled }) => isDisabled ? 'not-allowed' : 'pointer'};
 
     &:hover {
       transform: scale(1.1);
     }
   `,
   ZoomIcon: styled(MdZoomIn)`
-    fill: ${({isDisabled}) => isDisabled ? '#ccc' : '#fff'};
+    fill: ${({ isDisabled }) => isDisabled ? '#ccc' : '#fff'};
 
-    cursor: ${({isDisabled}) => isDisabled ? 'not-allowed' : 'pointer'};
+    cursor: ${({ isDisabled }) => isDisabled ? 'not-allowed' : 'pointer'};
 
   `,
   StopEditIcon: styled(Icon)`
@@ -618,7 +620,7 @@ const TB = {
     && svg {
       width: 100%;
       height: 100%;
-      fill: ${({isDisabled}) => isDisabled ? '#ccc' : '#fff'};
+      fill: ${({ isDisabled }) => isDisabled ? '#ccc' : '#fff'};
     }
 
     &:hover {
@@ -653,4 +655,4 @@ function mapDispatchToProps(dispatch) {
   }
 }
 
-export default connect(null,mapDispatchToProps)(Toolbar)
+export default connect(null, mapDispatchToProps)(Toolbar)

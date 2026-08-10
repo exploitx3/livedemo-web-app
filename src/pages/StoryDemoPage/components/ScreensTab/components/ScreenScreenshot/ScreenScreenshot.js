@@ -59,6 +59,8 @@ const ScreenScreenshot = ({
   let [addTransitionIsLoading, setAddTransitionIsLoading] = useState(false)
 
   let [isScreenOpen, setIsScreenOpen] = useState(false)
+  // last screen must stay open — add-step/transition UI lives in the open body
+  const isOpen = screenIndex === screens.length - 1 || isScreenOpen
   let [isTextEditing, setIsTextEditing] = useState(false)
 
   let [view, setView] = useState(VIEWS.STEPS)
@@ -588,39 +590,10 @@ const ScreenScreenshot = ({
             setAddStepIsLoading(true)
 
             return actions.addStep(newStepIndex, StepViewTypes.POINTER, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
-              .then(newStepData => {
-
-                let newScreen = {...screenInternal}
-
-                let prevStepData = newScreen.steps[newScreen.steps.length - 1]
-                newScreen.steps.push(newStepData)
-
-                let newScreens = [...screens].map(scr => {
-                  if (scr._id === newScreen._id) {
-                    return newScreen
-                  }
-                  return scr
-                })
-
-                // window.postMessage({
-                //   type: 'changeStep',
-                //   stepNumber: calculatedStepIndex + 1,
-                //   // prevStepData: prevStepData
-                // }, '*')
-
-                // window.postMessage({
-                //   type: 'add_step',
-                //   newIndex: calculatedStepIndex,
-                //   stepData: newStepData,
-                //   prevStepData: prevStepData,
-                //   screenType: ScreenTypes.SCREEN_SCREENSHOT,
-                //   screenId: newScreen._id,
-                //   screenWidth: newScreen.width,
-                //   screenHeight: newScreen.height
-                // }, '*')
+              .then(() => {
                 setAddStepIsLoading(false)
-                changeStep(calculatedStepIndex + 1)  // navigate to new step
-
+                // defer so Walkthrough gets the new step from redux before changeStep
+                setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
               })
           }}
 
@@ -629,40 +602,9 @@ const ScreenScreenshot = ({
 
             let newStepIndex = screen.steps.length
             return actions.addStep(newStepIndex, StepViewTypes.HOTSPOT, storyDemo._id, screen._id, storyDemo.workspaceId, authData.token)
-              .then(newStepData => {
-                let newScreen = {...screen}
-
-                let prevStepData = newScreen.steps[newScreen.steps.length - 1]
-                newScreen.steps.push(newStepData)
-
-                let newScreens = [...screens].map(scr => {
-                  if (scr._id === newScreen._id) {
-                    return newScreen
-                  }
-                  return scr
-                })
-
-
-                // window.postMessage({
-                //   type: 'changeStep',
-                //   stepNumber: calculatedStepIndex + 1,
-                //   // prevStepData: prevStepData
-                // }, '*')
-
-                // window.postMessage({
-                //   type: 'add_step',
-                //   newIndex: calculatedStepIndex,
-                //   stepData: newStepData,
-                //   prevStepData: prevStepData,
-                //   screenType: ScreenTypes.SCREEN_SCREENSHOT,
-                //   screenId: newScreen._id,
-                //   screenWidth: newScreen.width,
-                //   screenHeight: newScreen.height
-                // }, '*')
+              .then(() => {
                 setAddStepIsLoading(false)
-                changeStep(calculatedStepIndex + 1)  // navigate to new step
-
-
+                setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
               })
           }}
 
@@ -671,41 +613,9 @@ const ScreenScreenshot = ({
 
             let newStepIndex = screen.steps.length
             return actions.addStep(newStepIndex, StepViewTypes.POPUP, storyDemo._id, screen._id, storyDemo.workspaceId, authData.token)
-              .then(newStepData => {
-                let newScreen = {...screen}
-
-                let prevStepData = newScreen.steps[newScreen.steps.length - 1]
-                newScreen.steps.push(newStepData)
-
-                let newScreens = [...screens].map(scr => {
-                  if (scr._id === newScreen._id) {
-                    return newScreen
-                  }
-                  return scr
-                })
-
-
-                // window.postMessage({
-                //   type: 'changeStep',
-                //   stepNumber: calculatedStepIndex + 1,
-                //   // prevStepData: prevStepData
-                // }, '*')
-
-                // window.postMessage({
-                //   type: 'add_step',
-                //   newIndex: calculatedStepIndex,
-                //   stepData: newStepData,
-                //   prevStepData: prevStepData,
-                //   screenType: ScreenTypes.SCREEN_SCREENSHOT,
-                //   screenId: newScreen._id,
-                //   screenWidth: newScreen.width,
-                //   screenHeight: newScreen.height
-                // }, '*')
-
+              .then(() => {
                 setAddStepIsLoading(false)
-                changeStep(calculatedStepIndex + 1)  // navigate to new step
-
-
+                setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
               })
           }}
 
@@ -721,7 +631,7 @@ const ScreenScreenshot = ({
       key: 'steps',
       label: 'Steps',
       onClick: function () {
-        if (!isScreenOpen) {
+        if (!isOpen) {
           setIsScreenOpen(true)
         }
         setView(VIEWS.STEPS)
@@ -731,7 +641,7 @@ const ScreenScreenshot = ({
       key: 'transitions',
       label: 'Transitions',
       onClick: function () {
-        if (!isScreenOpen) {
+        if (!isOpen) {
           setIsScreenOpen(true)
         }
         setView(VIEWS.TRANSITIONS)
@@ -814,7 +724,7 @@ const ScreenScreenshot = ({
             >
 
               <SC.ScreenWrapper>
-                <SC.ScreenHeader isOpen={isScreenOpen}>
+                <SC.ScreenHeader isOpen={isOpen}>
                   <SC.DragWrapper {...provided.dragHandleProps}>
                     <SC.DragIcon width="12" height="13" viewBox="0 0 12 13" fill="none"
                                  xmlns="http://www.w3.org/2000/svg">
@@ -826,6 +736,8 @@ const ScreenScreenshot = ({
                   <SC.HeaderMain onClick={() => {
                     changeStep(calculatedStepIndex)
 
+                    // last screen stays open so add controls remain visible
+                    if (screenIndex === screens.length - 1) return
                     if (calculatedStepIndex === previousStepIndex || !isScreenOpen) {
                       setIsScreenOpen(!isScreenOpen)
                     }
@@ -878,7 +790,7 @@ const ScreenScreenshot = ({
                   </Dropdown>
 
                 </SC.ScreenHeader>
-                {isScreenOpen ?
+                {isOpen ?
                   (view === VIEWS.TRANSITIONS ?
                     renderAllTransitions(screen, screens)
                     : renderStepsView(screen, screens))

@@ -716,6 +716,9 @@ function WalkthroughComponent({
     newTop: 0,
     scaleValueX: 1
   })
+  // Main's offset inside the wrapper at identity (scale 1). Used when already
+  // zoomed so we don't remeasure a transformed getBoundingClientRect.
+  const unscaledMainOffsetRef = useRef({ left: 0, top: 0 })
 
 
   // let animationClassStop = 'cursor-click-animate-stop'
@@ -2226,8 +2229,9 @@ function WalkthroughComponent({
 
     clearAutoCursor(newStep)
 
-    // Scale main if changing screens or no zoom span
-    if (step.screenId !== newStep.screenId || !newStep.zoomSpan) {
+    // Zoom out only when the next step has nothing to hand off to.
+    // If it has a zoomSpan, keep the current scale so scaleMain can animate zoom → zoom.
+    if (!newStep.zoomSpan) {
       scaleMain(1, 0, 0)
     }
 
@@ -2694,25 +2698,35 @@ function WalkthroughComponent({
       return
     }
 
-    mainRefRect.current = mainRef.current.getBoundingClientRect()
+    const el = mainRef.current
     wrapperRefRect.current = wrapperRef.current.getBoundingClientRect()
+
+    // Zoom math is always relative to identity layout. If we're already scaled,
+    // reuse the cached unscaled offset instead of reading a transformed rect.
+    let mainOffsetLeft
+    let mainOffsetTop
+    if (isScaledRef.current) {
+      mainOffsetLeft = unscaledMainOffsetRef.current.left
+      mainOffsetTop = unscaledMainOffsetRef.current.top
+    } else {
+      mainRefRect.current = el.getBoundingClientRect()
+      mainOffsetLeft = mainRefRect.current.left - wrapperRefRect.current.left
+      // Exclude omniBar height from top calculation - scaleMain should not account for omniBar
+      mainOffsetTop = (mainRefRect.current.top - wrapperRefRect.current.top) - omniBarHeight
+      unscaledMainOffsetRef.current = { left: mainOffsetLeft, top: mainOffsetTop }
+    }
 
     top = Math.min(top, wrapperRefRect.current.height)
     left = Math.min(left, wrapperRefRect.current.width)
 
-
-    let mainRefRectScaledCalcLeft = mainRefRect.current.left - wrapperRefRect.current.left
-    // Exclude omniBar height from top calculation - scaleMain should not account for omniBar
-    let mainRefRectScaledCalcTop = (mainRefRect.current.top - wrapperRefRect.current.top) - omniBarHeight
-
-    let newLeft = (left !== 0 ? left - mainRefRectScaledCalcLeft : 0) * scaleValueX * -1
-    let newTop = (top !== 0 ? top - (mainRefRectScaledCalcTop) : 0) * scaleValueX * -1
+    let newLeft = (left !== 0 ? left - mainOffsetLeft : 0) * scaleValueX * -1
+    let newTop = (top !== 0 ? top - mainOffsetTop : 0) * scaleValueX * -1
 
     // Make sure that main element never goes out of the wrapper
     // let wrapperMainDifference = wrapperRefRect.bottom - mainRefRect.
 
 
-    let initialLeft = (left !== 0 ? left - mainRefRectScaledCalcLeft : 0) * scaleValueX * -1
+    let initialLeft = (left !== 0 ? left - mainOffsetLeft : 0) * scaleValueX * -1
     let modLeft = -initialLeft + (wrapperRefRect.current.width - ((wrapperRefRect.current.width * scaleValueX) - initialLeft))
     // Make sure the left never goes out of bounds of the wrapper
     newLeft = Math.max(
@@ -2721,12 +2735,12 @@ function WalkthroughComponent({
     )
 
     // Apply similar constraint for top to prevent going out of bounds vertically
-    let initialTop = (top !== 0 ? top - (mainRefRectScaledCalcTop) : 0) * scaleValueX * -1
+    let initialTop = (top !== 0 ? top - mainOffsetTop : 0) * scaleValueX * -1
     // Calculate the maximum allowed top value to prevent going out of bounds at the top
     // The top bound ensures the element's top edge doesn't go above the wrapper's top (position 0)
-    // When scaled, we need to ensure: mainRefRectScaledCalcTop + newTop/scaleValueX >= 0
-    // Solving for newTop: newTop >= -mainRefRectScaledCalcTop * scaleValueX
-    let topBound = -mainRefRectScaledCalcTop * scaleValueX
+    // When scaled, we need to ensure: mainOffsetTop + newTop/scaleValueX >= 0
+    // Solving for newTop: newTop >= -mainOffsetTop * scaleValueX
+    let topBound = -mainOffsetTop * scaleValueX
     // Make sure the top never goes out of bounds of the wrapper (use Math.min to prevent going above top)
     newTop = Math.min(
       initialTop,
@@ -2734,10 +2748,9 @@ function WalkthroughComponent({
     )
 
 
-    let oldStyle = mainRef.current.style.transform
     let newStyle = `translate3d(${newLeft}px, ${newTop}px, 0px) scale(${scaleValueX})`
 
-    mainRef.current.style.transform = newStyle
+    el.style.transform = newStyle
 
     scaleValuesRef.current = {
       newLeft,
@@ -3062,6 +3075,7 @@ function WalkthroughComponent({
           isOverlayEnabled={stepIsOverlayEnabled}
           overlayBackgroundColor={(step && step.view && step.view.popup && step.view.popup.overlayBackgroundColor) || 'rgba(0,0,0,0.65)'}
           isPopup={step && step.view && step.view.viewType === STEP_VIEWS.POPUP}
+          $isInEditor={isInEditor}
         >
 
           {getStepView(storyDemoState, step, prevStep, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled, stepIsOverlayEnabled, isInEditor)}
@@ -3220,7 +3234,9 @@ function WalkthroughComponent({
         </WS.MobileBottomWrapper>
       ) : ''}
 
-      <WS.TooltipElemAnchorsWrapper ref={tooltipElemAnchorsWrapperRef} id={'tooltip-element-visualizer'}
+      <WS.TooltipElemAnchorsWrapper
+        ref={tooltipElemAnchorsWrapperRef}
+        id={'tooltip-element-visualizer'}
         fullWidth={fullWidth}
         fullHeight={fullHeight}
         innerWidth={innerWidth}
@@ -3344,6 +3360,12 @@ const WS = {
 
     border-radius: 20px;
     box-shadow: 0 0 0 1px rgb(17 24 39 / 16%);
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
   }
 
   //height: calc(100% - 65px);
@@ -3381,7 +3403,12 @@ const WS = {
       // width: ${({ fullWidth }) => fullWidth}px;
       // height: ${({ fullHeight }) => fullHeight}px;
     transform-origin: top left;
+    pointer-events: none;
       // transform: scaleX(${(props) => `${props.scalePercentageWidth}`}) scaleY(${(props) => `${props.scalePercentageHeight}`});
+
+    && > * {
+      pointer-events: auto;
+    }
   `,
   OverlayComponent: styled.div`
     width: 100%;
@@ -3409,6 +3436,12 @@ const WS = {
       left: 0;
       top: 0;
       z-index: 998;
+      /* Editor: pass clicks through empty area to ZoomSpans/Regions; children stay clickable */
+      pointer-events: ${({ $isInEditor }) => $isInEditor ? 'none' : 'auto'};
+    }
+
+    && > * {
+      pointer-events: auto;
     }
 
     ${({ isOverlayEnabled, overlayBackgroundColor, isPopup }) => {
@@ -3627,6 +3660,11 @@ const WS = {
     position: fixed;
     top: 0;
     left: 0;
+    pointer-events: none;
+
+    && > * {
+      pointer-events: auto;
+    }
   `,
   ImagesWrapper: styled.div`
     max-width: 100%;

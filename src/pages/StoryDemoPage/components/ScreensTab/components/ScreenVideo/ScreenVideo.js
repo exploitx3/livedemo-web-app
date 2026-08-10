@@ -31,6 +31,8 @@ const ScreenVideo = ({
   const screens = storyDemo && storyDemo.screens ? storyDemo.screens : []
 
   let [isScreenOpen, setIsScreenOpen] = useState(false)
+  // last screen must stay open — add UI lives in the open body
+  const isOpen = screenIndex === screens.length - 1 || isScreenOpen
   let [isTextEditing, setIsTextEditing] = useState(false)
   let [showTransition, setShowTransition] = useState(false)
   let [isNavUpdating, setIsNavUpdating] = useState(false)
@@ -509,7 +511,7 @@ const ScreenVideo = ({
           >
 
             <SC.ScreenWrapper>
-              <SC.ScreenHeader isOpen={isScreenOpen}>
+              <SC.ScreenHeader isOpen={isOpen}>
                 <SC.DragWrapper {...provided.dragHandleProps}>
                   <SC.DragIcon width="12" height="13" viewBox="0 0 12 13" fill="none"
                                xmlns="http://www.w3.org/2000/svg">
@@ -521,6 +523,8 @@ const ScreenVideo = ({
                 <SC.HeaderMain onClick={() => {
                   changeStep(calculatedStepIndex)
 
+                  // last screen stays open so add controls remain visible
+                  if (screenIndex === screens.length - 1) return
                   if (calculatedStepIndex === previousStepIndex || !isScreenOpen) {
                     setIsScreenOpen(!isScreenOpen)
                   }
@@ -573,7 +577,7 @@ const ScreenVideo = ({
                 </Dropdown>
 
               </SC.ScreenHeader>
-              {isScreenOpen ? (
+              {isOpen ? (
                 <SC.ScreenEmptyText>
                   Videos cannot have steps
                 </SC.ScreenEmptyText>

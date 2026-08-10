@@ -461,7 +461,7 @@ const TC = {
   ContentWrapper: styled.div`
     width: 100%;
     overflow-y: auto;
-    max-height: 200px;
+    // max-height: 200px;
     display: block;
     font-size: 1.4vw;
 

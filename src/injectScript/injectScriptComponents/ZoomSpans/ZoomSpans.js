@@ -174,6 +174,13 @@ function ZoomSpans({
             clearTimeout(timer)
         })
 
+        // duration === 0 never auto-rescales; clear flags only so the next
+        // zoom can hand off smoothly (scaleMain measures from identity)
+        zoomSpansRef.current.forEach((zoomSpan) => {
+            zoomSpan.triggered = false
+            zoomSpan.showed = false
+        })
+
         if (currentStep && currentStep.zoomSpans) {
             let newZoomSpans = currentStep.zoomSpans.map(span => {
 
@@ -401,7 +408,6 @@ function ZoomSpans({
         if (!boxRef || !boxRef.current) {
             return
         }
-
 
         let localInnerWidth = innerWidthRef.current
         let localInnerHeight = innerHeightRef.current

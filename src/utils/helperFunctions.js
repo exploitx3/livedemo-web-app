@@ -294,6 +294,13 @@ export const htmlSerialize = (nodes) => {
 
 }
 
+// Enter = new <p>; getLeaf also puts <br /> in empty <p>s — strip those then 1 <br /> per paragraph boundary
+export const htmlSerializeWithLineBreaks = (nodes) => {
+  return htmlSerialize(nodes)
+    .replace(/<p><br\s*\/?><\/p>/gi, '<p></p>')
+    .replace(/<\/p>\s*<p>/gi, '<br />')
+}
+
 const APP_IDS = [
   "dnlnaeifccbhdnbppjjgleapjadjklbe",
   'bmdppjnfoimgmgbmmdphnopadjejbdpm',

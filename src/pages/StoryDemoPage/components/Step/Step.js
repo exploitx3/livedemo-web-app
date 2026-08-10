@@ -29,7 +29,7 @@ import HubspotFormView from './components/HubspotFormView/HubspotFormView'
 
 import 'antd/es/select/style'
 import { deserialize } from '../ViewEditor/EditorInternal'
-import { htmlSerialize } from '../../../../utils/helperFunctions'
+import { htmlSerializeWithLineBreaks } from '../../../../utils/helperFunctions'
 import { updateCurrentSelectedWorkspace } from '../../../../actions/workspacesActions'
 import { getWorkspaceEncryptionKey } from '../../../../actions/secureStorageActions'
 import { refreshToken } from '../../../../actions/authActions'
@@ -387,9 +387,11 @@ const Step = ({
   const onSaveStep = useCallback(() => {
     let internalStep = internalStepState
 
-    let contentHtml = htmlSerialize(editorValue)
+    let contentHtml = htmlSerializeWithLineBreaks(editorValue)
 
-    let popupDescription = popupDescriptionValue ? htmlSerialize(popupDescriptionValue) : '<p></p>'
+    let popupDescription = popupDescriptionValue
+      ? htmlSerializeWithLineBreaks(popupDescriptionValue)
+      : '<p></p>'
 
     let buttons = internalStep.view.popup && internalStep.view.popup.buttons &&
       internalStep.view.popup.buttons.map((button) => {

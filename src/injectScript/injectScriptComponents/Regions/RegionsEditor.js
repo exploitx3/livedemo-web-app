@@ -424,11 +424,16 @@ const WS = {
        left: 0;
        width: 100%;
        height: 100%;
+       z-index: 997;
        // width: ${({ fullWidth }) => fullWidth}px;
        // height: ${({ fullHeight }) => fullHeight}px;
        // transform-origin: top left;
        // transform: scaleX(${(props) => `${props.scalePercentageWidth}`}) scaleY(${(props) => `${props.scalePercentageHeight}`});
+       pointer-events: none;
+    }
 
+    && > * {
+      pointer-events: auto;
     }
 
     && > div > div > div:nth-child(2) {

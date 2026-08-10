@@ -1599,6 +1599,7 @@ const StoryDemoPage = ({
     console.log('ChangeIframeStep - ' + currentStepInternal)
     setPreviousStep(currentStep)
     setPreviousStepIndex(currentStepIndex)
+    setCurrentStepIndex(currentStepInternal)
     setCurrentStep(steps[currentStepInternal - 1])
 
 
@@ -2777,6 +2778,19 @@ const S = {
     align-items: center;
     border: 2px solid ${Colors.primaryColor};
     border-radius: 20px;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    &&, && * {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
 
 
 

@@ -459,7 +459,7 @@ const TC = {
   ContentWrapper: styled.div`
     width: 100%;
     overflow-y: auto;
-    max-height: 200px;
+    // max-height: 200px;
     display: block;
     font-size: 1.4vw;
 
@@ -530,6 +530,12 @@ const TC = {
     //height: auto;
     // transition: ${({isMoving}) => isMoving ? 'none' : '0.5s all ease-out'};
     transition: 0.5s all ease-out;
+
+    /* Absolute like Hotspot so StepsWrapper does not keep an in-flow hit box at 0,0 */
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: auto;
 
     transform-origin: top left;
     transform: translateX(${({tooltipX}) => tooltipX}px) translateY(${({tooltipY}) => tooltipY}px);

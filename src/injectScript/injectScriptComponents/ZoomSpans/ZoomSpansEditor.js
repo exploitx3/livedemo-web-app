@@ -47,7 +47,7 @@ function ZoomSpansEditor({
 
     let newSpan = {
       ...span,
-      showed: false,
+      showed: !!isInEditor,
       triggered: false
     }
     return newSpan
@@ -157,7 +157,8 @@ function ZoomSpansEditor({
 
         let newSpan = {
           ...span,
-          showed: false,
+          // Editor always shows spans so they can be dragged; runtime uses timeline
+          showed: !!isInEditorInternalRef.current,
           triggered: false
         }
         return newSpan
@@ -202,6 +203,14 @@ function ZoomSpansEditor({
       return
     }
 
+    // Editor: keep all zoom regions visible for editing
+    if (isInEditorInternalRef.current) {
+      zoomSpansRef.current.forEach((zoomSpan) => {
+        showZoomSpan(zoomSpan)
+      })
+      return
+    }
+
     let timestampInSeconds = videoRef.current.currentTime
     console.log('timestampInSeconds: ' + timestampInSeconds)
 
@@ -222,14 +231,8 @@ function ZoomSpansEditor({
         timestampInSeconds <= zoomSpan.startTime + zoomSpan.duration
       ) {
 
-        if (isInEditorInternalRef.current) {
-
-          showZoomSpan(zoomSpan)
-        } else {
-
-          triggerScaleForZoomSpan(zoomSpan)
-          zoomSpan.triggered = true
-        }
+        triggerScaleForZoomSpan(zoomSpan)
+        zoomSpan.triggered = true
 
       } else {
 
@@ -297,8 +300,10 @@ function ZoomSpansEditor({
     let boxRef = spanElementRefs.current[zoomSpan._id]
     let boxRefCordinates = boxRef.current.getBoundingClientRect()
     let scaleValue = innerWidth / boxRefCordinates.width
-    let left = boxRefCordinates.left
-    let top = boxRefCordinates.top - omniBarHeight
+    // content coords (Main), same as ZoomSpans preview — not viewport/wrapper
+    let left = Math.max(boxRefCordinates.left - wrapperLeftPos, 0)
+    let top = Math.max(boxRefCordinates.top - wrapperTopPos - omniBarHeight, 0)
+    top = Math.min(top, innerHeight)
 
     scaleMain(scaleValue, left, top)
 
@@ -348,11 +353,18 @@ const ZS = {
       left: 0;
       width: 100%;
       height: 100%;
+      /* Above StepsWrapper (998) so the box paints; pe-none lets clicks fall through empty area */
+      z-index: 999;
         // width: ${({fullWidth}) => fullWidth}px;
         // height: ${({fullHeight}) => fullHeight}px;
       transform-origin: top left;
+      pointer-events: none;
         // transform: scaleX(${(props) => `${props.scalePercentageWidth}`}) scaleY(${(props) => `${props.scalePercentageHeight}`});
 
+    }
+
+    && > * {
+      pointer-events: auto;
     }
 
     && > div > div > div:nth-child(2) {
