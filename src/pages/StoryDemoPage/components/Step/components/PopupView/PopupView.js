@@ -18,6 +18,10 @@ import PreviewImageSection from '../PopupOptionsView/PreviewImageSection'
 import PopupAlignments from '../../../../../../constants/PopupAlignments'
 import { useNavigate } from 'react-router-dom'
 import 'antd/es/select/style'
+import {
+  getPopupButtonColors,
+  getStoryTheme,
+} from '../../../../../../injectScript/helpers.js'
 
 const { Option } = Select
 
@@ -225,6 +229,7 @@ function addButton(buttonObj){
               gotoType: 'next', // screen | website | next | none
               gotoWebsite: '',
               gotoScreen: '',
+              ...getPopupButtonColors(null, getStoryTheme(storyDemo)),
             })
           }}
         >

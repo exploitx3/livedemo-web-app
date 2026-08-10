@@ -72,6 +72,29 @@ export function validateField(fieldName, value) {
     return true
 }
 
+/** Theme from storyDemo.custom.theme, or null. */
+export function getStoryTheme(storyDemo) {
+    return (storyDemo && storyDemo.custom && storyDemo.custom.theme) || null
+}
+
+/**
+ * Resolved popup button colors.
+ * Uses button fields when set; else theme Step Background / Text when theme is on; else defaults.
+ */
+export function getPopupButtonColors(popupButton, theme) {
+    let fallbackBg = '#1070ff'
+    let fallbackText = '#FFFFFF'
+    if (theme && theme.isActive) {
+        fallbackBg = theme.stepBackgroundColor || fallbackBg
+        fallbackText = theme.textColor || fallbackText
+    }
+
+    return {
+        backgroundColor: (popupButton && popupButton.backgroundColor) || fallbackBg,
+        textColor: (popupButton && popupButton.textColor) || fallbackText,
+    }
+}
+
 /** Returns { message, invalidNames } if form cannot submit; null if ready. */
 export function getFormSubmitIssue(formData, fieldsObj) {
     let fields = (formData && formData.fields) || []

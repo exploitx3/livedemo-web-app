@@ -10,6 +10,9 @@ import { HexColorInput, HexColorPicker, RgbaColorPicker } from "react-colorful";
 import 'tippy.js/dist/tippy.css' // optional
 import 'tippy.js/animations/shift-away.css'
 import Tippy from '@tippyjs/react'
+import { getPopupButtonColors, getStoryTheme } from "../../../../../../injectScript/helpers.js";
+
+const { Option } = Select
 
 const GOTO_TYPES = {
   website: 'website',
@@ -18,18 +21,19 @@ const GOTO_TYPES = {
 }
 
 function Tip({ children, ...props }) {
-
   return <S.Tippy {...props}>{children}</S.Tippy>
 }
 
 const PopupButton = ({ popupButton, setPopupButton, deleteButton, storyDemo }) => {
+  let initial = getPopupButtonColors(popupButton, getStoryTheme(storyDemo))
+
   let [text, setText] = useState(popupButton && popupButton.text ? popupButton.text : '')
   let [currentSelectedScreen, setCurrentSelectedScreen] = useState(popupButton && popupButton.gotoScreen ? popupButton.gotoScreen : (storyDemo.screens.length !== 0 ? storyDemo.screens[0] : {}))
   let [gotoType, setGotoType] = useState(popupButton && popupButton.gotoType && GOTO_TYPES[popupButton.gotoType] ? GOTO_TYPES[popupButton.gotoType] : GOTO_TYPES.next)
   let [gotoWebsite, setGotoWebsite] = useState(popupButton && popupButton.gotoWebsite ? popupButton.gotoWebsite : '')
 
-  const [buttonTextColor, setButtonTextColor] = useState(popupButton && popupButton.textColor ? popupButton.textColor : '#FFFFFF')
-  const [buttonBackgroundColor, setButtonBackgroundColor] = useState(popupButton && popupButton.textColor ? popupButton.backgroundColor : Colors.primaryColor)
+  const [buttonTextColor, setButtonTextColor] = useState(initial.textColor)
+  const [buttonBackgroundColor, setButtonBackgroundColor] = useState(initial.backgroundColor)
 
   let [isViewOpen, setIsViewOpen] = useState(false)
 
@@ -47,7 +51,7 @@ const PopupButton = ({ popupButton, setPopupButton, deleteButton, storyDemo }) =
       gotoType: gotoType,
       gotoWebsite: gotoWebsite,
       textColor: buttonTextColor,
-      backgroundColor: buttonBackgroundColor
+      backgroundColor: buttonBackgroundColor,
     })
   }, [text, currentSelectedScreen, gotoType, gotoWebsite, buttonTextColor, buttonBackgroundColor])
 

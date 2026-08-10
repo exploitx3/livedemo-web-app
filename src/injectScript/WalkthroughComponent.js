@@ -27,6 +27,7 @@ import * as storyHelpers from '../utils/storyHelpers.js'
 import {
   deriveRenderSteps,
   getDemoDocument,
+  getFormSubmitIssue,
   getIframeLoadedScreenId,
   getScreenIndex,
   getStepAndScreenByStepIndex,
@@ -404,6 +405,19 @@ function WalkthroughComponent({
       step.view.popup.formId
     )
   }
+
+  // Preview must not arrow/tab past a form that still needs required input.
+  // Empty fieldsObj = "would submit fail?" → same required rules as Form submit.
+  function formPopupHasRequiredFields(step) {
+    if (!isFormPopupStep(step)) return false
+    let formDoc = step.view.popup.formId
+    if (!formDoc) return false
+    if (formDoc.type === 'hubspot') return true
+    return !!getFormSubmitIssue(formDoc, {})
+  }
+
+  // Set true only by form submit / configured form navigation before changeStep.
+  const formStepClearedRef = useRef(false)
 
   function setIsAutoPlayActive(newValue) {
     _setIsAutoPlayActive(newValue)
@@ -2377,6 +2391,24 @@ function WalkthroughComponent({
 
     newStepIndex = Math.max(Math.min(newStepIndex, steps.length - 1), 0)
 
+    let previousStepIndex = currentStepIndexRef.current
+    let leavingStep = steps[previousStepIndex]
+
+    // Preview: arrows / tabs / mobile nav call changeStep directly and would skip
+    // required form popups. Form button paths set formStepClearedRef first.
+    if (
+      !isInEditorRef.current &&
+      newStepIndex > previousStepIndex &&
+      formPopupHasRequiredFields(leavingStep) &&
+      !formStepClearedRef.current
+    ) {
+      if (typeof window.__livedemoRequestFormValidate === 'function') {
+        window.__livedemoRequestFormValidate()
+      }
+      return
+    }
+
+    formStepClearedRef.current = false
 
     let stepNumber = newStepIndex + 1
 
@@ -2386,7 +2418,6 @@ function WalkthroughComponent({
 
 
     // let isReverse = currentStepIndex.current - newStepIndex === 0 ? false : (currentStepIndex.current > newStepIndex)
-    let previousStepIndex = currentStepIndexRef.current
 
 
     setCurrentStepIndexRef(newStepIndex)
@@ -2622,13 +2653,14 @@ function WalkthroughComponent({
         liveDemo={storyDemoState}
         size={stepsInternalRef.current.length}
         onNext={() => {
+          formStepClearedRef.current = true
           onNext()
         }}
         onBack={() => {
           onBack()
         }}
         changeToScreen={(screenId) => {
-
+          formStepClearedRef.current = true
           let screenIndex = getScreenIndex(screenId, storyDemoInternalRef.current)
 
           changeStep(screenIndex, stepsInternalRef.current)

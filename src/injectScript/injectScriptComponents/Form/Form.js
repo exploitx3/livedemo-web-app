@@ -1,4 +1,4 @@
-import React, {useRef, useState, forwardRef} from 'react'
+import React, {useRef, useState, useEffect, forwardRef} from 'react'
 import styled from 'styled-components'
 import Colors from '../../../constants/mainColors.js'
 import {Button} from 'antd'
@@ -8,7 +8,7 @@ import ENV from "../../config.json";
 import FormView from "./FormView.js";
 import ReCAPTCHAModule from "react-google-recaptcha";
 import Spinner from "../Spinner/Spinner.js";
-import { getFormSubmitIssue } from '../../helpers.js'
+import { getFormSubmitIssue, getPopupButtonColors, getStoryTheme } from '../../helpers.js'
 
 // Ensure we get the actual component (handle both default and named exports)
 const ReCAPTCHA = ReCAPTCHAModule?.default || ReCAPTCHAModule
@@ -76,8 +76,7 @@ function Form({
             index: 0,
             text: 'Next',
             gotoType: 'next',
-            textColor: themeButtonTextColor || '#FFFFFF',
-            backgroundColor: themeButtonBackgroundColor || '#1070ff',
+            ...getPopupButtonColors(null, getStoryTheme(liveDemo)),
         }]
     }
     let useCaptcha = !!(formDataInternal && formDataInternal.useCaptcha)
@@ -90,6 +89,31 @@ function Form({
     let [invalidFieldNames, setInvalidFieldNames] = useState([])
 
     let recaptchaRef = useRef(null)
+    let fieldsObjRef = useRef(fieldsObj)
+    fieldsObjRef.current = fieldsObj
+
+    // Walkthrough arrows call this before blocking skip past required forms
+    useEffect(() => {
+        if (!showForm || !formDataInternal) return
+
+        window.__livedemoRequestFormValidate = () => {
+            let issue = getFormSubmitIssue(formDataInternal, fieldsObjRef.current)
+            if (issue) {
+                setSubmitError(issue.message)
+                setInvalidFieldNames(issue.invalidNames)
+                return false
+            }
+            setSubmitError(null)
+            setInvalidFieldNames([])
+            return true
+        }
+
+        return () => {
+            if (window.__livedemoRequestFormValidate) {
+                delete window.__livedemoRequestFormValidate
+            }
+        }
+    }, [showForm, formDataInternal])
 
     function sendFormData(formId, currentFieldsObj) {
         let formBody = Object.values(currentFieldsObj).reduce((accum, fieldObj) => {

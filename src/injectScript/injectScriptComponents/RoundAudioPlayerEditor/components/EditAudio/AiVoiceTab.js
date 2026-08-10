@@ -50,7 +50,7 @@ function resolveDefaultVoice(stepAudio, voices) {
     }
   }
 
-  return list[1] || list[0]
+  return list[0] || list[1]
 }
 
 const AiVoiceTab = ({

@@ -24,6 +24,10 @@ import DescriptionEditor from '../../../ViewEditor/DescriptionEditor'
 import PopupButton from '../PopupButton/PopupButton'
 import PreviewImageSection from '../PopupOptionsView/PreviewImageSection'
 import 'antd/es/select/style'
+import {
+  getPopupButtonColors,
+  getStoryTheme,
+} from '../../../../../../injectScript/helpers.js'
 
 const { Option } = Select
 
@@ -824,6 +828,7 @@ const FormView = ({
                 gotoType: 'next',
                 gotoWebsite: '',
                 gotoScreen: '',
+                ...getPopupButtonColors(null, getStoryTheme(storyDemo)),
               })
             }}
           >
