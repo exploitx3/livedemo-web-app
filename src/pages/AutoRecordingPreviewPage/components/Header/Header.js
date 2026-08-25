@@ -140,7 +140,8 @@ const S = {
     }
   `,
   Breadcrumbs__Text: styled.p`
-    overflow-x: hidden;
+    /* overflow-x:hidden alone → overflow-y:auto (scrollbar arrows beside title) */
+    overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
     max-width: 500px;

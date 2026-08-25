@@ -10,8 +10,8 @@ import Icon from '../../../../components/Icon/Icon'
 import 'antd/es/card/style'
 import 'antd/es/dropdown/style'
 import 'antd/es/col/style'
-import 'antd/es/button/style' 
-import 'antd/es/skeleton/style' 
+import 'antd/es/button/style'
+import 'antd/es/skeleton/style'
 
 import styled from 'styled-components'
 import WorkspaceStatuses from '../../../../constants/WorkspaceStatuses'
@@ -23,7 +23,7 @@ import mainColors from '../../../../constants/mainColors'
 const FREE_DEMO_LIMIT = 3
 
 const StoryDemosView = memo((props) => {
-  
+
   const cards = useMemo(
     () => generateStoryDemoCards(props.storydemos, props),
     [props.storydemos, props.onDeleteLiveDemo, props.isChromeAppAuthorized, props.noDemoLimit]
@@ -63,6 +63,7 @@ function generateStoryDemoCards(storyDemos, props) {
 
           <Card
             loading={loading}
+            className='story-demo-card-loading'
             style={{ width: 150 }}
             cover={
               <div className={'ant-skeleton ant-skeleton-active'}>
@@ -83,7 +84,7 @@ function generateStoryDemoCards(storyDemos, props) {
             }
             actions={[
               (
-                <span style={{ width: '100%', display: 'flex' }}>
+                <span style={{ border: 'none', visibility: 'hidden', width: '100%', display: 'flex' }}>
                   <span className={'card__left-action'}
                     style={{ width: '70%', display: 'flex', justifyContent: 'space-evenly' }}>
                     <Icon type="sync" style={{ lineHeight: '25px' }} />
@@ -182,11 +183,11 @@ function generateStoryDemoCards(storyDemos, props) {
     }
     else {
 
-        const noDemoLimit = props.noDemoLimit === true
+      const noDemoLimit = props.noDemoLimit === true
 
       return <S.WorkspacesContainer>
         {storyDemos.map((storyDemo, index) => {
-          const isHidden = !noDemoLimit && index < storyDemos.length - FREE_DEMO_LIMIT 
+          const isHidden = !noDemoLimit && index < storyDemos.length - FREE_DEMO_LIMIT
           return (
             <StoryDemoCardSwitch
               key={storyDemo._id}
@@ -214,6 +215,12 @@ S.Col = styled(Col)`
   display: inline-block !important;
   margin-top: 20px;
 
+
+  && .story-demo-card-loading {
+   .ant-card-actions {
+     visibility: hidden;
+   }
+  }
 
   @media only screen and (max-width: 992px) {
     display: block !important;

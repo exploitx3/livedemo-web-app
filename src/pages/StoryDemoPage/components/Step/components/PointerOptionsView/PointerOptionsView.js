@@ -113,7 +113,16 @@ const PointerOptionsView = ({
             setIsPickingElement(newIsPickingElementValue)
 
             if(newIsPickingElementValue) {
-              updateSelector()
+              Promise.resolve(updateSelector())
+                .then(() => {
+                  // Show regions again sized to the picked element
+                  setIsPickingElement(false)
+                  setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+                })
+                .catch(() => {
+                  setIsPickingElement(false)
+                  setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+                })
             } else {
               cancelSelector()
               setIsPickingElement(false)

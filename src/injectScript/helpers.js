@@ -433,10 +433,24 @@ export function deriveRenderSteps(storyDemo) {
                     return step
                 })
 
-                videoSteps.forEach(stepObj => {
-
-                    screenSteps.push(stepObj)
-                })
+                if (videoSteps.length) {
+                    videoSteps.forEach(stepObj => {
+                        screenSteps.push(stepObj)
+                    })
+                } else {
+                    screenSteps.push({
+                        screenId: screen._id,
+                        screenType: screen.type,
+                        asset: screen.asset,
+                        playbackRate: screen.playbackRate,
+                        startTime: screen.startTime,
+                        endTime: screen.endTime,
+                        duration: screen.duration,
+                        zoomSpans: screen.zoomSpans ? screen.zoomSpans : [],
+                        cursorPositions: screen.cursorPositions,
+                        view: { viewType: 'none' },
+                    })
+                }
 
             } else {
 

@@ -122,10 +122,11 @@ let getInitialSelector = function (steps) {
 }
 
 function extractHotspotTransitions(screen) {
+  const transitions = (screen && Array.isArray(screen.customTransitions)) ? screen.customTransitions : []
 
-  let newHotspotTransitions = JSON.parse(JSON.stringify(screen.customTransitions)).filter(transition => transition.type === ScreenTransitionTypes.HOTSPOT)
+  let newHotspotTransitions = JSON.parse(JSON.stringify(transitions)).filter(transition => transition.type === ScreenTransitionTypes.HOTSPOT)
     .map(transition => {
-      transition.screenId = screen._id
+      transition.screenId = screen && screen._id
       return transition
     })
 
@@ -133,10 +134,11 @@ function extractHotspotTransitions(screen) {
 }
 
 function extractPointerTransitions(screen) {
+  const transitions = (screen && Array.isArray(screen.customTransitions)) ? screen.customTransitions : []
 
-  let newPointerTransitions = JSON.parse(JSON.stringify(screen.customTransitions)).filter(transition => transition.type === ScreenTransitionTypes.POINTER)
+  let newPointerTransitions = JSON.parse(JSON.stringify(transitions)).filter(transition => transition.type === ScreenTransitionTypes.POINTER)
     .map(transition => {
-      transition.screenId = screen._id
+      transition.screenId = screen && screen._id
       return transition
     })
 
@@ -250,6 +252,37 @@ function WalkthroughComponent({
 
       setStepsInternal(newSteps)
 
+      // Last screen deleted (or demo has no renderable steps) — bail before
+      // touching currentStep.screenId / processStep. Parent unmounts Walkthrough
+      // when renderSteps is empty; this avoids the crash during that update.
+      if (!newSteps.length || !demo.screens || !demo.screens.length) {
+        currentStepIndexRef.current = 0
+        setCurrentStepIndexState(0)
+        setStep(null)
+        setShowRegions(false)
+        setHotspotTransitions([])
+        setPointerTransitions([])
+        lastVideoLoadKeyForZoomSpanUpdatesRef.current = null
+        if (hlsRef.current) {
+          try {
+            hlsRef.current.destroy()
+          } catch (e) {
+            // ignore
+          }
+          hlsRef.current = null
+        }
+        storyDemoInternalRef.current = demo
+        setStoryDemoState(demo)
+        return
+      }
+
+      // Keep the same step across deletes when indices shift.
+      const stickyId = stepRef.current && stepRef.current._id
+      let stickyIdx = stickyId ? newSteps.findIndex((s) => s && s._id === stickyId) : -1
+      if (stickyIdx >= 0) {
+        currentStepIndexRef.current = stickyIdx
+      }
+
       let currentStep = newSteps[currentStepIndexRef.current]
 
       // To handle Delete Screen
@@ -257,8 +290,15 @@ function WalkthroughComponent({
         let newIndexLast = newSteps.length - 1
         currentStep = newSteps[newIndexLast]
         currentStepIndexRef.current = newIndexLast
+        setCurrentStepIndexState(newIndexLast)
 
         let screenFromDemo = demo.screens.find(scr => scr._id === currentStep.screenId)
+
+        if (!screenFromDemo) {
+          storyDemoInternalRef.current = demo
+          setStoryDemoState(demo)
+          return
+        }
 
         currentScreenIdRef.current = screenFromDemo._id
         currentScreenRef.current = screenFromDemo
@@ -269,9 +309,16 @@ function WalkthroughComponent({
         // forceUpdate()
 
         processStep(currentStepIndexRef, videoRef, storyDemoInternalRef, newSteps)
+        return
       }
 
       let screenFromDemo = demo.screens.find(scr => scr._id === currentStep.screenId)
+
+      if (!screenFromDemo) {
+        storyDemoInternalRef.current = demo
+        setStoryDemoState(demo)
+        return
+      }
 
       currentScreenIdRef.current = screenFromDemo._id
       currentScreenRef.current = screenFromDemo
@@ -469,6 +516,7 @@ function WalkthroughComponent({
 
   let navWrapperRef = useRef(null)
   let videoSourceRef = useRef(null)
+  let hlsRef = useRef(null)
 
   let eventsRef = useRef([])
 
@@ -534,12 +582,27 @@ function WalkthroughComponent({
 
   function detachVideoViewHandlers(videoEl) {
     videoViewGenerationRef.current += 1
+    lastVideoLoadKeyForZoomSpanUpdatesRef.current = null
+    if (hlsRef.current) {
+      try {
+        hlsRef.current.destroy()
+      } catch (e) {
+        // ignore
+      }
+      hlsRef.current = null
+    }
     if (!videoEl) {
       return
     }
     videoEl.onloadeddata = null
     videoEl.ontimeupdate = null
     videoEl.onended = null
+    try {
+      videoEl.removeAttribute('src')
+      videoEl.load()
+    } catch (e) {
+      // ignore
+    }
   }
 
   const currentStepIndexRef = useRef(storyConfig.currentStepIndex || 0)
@@ -574,7 +637,7 @@ function WalkthroughComponent({
   // console.log('step set')
   let currentScreenIdRef = useRef(iframeScreenId)
 
-  let currentScreenDoc = storyDemoInternalRef.current.screens.find(scr => scr._id === currentScreenIdRef.current)
+  let currentScreenDoc = (storyDemoInternalRef.current.screens || []).find(scr => scr._id === currentScreenIdRef.current)
   let currentScreenRef = useRef(currentScreenDoc)
   currentScreenRef.current = currentScreenDoc
 
@@ -602,10 +665,12 @@ function WalkthroughComponent({
   const shownImageId = useRef('')
 
 
-  const transitions = currentScreenRef.current.customTransitions ? currentScreenRef.current.customTransitions : []
+  const transitions = (currentScreenRef.current && currentScreenRef.current.customTransitions)
+    ? currentScreenRef.current.customTransitions
+    : []
 
-  const [hotspotTransitions, setHotspotTransitions] = useState(extractHotspotTransitions(currentScreenRef.current))
-  const [pointerTransitions, setPointerTransitions] = useState(extractPointerTransitions(currentScreenRef.current))
+  const [hotspotTransitions, setHotspotTransitions] = useState(() => extractHotspotTransitions(currentScreenRef.current || {}))
+  const [pointerTransitions, setPointerTransitions] = useState(() => extractPointerTransitions(currentScreenRef.current || {}))
 
   function clearTransitions() {
 
@@ -838,9 +903,69 @@ function WalkthroughComponent({
 
   useEffect(() => {
 
+    const prevSteps = stepsInternalRef.current
+    const prevIds = prevSteps.map((s) => s && s._id).join(',')
+    const nextIds = steps.map((s) => s && s._id).join(',')
+    // Parent passes a fresh `steps` array every render. Only remap indices when
+    // steps were added/removed (e.g. delete screen). Sticky-id remap on every
+    // identity change undoes video→video changeStep and requires a second click.
+    const membershipChanged = prevIds !== nextIds
+
+    if (!steps.length) {
+      setStepsInternal(steps)
+      currentStepIndexRef.current = 0
+      setCurrentStepIndexState(0)
+      setStep(null)
+      return
+    }
+
+    let nextIdx = currentStepIndexRef.current
+    if (membershipChanged) {
+      const currentId = stepRef.current && stepRef.current._id
+      const stickyIdx = currentId
+        ? steps.findIndex((s) => s && s._id === currentId)
+        : -1
+      if (stickyIdx >= 0) {
+        nextIdx = stickyIdx
+      } else {
+        nextIdx = Math.min(currentStepIndexRef.current, steps.length - 1)
+      }
+    } else {
+      nextIdx = Math.min(Math.max(currentStepIndexRef.current, 0), steps.length - 1)
+    }
+
+    const prevStep = stepRef.current
+    const nextStep = steps[nextIdx]
+
     setStepsInternal(steps)
-    setStep(steps[currentStepIndexState])
-    processStep(currentStepIndexRef, videoRef, storyDemoInternalRef, stepsInternalRef.current)
+    currentStepIndexRef.current = nextIdx
+
+    const prevBindKey = prevStep && [
+      prevStep._id,
+      prevStep.screenId,
+      prevStep.screenType,
+      prevStep.startTime,
+      prevStep.endTime,
+      prevStep.playbackRate,
+      prevStep.asset && prevStep.asset.playback_ids && prevStep.asset.playback_ids[0] && prevStep.asset.playback_ids[0].id
+    ].join(':')
+    const nextBindKey = nextStep && [
+      nextStep._id,
+      nextStep.screenId,
+      nextStep.screenType,
+      nextStep.startTime,
+      nextStep.endTime,
+      nextStep.playbackRate,
+      nextStep.asset && nextStep.asset.playback_ids && nextStep.asset.playback_ids[0] && nextStep.asset.playback_ids[0].id
+    ].join(':')
+
+    if (prevBindKey && prevBindKey === nextBindKey) {
+      setCurrentStepIndexState(nextIdx)
+      setStep(nextStep)
+      return
+    }
+
+    processStep(currentStepIndexRef, videoRef, storyDemoInternalRef, steps)
 
   }, [steps])
 
@@ -1192,6 +1317,44 @@ function WalkthroughComponent({
 
       }
 
+      if (event.data && event.data.type === 'update_step') {
+        let newStepData = event.data.stepData
+        if (!newStepData || !newStepData._id) {
+          return
+        }
+
+        let screenId = newStepData.screenId
+        let demo = storyDemoInternalRef.current
+        if (!demo || !demo.screens) {
+          return
+        }
+
+        let newDemo = JSON.parse(JSON.stringify(demo))
+        let screen = newDemo.screens.find(scr => String(scr._id) === String(screenId) ||
+          (newStepData.screenId == null && scr.steps && scr.steps.some(s => s._id === newStepData._id)))
+
+        if (!screen && currentScreenRef.current) {
+          screen = newDemo.screens.find(scr => scr._id === currentScreenRef.current._id)
+        }
+
+        if (!screen || !screen.steps) {
+          return
+        }
+
+        screen.steps = screen.steps.map(step => {
+          if (step._id === newStepData._id) {
+            return {
+              ...step,
+              ...newStepData,
+              screenId: step.screenId || screen._id
+            }
+          }
+          return step
+        })
+
+        setStoryDemoInternal(newDemo)
+      }
+
 
       if (event.data && event.data.type === 'update_storyDemo') {
         // console.log('update_storyDemo')
@@ -1325,11 +1488,16 @@ function WalkthroughComponent({
     let mainWrapperRect = mainRefRect.current
 
     let videoWrapper = document.getElementById('story_video_wrapper')
+    if (!videoWrapper) {
+      return
+    }
     let videoWrapperRect = videoRefRect.current
 
-    let videoTrack = videoAsset.tracks.filter(trk => trk.type === 'video')[0]
-    let maxWidth = videoTrack.max_width
-    let maxHeight = videoTrack.max_height
+    let videoTrack = videoAsset && Array.isArray(videoAsset.tracks)
+      ? videoAsset.tracks.filter(trk => trk.type === 'video')[0]
+      : null
+    let maxWidth = (videoTrack && videoTrack.max_width) || videoAsset.width || 1280
+    let maxHeight = (videoTrack && videoTrack.max_height) || videoAsset.height || 720
 
     // let innerWidth = isEmbed ? mainWrapperRect.width : window.innerWidth
     // let innerHeight = isEmbed ? mainWrapperRect.height : window.innerHeight
@@ -1416,6 +1584,11 @@ function WalkthroughComponent({
     if (currentStep.screenType === 'Screen_Page') {
       // Cancel any in-flight video onloadeddata from the previous step.
       detachVideoViewHandlers(video)
+      setShowSpinner(false)
+      // Must re-enable before any await — Video clears these, and a slow/failed
+      // showScreen would otherwise leave hotspots hidden after Video → Page.
+      setShowTooltip(true)
+      setShowTransitions(true)
 
       // if (!(prevStep && currentStep.screenId === prevStep.screenId)) {
 
@@ -1431,15 +1604,16 @@ function WalkthroughComponent({
 
       if (screen && screen.recordingRole) {
         setIframeScreenId(currentStep.screenId)
+        // Always sync the persistent rrweb player: forward adds event suffixes,
+        // backward truncates events between steps, then pause(toTimeMs).
+        // Size update after showScreen — resizing #story_rrweb_root mid-swap causes a blink.
+        await chainManager.showScreen(screen, storyDoc, workspaceId, storyId)
         if (screen.width) {
           setIframeSize({
             width: screen.width,
             height: screen.height
           })
         }
-        // Always sync the persistent rrweb player: forward adds event suffixes,
-        // backward truncates events between steps, then pause(toTimeMs).
-        await chainManager.showScreen(screen, storyDoc, workspaceId, storyId)
         makeVisible(MAIN_VIEWS.RRWEB, {})
         // One debounced checkout after nested Replayer content is ready.
         checkoutSessionRecording(500)
@@ -1454,11 +1628,6 @@ function WalkthroughComponent({
 
         makeVisible(MAIN_VIEWS.IFRAME, {})
       }
-      // React 18 automatically batches state updates, so no need for unstable_batchedUpdates
-      if (!showTooltip) {
-        setShowTooltip(true)
-      }
-      setShowTransitions(true)
 
       console.timeLog('p')
       console.timeEnd('p')
@@ -1488,6 +1657,10 @@ function WalkthroughComponent({
       // }
 
       let videoMuxAsset = currentStep.asset
+      if (!videoMuxAsset || !videoMuxAsset.playback_ids || !videoMuxAsset.playback_ids[0]) {
+        console.error('Screen_Video missing Mux playback_ids', screen && screen._id)
+        return
+      }
 
       let startTime = currentStep.startTime && currentStep.startTime > 0 ? currentStep.startTime : (isInEditor ? 0 : 0.1)
       let endTime = currentStep.endTime ? currentStep.endTime : videoMuxAsset.duration
@@ -1496,19 +1669,60 @@ function WalkthroughComponent({
       let streamUrlMp4 = `https://stream.mux.com/${videoMuxAsset.playback_ids[0].id}/high.mp4#t=${startTime}`
       // https://stream.mux.com/{PLAYBACK_ID}/{high, medium, or low}.mp4
 
-      let ratioArr = videoMuxAsset.aspect_ratio.split(':')
+      let ratioArr = (videoMuxAsset.aspect_ratio || '16:9').split(':')
 
       // React 18 automatically batches state updates, so no need for unstable_batchedUpdates
-      setVideoRatioWidth(parseInt(ratioArr[0]))
-      setVideoRatioHeight(parseInt(ratioArr[1]))
+      setVideoRatioWidth(parseInt(ratioArr[0]) || 16)
+      setVideoRatioHeight(parseInt(ratioArr[1]) || 9)
 
       scaleVideo(isEmbed, videoMuxAsset, videoRef)
 
-      let videoLoadKey = `${screen._id}:${videoMuxAsset.playback_ids[0].id}:${startTime}:${endTime}`
-      let needsVideoReload = lastVideoLoadKeyForZoomSpanUpdatesRef.current !== videoLoadKey
-      lastVideoLoadKeyForZoomSpanUpdatesRef.current = videoLoadKey
+      // Wait for Mux poster before revealing the video layer (prevents white flash).
+      const posterTime = startTime > 0 ? startTime : 0.1
+      const posterUrl = `https://image.mux.com/${videoMuxAsset.playback_ids[0].id}/thumbnail.png?time=${posterTime}`
 
-      if (needsVideoReload || !isInEditorRef.current) {
+      let videoLoadKey = `${screen._id}:${videoMuxAsset.playback_ids[0].id}:${startTime}:${endTime}`
+      // Parent often passes a fresh `steps` array every render → processStep re-enters.
+      // If HLS is already bound for this key, do not bump generation (that cancels the
+      // in-flight bind) and do not re-attach HLS (that resets currentTime).
+      let alreadyBound =
+        lastVideoLoadKeyForZoomSpanUpdatesRef.current === videoLoadKey &&
+        !!hlsRef.current
+
+      if (alreadyBound && isInEditorRef.current) {
+        video.poster = posterUrl
+        video.style.background = `url("${posterUrl}")`
+        video.style.backgroundSize = 'cover'
+        makeVisible(MAIN_VIEWS.VIDEO, {})
+      } else {
+      const videoBindGeneration = ++videoViewGenerationRef.current
+
+      await waitForPosterImage(posterUrl)
+
+      if (videoBindGeneration !== videoViewGenerationRef.current) {
+        // Navigated away while poster was loading
+      } else {
+        const stillVideoStep = stepsInternalRef.current[currentStepIndex.current]
+        if (stillVideoStep && stillVideoStep.screenType === 'Screen_Video') {
+          video.poster = posterUrl
+          video.style.background = `url("${posterUrl}")`
+          video.style.backgroundSize = 'cover'
+          makeVisible(MAIN_VIEWS.VIDEO, {})
+        }
+      }
+
+      if (
+        videoBindGeneration === videoViewGenerationRef.current
+      ) {
+        if (hlsRef.current) {
+          try {
+            hlsRef.current.destroy()
+          } catch (e) {
+            // ignore
+          }
+          hlsRef.current = null
+        }
+
         let hls = new Hls({
           maxBufferLength: 5,
           enableWorker: true,
@@ -1517,6 +1731,9 @@ function WalkthroughComponent({
           startLevel: 4,
           autoStartLoad: false,
         })
+        hlsRef.current = hls
+        lastVideoLoadKeyForZoomSpanUpdatesRef.current = videoLoadKey
+
         hls.attachMedia(video)
         hls.loadSource(streamUrl)
 
@@ -1532,7 +1749,6 @@ function WalkthroughComponent({
         hls.startLoad(startPosition)
 
 
-        const videoBindGeneration = ++videoViewGenerationRef.current
         video.onloadeddata = function (e) {
           // Stale callback after navigating away from this video step.
           if (videoBindGeneration !== videoViewGenerationRef.current) {
@@ -1629,16 +1845,11 @@ function WalkthroughComponent({
           onEnded()
         }
 
-        video.load()
+        // Do not call video.load() here — it resets the element and drops the HLS
+        // MediaSource attachment, leaving a blank video after rebinds (e.g. post-delete).
 
-      } else {
-        // Reload skipped (same screen/asset/start/end as last time - e.g. a zoom-span-only edit,
-        // or navigating away to a screenshot step and back). Video already has data loaded, so
-        // `video.onloadeddata` won't fire again to flip visibility - do it directly here instead,
-        // otherwise the video wrapper stays CSS-hidden (from the screenshot step's makeVisible
-        // call) and playback looks broken even though `.play()`/`.pause()` still work fine.
-        makeVisible(MAIN_VIEWS.VIDEO, {})
-      } // end needsVideoReload
+      }
+      } // end alreadyBound / bind branch
 
       // makeVisible(MAIN_VIEWS.VIDEO, {})
       // console.log('after make visible')
@@ -1665,6 +1876,7 @@ function WalkthroughComponent({
       // Cancel any in-flight video onloadeddata from the previous step — otherwise
       // a late loadeddata can makeVisible(VIDEO) and blank this screenshot.
       detachVideoViewHandlers(video)
+      setShowSpinner(false)
 
       if (screen.customTransitions) {
 
@@ -1922,6 +2134,11 @@ function WalkthroughComponent({
     let rrwebElem = document.getElementById('story_rrweb_root')
     let videoElem = document.getElementById('story_video_wrapper')
     let imagesElem = document.getElementById('story_images')
+
+    // Unmount / empty-demo races (e.g. delete last screen) leave these null.
+    if (!iframeElem || !videoElem || !imagesElem) {
+      return
+    }
 
     if (view === MAIN_VIEWS.IFRAME) {
       iframeElem.classList.add('zIndex2')
@@ -2218,19 +2435,22 @@ function WalkthroughComponent({
 
   function onChangeScreen(step, screenId) {
     let currentScreen = storyDemoInternalRef.current.screens.find(scr => scr._id === step.screenId)
+    const transitions = (currentScreen && Array.isArray(currentScreen.customTransitions))
+      ? currentScreen.customTransitions
+      : []
 
-    let pointerTransitions = currentScreen.customTransitions.filter(transition => transition.type === ScreenTransitionTypes.POINTER)
+    let pointerTransitions = transitions.filter(transition => transition.type === ScreenTransitionTypes.POINTER)
     setPointerTransitions(pointerTransitions)
 
-    let hotspotTransitions = currentScreen.customTransitions.filter(transition => transition.type === ScreenTransitionTypes.HOTSPOT)
+    let hotspotTransitions = transitions.filter(transition => transition.type === ScreenTransitionTypes.HOTSPOT)
     setHotspotTransitions(hotspotTransitions)
 
     setupStepRegions(step, screenId)
 
     let shouldShowRegions = calculateShouldShowRegions(step, { current: currentScreen })
     setShowRegions(shouldShowRegions)
-    setupTransitionRegions(currentScreen.customTransitions, screenId)
-    setupPointerTransitions(currentScreen.customTransitions)
+    setupTransitionRegions(transitions, screenId)
+    setupPointerTransitions(transitions)
 
   }
 
@@ -2260,6 +2480,31 @@ function WalkthroughComponent({
   // Helper function to wait for a delay
   function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  /** Resolve when Mux poster (or any image URL) is decoded — avoids white flash before makeVisible(VIDEO). */
+  function waitForPosterImage(url) {
+    return new Promise((resolve) => {
+      if (!url) {
+        resolve(false)
+        return
+      }
+      let settled = false
+      const finish = (ok) => {
+        if (settled) {
+          return
+        }
+        settled = true
+        resolve(ok)
+      }
+      const img = new Image()
+      img.onload = () => finish(true)
+      img.onerror = () => finish(false)
+      img.src = url
+      if (img.complete) {
+        finish(img.naturalWidth > 0)
+      }
+    })
   }
 
   // Helper function to check if audio has played
@@ -2292,7 +2537,7 @@ function WalkthroughComponent({
     }
 
     // Forms require user input — never auto-advance past them
-    if (isFormPopupStep(step)) {
+    if (!step || isFormPopupStep(step)) {
       console.log('afterChangeStep - skip autoplay on form step')
       return
     }
@@ -2310,6 +2555,10 @@ function WalkthroughComponent({
 
     // Calculate Step AutoPlayConfig delay
     let delayResult = AutoPlayDelay
+
+    if (!step.autoPlayConfig) {
+      return
+    }
 
     if (step.autoPlayConfig.type === StepAutoPlayTypes.manual) {
       delayResult = step.autoPlayConfig.delay * 1000
@@ -2853,15 +3102,18 @@ function WalkthroughComponent({
 
   // let renderCursorCondition = isAutoPlayActive || (step.autoPlayConfig && step.autoPlayConfig.enabled &&
   //     (!step.stepAudioId || (step.stepAudioId && audioHasPlayed) ))
-  let renderCursorCondition = isAutoPlayActive || (step.autoPlayConfig && step.autoPlayConfig.enabled)
+  let renderCursorCondition = isAutoPlayActive || (step && step.autoPlayConfig && step.autoPlayConfig.enabled)
 
 
   const ZoomSpansComponent = isInEditor ? ZoomSpansEditor : ZoomSpans
   const RegionsComponent = isInEditor ? RegionsEditor : Regions
 
-  const videoCursorScreen = storyDemoInternalRef.current.screens.find((s) => s._id === step.screenId)
+  const videoCursorScreen = step && storyDemoInternalRef.current.screens
+    ? storyDemoInternalRef.current.screens.find((s) => s._id === step.screenId)
+    : null
   const videoCursorPositions = videoCursorScreen && videoCursorScreen.cursorPositions
   const showVideoCursor =
+    !!step &&
     storyDemoInternalRef.current.type === StoryTypes.desktop &&
     step.screenType === ScreenTypes.SCREEN_VIDEO &&
     Array.isArray(videoCursorPositions) &&
@@ -2928,6 +3180,17 @@ function WalkthroughComponent({
       </WS.WatermarkButton>
     </WS.WatermarkWrapper>
   )
+
+  if (!step) {
+    return (
+      <WS.Wrapper
+        ref={onWrapperRefSetup}
+        width={width ? width + 'px' : '100%'}
+        height={height ? height + 'px' : '100%'}
+        className="joyride-wrapper"
+      />
+    )
+  }
 
   return (<WS.Wrapper
     ref={onWrapperRefSetup}
@@ -3109,6 +3372,7 @@ function WalkthroughComponent({
           overlayBackgroundColor={(step && step.view && step.view.popup && step.view.popup.overlayBackgroundColor) || 'rgba(0,0,0,0.65)'}
           isPopup={step && step.view && step.view.viewType === STEP_VIEWS.POPUP}
           $isInEditor={isInEditor}
+          $pickMode={isInEditor && !editorShowRegions}
         >
 
           {getStepView(storyDemoState, step, prevStep, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled, stepIsOverlayEnabled, isInEditor)}
@@ -3120,7 +3384,8 @@ function WalkthroughComponent({
           // style={{ ...additionalStyles }}
           ref={navWrapperRef}
           className={'nav-wrapper'}
-          $showHotspot={true}>
+          $showHotspot={true}
+          $pickMode={isInEditor && !editorShowRegions}>
           {getTransitionsView(storyDemoState, hotspotTransitions, pointerTransitions, stepRef.current, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled)}
 
         </WS.NavigationWrapper>
@@ -3474,7 +3739,8 @@ const WS = {
     }
 
     && > * {
-      pointer-events: auto;
+      /* Pick mode: let clicks reach the demo document under the tooltip */
+      pointer-events: ${({ $pickMode }) => $pickMode ? 'none' : 'auto'};
     }
 
     ${({ isOverlayEnabled, overlayBackgroundColor, isPopup }) => {
@@ -3696,7 +3962,7 @@ const WS = {
     pointer-events: none;
 
     && > * {
-      pointer-events: auto;
+      pointer-events: ${({ $pickMode }) => $pickMode ? 'none' : 'auto'};
     }
   `,
   ImagesWrapper: styled.div`

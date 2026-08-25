@@ -18,6 +18,14 @@ const elementPickerFactory = function() {
   var onClick;
   var currentDocument = document
 
+  function setPickerActive(active) {
+    try {
+      window.__livedemoElementPickerActive = !!active
+    } catch (e) {
+      // ignore
+    }
+  }
+
   function onMouseMove(event) {
 
     event      = event || window.event;
@@ -41,6 +49,9 @@ const elementPickerFactory = function() {
     var target = event.target || event.srcElement;
     if (event.preventDefault) event.preventDefault();
     if (event.stopPropagation) event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') {
+      event.stopImmediatePropagation();
+    }
     onClick(target);
     reset();
     return false
@@ -49,9 +60,15 @@ const elementPickerFactory = function() {
 
   function reset() {
 
+    setPickerActive(false)
+    // Capture + bubble: rrweb hover-only guards used to listen in capture and
+    // swallow clicks before a bubble-only picker could see them.
+    currentDocument.removeEventListener('click', onMouseClick, true);
     currentDocument.removeEventListener('click', onMouseClick, false);
     currentDocument.removeEventListener('mousemove', onMouseMove, false);
-    currentDocument.body.style.cursor = 'auto';
+    if (currentDocument.body) {
+      currentDocument.body.style.cursor = 'auto';
+    }
     if (oldTarget) {
       resetOldTargetColor();
     }
@@ -74,9 +91,14 @@ const elementPickerFactory = function() {
     }
     desiredBackgroundColor = options.backgroundColor || desiredBackgroundColor
 
+    // Re-init while already picking — drop previous listeners first.
+    reset()
+
     currentDocument = options.document || document
     onClick = options.onClick;
-    currentDocument.addEventListener('click', onMouseClick, false);
+    setPickerActive(true)
+    // Capture phase so we receive the click even if other handlers stop bubbling.
+    currentDocument.addEventListener('click', onMouseClick, true);
     currentDocument.addEventListener('mousemove', onMouseMove, false);
 
     return elementPicker;

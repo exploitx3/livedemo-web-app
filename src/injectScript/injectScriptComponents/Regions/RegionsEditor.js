@@ -203,6 +203,8 @@ function Regions({
               y={region.y}
               data={region.data}
               omniBarHeight={omniBarHeight}
+              innerWidth={innerWidth}
+              innerHeight={innerHeight}
               onChangeHandler={onChangeHandler}
             />
           })}
@@ -218,6 +220,8 @@ function Regions({
                 y={region.y}
                 data={region.data}
                 omniBarHeight={omniBarHeight}
+                innerWidth={innerWidth}
+                innerHeight={innerHeight}
                 onChangeHandler={onChangeHandler}
               />
           })}

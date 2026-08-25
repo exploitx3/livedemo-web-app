@@ -696,13 +696,21 @@ const VideoEditor = (props) => {
 
               setIsPlaying(true)
 
-              if (!videoInternalRef.current.ended) {
+              if (!videoInternalRef.current) {
+                setIsPlaying(false)
+                return
+              }
 
-                videoInternalRef.current.play()
-              } else {
+              if (videoInternalRef.current.ended) {
                 videoInternalRef.current.currentTime = videoCurrentTime
+              }
 
-                videoInternalRef.current.play()
+              const playPromise = videoInternalRef.current.play()
+              if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch((err) => {
+                  console.warn('VideoEditor play failed', err)
+                  setIsPlaying(false)
+                })
               }
             }}
           >

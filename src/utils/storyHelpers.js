@@ -84,10 +84,21 @@ export function deriveRenderSteps(storyDemo) {
           return step
         })
 
-        videoSteps.forEach(stepObj => {
-
-          screenSteps.push(stepObj)
-        })
+        if (videoSteps.length) {
+          videoSteps.forEach(stepObj => {
+            screenSteps.push(stepObj)
+          })
+        } else {
+          // Uploaded videos may have no steps yet — still need one render row
+          screenSteps.push({
+            screenId: screen._id,
+            screenType: screen.type,
+            asset: screen.asset,
+            playbackRate: screen.playbackRate,
+            zoomSpans: screen.zoomSpans ? screen.zoomSpans : [],
+            view: { viewType: 'none' },
+          })
+        }
 
       } else {
 

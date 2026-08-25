@@ -10,6 +10,8 @@ import Input from 'antd/es/input'
 import 'antd/es/input/style'
 import Modal from 'antd/es/modal'
 import 'antd/es/modal/style'
+import Tooltip from 'antd/es/tooltip'
+import 'antd/es/tooltip/style'
 import styled from 'styled-components'
 import axios from '../../../../../../utils/axiosInstance'
 import StepViewTypes from '../../../../../../constants/StepViewTypes'
@@ -25,18 +27,21 @@ import {MdAdsClick, MdOutlineMouse} from 'react-icons/md'
 import {addStep, addTransition, updateScreen} from '../../../../../../actions/storyDemoActions'
 import {connect} from 'react-redux'
 import {bindActionCreators} from 'redux'
+import elementPicker from '../../../../../../injectScript/storyElementPicker.js'
 
 const {confirm} = Modal
 
-function getEditorDemoDocument(iframeRef) {
-  const win = iframeRef.current && iframeRef.current.contentWindow
-  if (!win) {
-    return null
+// Editor embeds Walkthrough in the same window (not a nested iframe), so pick
+// against the active rrweb replayer / story_iframe document on window.
+function getEditorDemoDocument() {
+  try {
+    if (window.__livedemoActiveReplayer && window.__livedemoActiveReplayer.iframe) {
+      return window.__livedemoActiveReplayer.iframe.contentDocument
+    }
+  } catch (e) {
+    // ignore
   }
-  if (win.__livedemoActiveReplayer && win.__livedemoActiveReplayer.iframe) {
-    return win.__livedemoActiveReplayer.iframe.contentDocument
-  }
-  const storyIframe = win.document.getElementById('story_iframe')
+  const storyIframe = document.getElementById('story_iframe')
   return storyIframe ? storyIframe.contentDocument : null
 }
 
@@ -96,10 +101,13 @@ const ScreenPage = ({
 
   function getSelector() {
     return new Promise((resolve, reject) => {
+      const demoDoc = getEditorDemoDocument()
+      if (!demoDoc) {
+        reject(new Error('Demo document not available for element pick'))
+        return
+      }
+
       function onClick(element) {
-
-
-        const demoDoc = getEditorDemoDocument(iframeRef)
         const simmer = new Simmer(demoDoc)
 
         let livedemoId = element.getAttribute('livedemo_id')
@@ -107,36 +115,39 @@ const ScreenPage = ({
           ? `[livedemo_id="${livedemoId}"]`
           : simmer(element)
 
+        // Bounds are iframe-local (recording content coords) — same space as region pixelData
         let elementBounds = element.getBoundingClientRect()
         let selectorLocation = {
           positionX: elementBounds.x,
-          positionY: elementBounds.y - omniBarHeight <= 0 ? elementBounds.y : elementBounds.y - omniBarHeight,
+          positionY: elementBounds.y,
           width: elementBounds.width,
           height: elementBounds.height,
         }
 
-        // console.log(selector)
-        // console.log(element)
         resolve({
           selector,
           selectorLocation
         })
       }
 
-      iframeRef.current.contentWindow.elementPicker.init({
-        document: getEditorDemoDocument(iframeRef),
+      elementPicker.init({
+        document: demoDoc,
         onClick,
         backgroundColor: Colors.primaryColor
       })
 
       setTimeout(() => {
+        elementPicker.reset()
         reject('Timed-out after 1 minutes - waiting to select an element')
       }, 60 * 1000)
     })
   }
 
   function cancelSelector() {
-    iframeRef.current.contentWindow.resetEditText()
+    elementPicker.reset()
+    if (typeof window.resetEditText === 'function') {
+      window.resetEditText()
+    }
   }
 
   function addStep(index, viewType, storyDemoId, screenId, workspaceId, authToken) {
@@ -170,6 +181,20 @@ const ScreenPage = ({
         Authorization: `Bearer ${authToken}`
       }
     }).then((res) => {
+      return res.data
+    })
+  }
+
+  function baseMergeScreen(storyDemoId, screenId, workspaceId, authToken) {
+    return axios.post(
+      `${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyDemoId}/screens/${screenId}/baseMerge`,
+      { afterScreenId: screenId },
+      {
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      }
+    ).then((res) => {
       return res.data
     })
   }
@@ -533,20 +558,33 @@ const ScreenPage = ({
           })
       }
     }]),
+    ...(screenInternal.recordingRole === 'delta' ? [{
+      key: 'baseMerge',
+      label: (
+        <Tooltip
+          title="Creates a new Base screen from this Delta merged with its Base (standalone DOM snapshot at this step)."
+          placement="left"
+        >
+          <span>BaseMerge</span>
+        </Tooltip>
+      ),
+      onClick: () => {
+        setIsLoading(true)
+        return baseMergeScreen(storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
+          .then(() => reloadStoryDemo())
+          .then(() => {
+            setIsLoading(false)
+          })
+          .catch(() => {
+            setIsLoading(false)
+          })
+      }
+    }] : []),
     ...((() => {
+      // Base with linked deltas still blocked (server 409). Any delta may be deleted.
       if (screenInternal.recordingRole === 'base') {
         const hasDeltas = screens.some((s) => s.recordingRole === 'delta' && String(s.baseScreenId) === String(screenInternal._id))
         if (hasDeltas) {
-          return []
-        }
-      }
-      if (screenInternal.recordingRole === 'delta') {
-        const laterDelta = screens.some((s) =>
-          s.recordingRole === 'delta' &&
-          String(s.baseScreenId) === String(screenInternal.baseScreenId) &&
-          s.index > screenInternal.index
-        )
-        if (laterDelta) {
           return []
         }
       }
@@ -611,7 +649,7 @@ const ScreenPage = ({
           key={currentScreen._id}
           draggableId={currentScreen._id}
           index={screenIndex}
-          isDragDisabled={!!currentScreen.recordingRole}
+          isDragDisabled={currentScreen.recordingRole === 'delta'}
         >
           {(provided, snapshot) => (
             <div

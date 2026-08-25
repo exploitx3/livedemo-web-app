@@ -290,18 +290,32 @@ const LiveDemoPreviewPage = ({collapsed, currentSelectedWorkspace, authData}) =>
   }, [navigate])
 
   useEffect(() => {
+    // Extension content script relays the preview video in ordered chunks
+    // (single postMessage with 100MB+ base64 string can jank/fail).
+    // chunkIndex 0 resets so an abandoned transfer can't corrupt the next.
+    let videoChunks = []
+
     function onUploadPreviewMessage(event) {
       if (event.origin !== window.location.origin) {
         return
       }
       const data = event.data
-      if (!data || data.type !== 'LiveDemoPreview-uploadStoryVideo') {
+      if (!data || data.type !== 'LiveDemoPreview-uploadStoryVideoChunk') {
         return
       }
-      if (data.storyId !== liveDemoIdFromUrl || !data.videoBase64) {
+      if (data.storyId !== liveDemoIdFromUrl || !data.chunk) {
         return
       }
-      setUploadPreviewVideoSrc(data.videoBase64)
+
+      if (data.chunkIndex === 0) {
+        videoChunks = []
+      }
+      videoChunks[data.chunkIndex] = data.chunk
+
+      if (data.chunkIndex === data.totalChunks - 1) {
+        setUploadPreviewVideoSrc(videoChunks.join(''))
+        videoChunks = []
+      }
     }
 
     window.addEventListener('message', onUploadPreviewMessage)

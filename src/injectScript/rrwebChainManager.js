@@ -85,11 +85,13 @@ function destroyReplayer(chain) {
 
 function isEditTextActive() {
   try {
-    if (typeof window !== 'undefined' && window.__livedemoEditTextActive) {
-      return true
-    }
-    if (typeof window !== 'undefined' && window.parent && window.parent.__livedemoEditTextActive) {
-      return true
+    if (typeof window !== 'undefined') {
+      if (window.__livedemoEditTextActive || window.__livedemoElementPickerActive) {
+        return true
+      }
+      if (window.parent && (window.parent.__livedemoEditTextActive || window.parent.__livedemoElementPickerActive)) {
+        return true
+      }
     }
   } catch (e) {
     // cross-origin parent — ignore
@@ -98,7 +100,7 @@ function isEditTextActive() {
 }
 
 function blockReplayActivation(event) {
-  // Allow element picker / contenteditable while EditText is open.
+  // Allow element picker / EditText while those modes are open.
   if (isEditTextActive()) {
     return
   }
@@ -288,9 +290,33 @@ function enableHoverOnlyInteract(replayer) {
   }
 }
 
-async function createReplayer(chain, root, events) {
+async function waitForFullSnapshot(replayer, timeoutMs = 400) {
+  if (!replayer) {
+    return
+  }
+  await new Promise((resolve) => {
+    let settled = false
+    const done = () => {
+      if (settled) {
+        return
+      }
+      settled = true
+      resolve()
+    }
+    try {
+      replayer.on('fullsnapshot-rebuilded', done)
+    } catch (e) {
+      // ignore
+    }
+    setTimeout(done, timeoutMs)
+  })
+}
+
+async function createReplayer(chain, root, events, { clearMount = true } = {}) {
   destroyReplayer(chain)
-  root.innerHTML = ''
+  if (clearMount) {
+    root.innerHTML = ''
+  }
   chain.events = events
   chain.replayer = new Replayer(events, {
     root,
@@ -320,24 +346,18 @@ async function createReplayer(chain, root, events) {
   enableHoverOnlyInteract(chain.replayer)
   // rrweb schedules the initial FullSnapshot rebuild on setTimeout(1); wait for it
   // so the first seek does not race an empty iframe.
-  await new Promise((resolve) => {
-    let settled = false
-    const done = () => {
-      if (settled) {
-        return
-      }
-      settled = true
-      resolve()
-    }
-    try {
-      chain.replayer.on('fullsnapshot-rebuilded', done)
-    } catch (e) {
-      // ignore
-    }
-    setTimeout(done, 50)
-  })
+  await waitForFullSnapshot(chain.replayer, 400)
   // Rebuild may reset iframe styles; re-assert hover interactivity.
   enableHoverOnlyInteract(chain.replayer)
+}
+
+function destroyOtherChains(keepBaseId) {
+  Object.keys(chains).forEach((id) => {
+    if (id === keepBaseId) {
+      return
+    }
+    destroyReplayer(chains[id])
+  })
 }
 
 function getChainScreens(storyDemo, baseId) {
@@ -444,6 +464,8 @@ function isNextChainNeighbor(prevScreen, nextScreen, chainScreens) {
  * - jump / first load / backward: pause at target toTimeMs
  *
  * No truncate/recreate on back — full list stays mounted.
+ * Base→base: keep the previous mirror visible until the new FullSnapshot is ready
+ * (avoids FOUC / white flash while events fetch + Replayer boots).
  */
 export async function showScreen(screen, storyDemo, workspaceId, storyId) {
   if (!screen || !screen.recordingRole) {
@@ -468,29 +490,14 @@ export async function showScreen(screen, storyDemo, workspaceId, storyId) {
     }
   }
 
-  // Destroy other chains' replayers so only one iframe lives in the root
-  Object.keys(chains).forEach((id) => {
-    if (id === baseId) {
-      return
-    }
-    destroyReplayer(chains[id])
-  })
-
+  // Fetch while the previous chain's iframe stays on screen (no destroy yet).
   const fullEvents = await eventsForFullChain(baseId, storyDemo, workspaceId, storyId)
   if (fullEvents.length < 2) {
     console.error('rrweb screen needs at least Meta+FullSnapshot')
     return null
   }
 
-  if (!chain.replayer) {
-    await createReplayer(chain, root, fullEvents.slice())
-  } else if (fullEvents.length > chain.events.length) {
-    // Chain grew (e.g. first open was base-only before deltas cached) — rebuild once.
-    await createReplayer(chain, root, fullEvents.slice())
-  } else {
-    chain.events = fullEvents
-  }
-
+  const needCreate = !chain.replayer || fullEvents.length > chain.events.length
   const chainScreens = getChainScreens(storyDemo, baseId)
   const prevScreen = findScreenById(chainScreens, chain.activeScreenId)
   const stepForward = isNextChainNeighbor(prevScreen, screen, chainScreens)
@@ -498,26 +505,80 @@ export async function showScreen(screen, storyDemo, workspaceId, storyId) {
     && screen.toTimeMs != null
     && screen.toTimeMs > prevScreen.toTimeMs
 
-  chain.activeScreenId = String(screen._id)
-
   if (chain.playTimer != null) {
     clearTimeout(chain.playTimer)
     chain.playTimer = null
   }
 
-  if (stepForward) {
-    // Every forward step: jump to transition Click, then lock screen end state.
-    const clickTs = findFirstClickTimestamp(
-      fullEvents,
-      prevScreen.toTimeMs,
-      screen.toTimeMs,
-    )
-    if (clickTs != null) {
-      seekToTimestamp(chain.replayer, fullEvents, clickTs)
+  function applySeek() {
+    if (stepForward) {
+      const clickTs = findFirstClickTimestamp(
+        fullEvents,
+        prevScreen.toTimeMs,
+        screen.toTimeMs,
+      )
+      if (clickTs != null) {
+        seekToTimestamp(chain.replayer, fullEvents, clickTs)
+      }
+      seekToScreen(chain.replayer, fullEvents, screen)
+    } else {
+      seekToScreen(chain.replayer, fullEvents, screen)
     }
-    seekToScreen(chain.replayer, fullEvents, screen)
+  }
+
+  if (needCreate) {
+    const keepOldVisible = root.childNodes.length > 0
+    let mountRoot = root
+    let staging = null
+
+    if (keepOldVisible) {
+      staging = document.createElement('div')
+      staging.setAttribute('data-livedemo-rrweb-staging', '1')
+      // opacity (not visibility) so the new mirror can paint off-screen while old stays visible
+      staging.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;z-index:2;'
+      try {
+        if (window.getComputedStyle(root).position === 'static') {
+          root.style.position = 'relative'
+        }
+      } catch (e) {
+        root.style.position = 'relative'
+      }
+      root.appendChild(staging)
+      mountRoot = staging
+    }
+
+    await createReplayer(chain, mountRoot, fullEvents.slice(), { clearMount: !staging })
+    chain.activeScreenId = String(screen._id)
+    applySeek()
+    await waitForFullSnapshot(chain.replayer, 400)
+    enableHoverOnlyInteract(chain.replayer)
+
+    // Paint new mirror on top of the old one, then remove the old (no blank gap).
+    if (staging) {
+      staging.style.opacity = '1'
+      staging.style.pointerEvents = ''
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    }
+    destroyOtherChains(baseId)
+    if (staging) {
+      Array.from(root.children).forEach((child) => {
+        if (child !== staging) {
+          try {
+            child.remove()
+          } catch (e) {
+            // ignore
+          }
+        }
+      })
+      staging.style.zIndex = ''
+    }
   } else {
-    seekToScreen(chain.replayer, fullEvents, screen)
+    destroyOtherChains(baseId)
+    chain.events = fullEvents
+    chain.activeScreenId = String(screen._id)
+    applySeek()
+    await waitForFullSnapshot(chain.replayer, 120)
+    enableHoverOnlyInteract(chain.replayer)
   }
 
   window.__livedemoActiveReplayer = chain.replayer

@@ -27,6 +27,10 @@ const PopupContentView = ({
 }) => {
     const hasImage = showPreviewImage && previewImageUrl
 
+    // empty <p><br /></p> tags are editor trailing-newline junk, not real paragraphs
+    const realParagraphs = popupDescription.replace(/<p>(\s*<br\s*\/?>\s*)*<\/p>/g, '')
+    const multiParagraph = (realParagraphs.match(/<p[\s>]/g) || []).length > 1
+
     const textContent = (
         <>
             <C.Title alignment={alignment} titleFontSize={titleFontSize}>{popupTitle}</C.Title>
@@ -35,6 +39,7 @@ const PopupContentView = ({
                 <C.Description
                     alignment={alignment}
                     textFontSize={textFontSize}
+                    $multiParagraph={multiParagraph}
                     dangerouslySetInnerHTML={{ __html: popupDescription }}
                 />
             )}
@@ -240,22 +245,25 @@ const C = {
         font-family: ${Colors.fontFamilyApple};
         margin: 0;
         padding-left: 10px;
-        white-space: nowrap;
         overflow: hidden;
-        text-overflow: ellipsis;
         width: 85%;
         font-weight: 300;
 
-        p:last-child {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        p:first-child { white-space: inherit; }
-        p:not(:last-child) { white-space: inherit; }
-
         && p { margin: 0; }
+
+        ${({ $multiParagraph }) => $multiParagraph && `
+            white-space: nowrap;
+            text-overflow: ellipsis;
+
+            p:last-child {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            p:first-child { white-space: inherit; }
+            p:not(:last-child) { white-space: inherit; }
+        `}
 
         @media (max-height: 235px) {
             && { display: none; }

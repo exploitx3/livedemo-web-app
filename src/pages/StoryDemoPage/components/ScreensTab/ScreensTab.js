@@ -95,7 +95,32 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
 
     let newScreensArray = reorderArray(screens, oldIndex, newIndex)
 
-    // Client-side guard: do not allow breaking rrweb chain order
+    // Base screens are draggable; keep their deltas immediately after (chain stays valid).
+    const dragged = screens[oldIndex]
+    if (dragged && dragged.recordingRole === 'base') {
+      const baseId = String(dragged._id)
+      const deltas = newScreensArray
+        .filter((s) => s.recordingRole === 'delta' && String(s.baseScreenId) === baseId)
+        .sort((a, b) => {
+          if (a.fromTimeMs != null && b.fromTimeMs != null) {
+            return a.fromTimeMs - b.fromTimeMs
+          }
+          return (a.index || 0) - (b.index || 0)
+        })
+      if (deltas.length) {
+        const withoutDeltas = newScreensArray.filter(
+          (s) => !(s.recordingRole === 'delta' && String(s.baseScreenId) === baseId)
+        )
+        const basePos = withoutDeltas.findIndex((s) => String(s._id) === baseId)
+        if (basePos >= 0) {
+          withoutDeltas.splice(basePos + 1, 0, ...deltas)
+          newScreensArray = withoutDeltas
+        }
+      }
+    }
+
+    // Client-side guard: do not allow breaking rrweb chain order.
+    // Non-rrweb screens (screenshot/video) may sit between chain members.
     const proposed = newScreensArray.map((screen, index) => ({
       _id: screen._id,
       index,
@@ -111,7 +136,6 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
         return
       }
     }
-    // Contiguity + relative capture order within each chain (mirrors server guard)
     const chains = new Map()
     for (const screen of proposed) {
       if (!screen.recordingRole) continue
@@ -121,7 +145,6 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
       if (!chains.has(chainId)) chains.set(chainId, [])
       chains.get(chainId).push(screen)
     }
-    const sortedProposed = [...proposed].sort((a, b) => a.index - b.index)
     for (const [, members] of chains) {
       members.sort((a, b) => a.index - b.index)
       if (members[0].recordingRole !== 'base') {
@@ -129,21 +152,15 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
         return
       }
       for (let i = 1; i < members.length; i++) {
+        if (members[i].recordingRole !== 'delta') {
+          console.warn('Blocked reorder that would break rrweb chain')
+          return
+        }
         if (
           members[i - 1].fromTimeMs != null &&
           members[i].fromTimeMs != null &&
           members[i].fromTimeMs < members[i - 1].fromTimeMs
         ) {
-          console.warn('Blocked reorder that would break rrweb chain')
-          return
-        }
-      }
-      const memberIds = new Set(members.map((m) => String(m._id)))
-      const positions = sortedProposed
-        .map((s, i) => (memberIds.has(String(s._id)) ? i : -1))
-        .filter((i) => i >= 0)
-      for (let i = 1; i < positions.length; i++) {
-        if (positions[i] !== positions[i - 1] + 1) {
           console.warn('Blocked reorder that would break rrweb chain')
           return
         }

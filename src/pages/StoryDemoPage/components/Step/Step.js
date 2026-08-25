@@ -324,32 +324,28 @@ const Step = ({
     return getSelector()
       .then(({ selector, selectorLocation }) => {
 
-        // setPointerSelector(selector)
-        // setPointerSelectorLocation(selectorLocation)
-
         let newStep = { ...internalStepRef.current }
+        if (!newStep.view) {
+          newStep.view = {}
+        }
+        if (!newStep.view.pointer) {
+          newStep.view.pointer = {}
+        }
         newStep.view.pointer.selector = selector
         newStep.view.pointer.selectorLocation = selectorLocation
 
-        // updateStep(newStep)
-
-        // console.log(selector)
         let updateObj = {
           view: {
             viewType: viewType,
             pointer: {
               selector: selector,
               selectorLocation: selectorLocation,
-              placement: internalStepRef.current.view.pointer.placement
+              placement: (internalStepRef.current.view && internalStepRef.current.view.pointer && internalStepRef.current.view.pointer.placement) || 'auto'
             }
           }
         }
 
-        saveStep(updateObj, storyDemoId, screenId, workspaceId, internalStepRef.current._id, authData.token)
-      })
-      .catch(err => {
-
-        console.log(err)
+        return saveStep(updateObj, storyDemoId, screenId, workspaceId, internalStepRef.current._id, authData.token)
       })
   }
 

@@ -160,7 +160,6 @@ const PointerTransition = function ({
         setPointerSelector(selector)
         setPointerSelectorLocation(selectorLocation)
 
-        // console.log(selector)
         let updateObj = {
           pointer: {
             selector: selector,
@@ -169,11 +168,7 @@ const PointerTransition = function ({
           }
         }
 
-        saveTransition(updateObj, transitionId, storyDemo._id, screen._id, storyDemo.workspaceId, authData.token)
-      })
-      .catch(err => {
-
-        console.log(err)
+        return saveTransition(updateObj, transitionId, storyDemo._id, screen._id, storyDemo.workspaceId, authData.token)
       })
   }
 
@@ -374,7 +369,15 @@ const PointerTransition = function ({
                   setIsPickingElement(newIsPickingElementValue)
 
                   if (newIsPickingElementValue) {
-                    updateSelector()
+                    Promise.resolve(updateSelector())
+                      .then(() => {
+                        setIsPickingElement(false)
+                        setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+                      })
+                      .catch(() => {
+                        setIsPickingElement(false)
+                        setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+                      })
                   } else {
                     cancelSelector()
                     setIsPickingElement(false)

@@ -2020,8 +2020,19 @@ const StoryDemoPage = ({
   }
 
 
-  function addScreen(screenId, workspaceId, storyDemoId, authToken) {
-    return axios.post(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyDemoId}/screens/${screenId}/copy`, {}, {
+  function addScreen(screenOrId, workspaceId, storyDemoId, authToken, afterScreenId) {
+    const screenId = typeof screenOrId === 'object' && screenOrId
+      ? screenOrId._id
+      : screenOrId
+    const recordingRole = typeof screenOrId === 'object' && screenOrId
+      ? screenOrId.recordingRole
+      : null
+    const body = afterScreenId ? { afterScreenId } : {}
+    // rrweb pages: merge delta(+base) or clone base into a new standalone Base via baseMerge.
+    const path = recordingRole
+      ? `screens/${screenId}/baseMerge`
+      : `screens/${screenId}/copy`
+    return axios.post(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyDemoId}/${path}`, body, {
       headers: {
         Authorization: `Bearer ${authToken}`
       }
@@ -2217,12 +2228,18 @@ const StoryDemoPage = ({
                                isOpen={isLibraryOpen}
                                isLoading={isLibraryLoading}
                                setIsLoading={setIsLibraryLoading}
-                               addScreen={(screenId) => {
+                               addScreen={(screenOrId) => {
                                  setIsLibraryLoading(true)
-                                 addScreen(screenId, workspaceIdFromURL, storyDemoIdFromUrl, authData.token)
+                                 const afterScreenId = currentScreen && currentScreen._id
+                                   ? currentScreen._id
+                                   : null
+                                 addScreen(screenOrId, workspaceIdFromURL, storyDemoIdFromUrl, authData.token, afterScreenId)
                                    .then(() => {
                                      setIsLibraryLoading(false)
                                      setIsLibraryOpen(false)
+                                   })
+                                   .catch(() => {
+                                     setIsLibraryLoading(false)
                                    })
                                }}
                       />

@@ -1,6 +1,8 @@
 import React, { useRef, useEffect } from 'react'
 import styled from 'styled-components'
 import Colors from '../../../constants/mainColors.js'
+import { Button } from 'antd'
+import { DragOutlined } from '@ant-design/icons'
 
 const resizeTypes = {
   topLeft: 'topLeft',
@@ -18,54 +20,61 @@ function RegionLite({
                       onChangeHandler = () => {},
                       omniBarHeight = 0,
                       wrapperLeftPos,
-                      wrapperTopPos
+                      wrapperTopPos,
+                      innerWidth,
+                      innerHeight
 }) {
 
   let boxRef = useRef(null)
-  let offsetX
-  let offsetY
+  const offsetXRef = useRef(0)
+  const offsetYRef = useRef(0)
+  const isDraggingRef = useRef(false)
 
-  // Use refs to track transform values and dimensions since they're modified during drag/resize
   const boxTransformXRef = useRef(x)
   const boxTransformYRef = useRef(y)
   const currentBoxWidthRef = useRef(boxWidth)
   const currentBoxHeightRef = useRef(boxHeight)
-  
-  // Update refs when props change
+
   useEffect(() => {
+    // Don't clobber live drag/resize geometry when parent re-renders mid-gesture
+    if (isDraggingRef.current) {
+      return
+    }
     currentBoxWidthRef.current = boxWidth
     currentBoxHeightRef.current = boxHeight
     boxTransformXRef.current = x
     boxTransformYRef.current = y
   }, [boxWidth, boxHeight, x, y])
 
-  // Track active event listeners for cleanup
   const activeListenersRef = useRef({
-    mousemove: null,
-    mouseup: null
+    move: null,
+    up: null,
+    captureTarget: null
   })
   const isMountedRef = useRef(true)
 
-  // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true
 
     return () => {
       isMountedRef.current = false
-      // Clean up any active listeners on unmount
-      if (activeListenersRef.current.mousemove) {
-        window.document.removeEventListener('mousemove', activeListenersRef.current.mousemove)
-        activeListenersRef.current.mousemove = null
-      }
-      if (activeListenersRef.current.mouseup) {
-        window.document.removeEventListener('mouseup', activeListenersRef.current.mouseup)
-        activeListenersRef.current.mouseup = null
-      }
+      removeActiveListeners()
     }
   }, [])
 
+  function removeActiveListeners() {
+    if (activeListenersRef.current.move) {
+      window.document.removeEventListener('pointermove', activeListenersRef.current.move)
+      activeListenersRef.current.move = null
+    }
+    if (activeListenersRef.current.up) {
+      window.document.removeEventListener('pointerup', activeListenersRef.current.up)
+      activeListenersRef.current.up = null
+    }
+    activeListenersRef.current.captureTarget = null
+  }
+
   function onChange() {
-    // console.log('onChange triggered')
     let changeData = {
       x: boxTransformXRef.current,
       y: boxTransformYRef.current,
@@ -77,96 +86,106 @@ function RegionLite({
     onChangeHandler(changeData)
   }
 
+  function clampPosition(nextX, nextY) {
+    let maxX = innerWidth != null
+      ? Math.max(0, innerWidth - currentBoxWidthRef.current)
+      : nextX
+    let maxY = innerHeight != null
+      ? Math.max(0, innerHeight - omniBarHeight - currentBoxHeightRef.current)
+      : nextY
+
+    if (innerWidth != null) {
+      nextX = Math.min(Math.max(nextX, 0), maxX)
+    }
+    if (innerHeight != null) {
+      nextY = Math.min(Math.max(nextY, 0), maxY)
+    }
+    return { x: nextX, y: nextY }
+  }
+
   function dragMove(e) {
     e.preventDefault()
 
     const el = boxRef.current
+    if (!el) {
+      return
+    }
 
-    boxTransformXRef.current = (e.pageX - wrapperLeftPos) - offsetX
-    boxTransformYRef.current = (e.pageY - wrapperTopPos) - offsetY
+    let next = clampPosition(
+      (e.pageX - wrapperLeftPos) - offsetXRef.current,
+      (e.pageY - wrapperTopPos) - offsetYRef.current
+    )
 
-    console.log(`offsetX = ${offsetX}, offsetY = ${offsetY}`)
-    console.log(`boxTransformX = ${boxTransformXRef.current}, boxTransformY = ${boxTransformYRef.current}`)
+    boxTransformXRef.current = next.x
+    boxTransformYRef.current = next.y
 
     el.style.transform = `translate(${boxTransformXRef.current}px, ${boxTransformYRef.current}px)`
   }
 
   function dragAdd(e) {
     e.preventDefault()
+    e.stopPropagation()
 
-    // Clean up any existing listeners first
-    if (activeListenersRef.current.mousemove) {
-      window.document.removeEventListener('mousemove', activeListenersRef.current.mousemove)
-    }
-    if (activeListenersRef.current.mouseup) {
-      window.document.removeEventListener('mouseup', activeListenersRef.current.mouseup)
+    const el = boxRef.current
+    if (!el) {
+      return
     }
 
-    const el = e.target
+    removeActiveListeners()
+    isDraggingRef.current = true
+
     let elRect = el.getBoundingClientRect()
+    offsetXRef.current = e.clientX - elRect.left
+    offsetYRef.current = e.clientY - elRect.top + omniBarHeight
 
-    offsetX = e.clientX - elRect.left
-    offsetY = e.clientY - elRect.top + omniBarHeight
+    // Keep receiving moves even when cursor crosses the rrweb iframe underneath
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+      activeListenersRef.current.captureTarget = e.currentTarget
+    } catch (err) {
+      // older browsers — document listeners still help when not over iframe
+    }
 
-    console.log(`offsetX = ${offsetX}, offsetY = ${offsetY}`)
+    activeListenersRef.current.move = dragMove
+    activeListenersRef.current.up = dragRemove
 
-    // Store references for cleanup
-    activeListenersRef.current.mousemove = dragMove
-    activeListenersRef.current.mouseup = dragRemove
-
-    window.document.addEventListener('mousemove', dragMove)
-    window.document.addEventListener('mouseup', dragRemove)
+    window.document.addEventListener('pointermove', dragMove)
+    window.document.addEventListener('pointerup', dragRemove)
   }
 
   function dragRemove(e) {
-    const el = boxRef.current
+    isDraggingRef.current = false
 
     if (isMountedRef.current) {
       onChange()
     }
 
-    if (activeListenersRef.current.mousemove) {
-      window.document.removeEventListener('mousemove', activeListenersRef.current.mousemove)
-      activeListenersRef.current.mousemove = null
-    }
-    if (activeListenersRef.current.mouseup) {
-      window.document.removeEventListener('mouseup', activeListenersRef.current.mouseup)
-      activeListenersRef.current.mouseup = null
-    }
-  }
+    const captureTarget = activeListenersRef.current.captureTarget
+    removeActiveListeners()
 
-
-  function setElementStartingTopLeft(element) {
-    element.style.top = '0px'
-    element.style.left = '0px'
-    if (element.style.bottom) {
-      element.style.bottom = ''
-    }
-    if (element.style.right) {
-      element.style.right = ''
+    if (captureTarget && captureTarget.releasePointerCapture && e) {
+      try {
+        captureTarget.releasePointerCapture(e.pointerId)
+      } catch (err) {
+        // ignore
+      }
     }
   }
-
-
-
 
   function resizeMove(type) {
-
     return function (e) {
-
-
       let newBoxWidth, newBoxHeight, offsetMarginX, offsetMarginY, offsetX, offsetY
 
       let el = boxRef.current
-      
-      // Try to read transform from inline style first, fallback to computed style or ref values
+      if (!el) {
+        return
+      }
+
       let transformStr = el.style.transform
       if (!transformStr || transformStr === 'none' || transformStr === '') {
-        // If no inline transform, get from computed style
         const computedStyle = window.getComputedStyle(el)
         transformStr = computedStyle.transform
         if (transformStr && transformStr !== 'none') {
-          // Parse matrix from computed style (matrix(a, b, c, d, tx, ty))
           const matrixMatch = transformStr.match(/matrix\(([^)]+)\)/)
           if (matrixMatch) {
             const values = matrixMatch[1].split(',').map(v => parseFloat(v.trim()))
@@ -174,20 +193,16 @@ function RegionLite({
             boxTransformYRef.current = values[5] || boxTransformYRef.current
           }
         }
-        // If still no transform found, use current ref values (initialized from props)
       } else {
-        // Parse from inline style (format: "translate(Xpx, Ypx)")
         try {
           let transformArr = transformStr.split('(')[1].split(',')
           boxTransformXRef.current = parseFloat(transformArr[0].slice(0, -2))
           boxTransformYRef.current = parseFloat(transformArr[1].slice(0, -3))
         } catch (err) {
-          // If parsing fails, keep current ref values
-          console.warn('Failed to parse transform:', transformStr)
+          // keep current ref values
         }
       }
-      
-      // Get current values from refs
+
       let boxTransformX = boxTransformXRef.current
       let boxTransformY = boxTransformYRef.current
       let currentBoxWidth = currentBoxWidthRef.current
@@ -197,7 +212,6 @@ function RegionLite({
 
         currentBoxWidthRef.current = e.clientX - el.getBoundingClientRect().left
         currentBoxHeightRef.current = e.clientY - el.getBoundingClientRect().top
-        // el.style.transformOrigin = 'top left'
 
       } else if (type === resizeTypes.bottomLeft) {
 
@@ -254,63 +268,91 @@ function RegionLite({
         el.style.transform = `translate(${offsetX}px, ${offsetY}px)`
       }
 
-      // Update box dimensions in DOM
       el.style.width = currentBoxWidthRef.current + 'px'
       el.style.height = currentBoxHeightRef.current + 'px'
     }
   }
 
   function resizeAdd(type) {
-
     return function (e) {
-      // Clean up any existing listeners first
-      if (activeListenersRef.current.mousemove) {
-        window.document.removeEventListener('mousemove', activeListenersRef.current.mousemove)
-      }
-      if (activeListenersRef.current.mouseup) {
-        window.document.removeEventListener('mouseup', activeListenersRef.current.mouseup)
+      e.preventDefault()
+      e.stopPropagation()
+
+      removeActiveListeners()
+      isDraggingRef.current = true
+
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId)
+        activeListenersRef.current.captureTarget = e.currentTarget
+      } catch (err) {
+        // ignore
       }
 
       let resizeMoveFunction = resizeMove(type)
       const onRemove = resizeRemoveClosure(resizeMoveFunction)
 
-      // Store references for cleanup
-      activeListenersRef.current.mousemove = resizeMoveFunction
-      activeListenersRef.current.mouseup = onRemove
+      activeListenersRef.current.move = resizeMoveFunction
+      activeListenersRef.current.up = onRemove
 
-      window.document.addEventListener('mousemove', resizeMoveFunction)
-      window.document.addEventListener('mouseup', onRemove)
+      window.document.addEventListener('pointermove', resizeMoveFunction)
+      window.document.addEventListener('pointerup', onRemove)
     }
   }
 
   function resizeRemoveClosure(resizeMoveFunction) {
     return function onRemove(e) {
+      isDraggingRef.current = false
+
       if (isMountedRef.current) {
         onChange()
       }
 
-      if (activeListenersRef.current.mousemove === resizeMoveFunction) {
-        window.document.removeEventListener('mousemove', resizeMoveFunction)
-        activeListenersRef.current.mousemove = null
+      const captureTarget = activeListenersRef.current.captureTarget
+
+      if (activeListenersRef.current.move === resizeMoveFunction) {
+        window.document.removeEventListener('pointermove', resizeMoveFunction)
+        activeListenersRef.current.move = null
       }
-      if (activeListenersRef.current.mouseup === onRemove) {
-        window.document.removeEventListener('mouseup', onRemove)
-        activeListenersRef.current.mouseup = null
+      if (activeListenersRef.current.up === onRemove) {
+        window.document.removeEventListener('pointerup', onRemove)
+        activeListenersRef.current.up = null
+      }
+      activeListenersRef.current.captureTarget = null
+
+      if (captureTarget && captureTarget.releasePointerCapture && e) {
+        try {
+          captureTarget.releasePointerCapture(e.pointerId)
+        } catch (err) {
+          // ignore
+        }
       }
     }
   }
 
 
   return <RL.Box $y={y} $x={x} $boxWidth={boxWidth} $boxHeight={boxHeight} ref={boxRef}>
-      <RL.InnerBox onMouseDown={dragAdd}/>
+      <RL.InnerBox />
       <RL.LeftLine/>
       <RL.RightLine/>
       <RL.BottomLine/>
       <RL.TopLine/>
-      <RL.LeftTopCorner onMouseDown={resizeAdd(resizeTypes.topLeft)}/>
-      <RL.LeftBottomCorner onMouseDown={resizeAdd(resizeTypes.bottomLeft)}/>
-      <RL.RightTopCorner onMouseDown={resizeAdd(resizeTypes.topRight)}/>
-      <RL.RightBottomCorner onMouseDown={resizeAdd(resizeTypes.bottomRight)}/>
+      <RL.LeftTopCorner onPointerDown={resizeAdd(resizeTypes.topLeft)}/>
+      <RL.LeftBottomCorner onPointerDown={resizeAdd(resizeTypes.bottomLeft)}/>
+      <RL.RightTopCorner onPointerDown={resizeAdd(resizeTypes.topRight)}/>
+      <RL.RightBottomCorner onPointerDown={resizeAdd(resizeTypes.bottomRight)}/>
+      <RL.ButtonsWrapper
+        onPointerDown={(e) => {
+          e.stopPropagation()
+        }}
+      >
+        <RL.MoveButton
+          title="Drag to move pointer region"
+          onPointerDown={dragAdd}
+        >
+          <DragOutlined/>
+          <RL.ButtonText>Move</RL.ButtonText>
+        </RL.MoveButton>
+      </RL.ButtonsWrapper>
     </RL.Box>
 }
 
@@ -321,80 +363,76 @@ const RL = {
     position: absolute;
     top: 0px;
     left: 0px;
-    //bottom: 0px;
-    //right: 0px;
   `,
   Box: styled.div`
     position: absolute;
-    user-select: auto;
+    user-select: none;
+    -webkit-user-select: none;
     width: ${({$boxWidth}) => $boxWidth}px;
     height: ${({$boxHeight}) => $boxHeight}px;
     display: inline-block;
     top: 0px;
     left: 0px;
-
     transform: translate(${({$x, $y}) => $x + 'px, ' + $y + 'px'});
-
-    cursor: move;
-
+    /* Hollow like ZoomSpan: clicks pass through interior to content underneath */
+    pointer-events: none !important;
+    cursor: default;
     z-index: 3;
-    //box-shadow: rgba(17, 24, 39, 0.5) 0px 0px 0px 100vmax;
     box-sizing: border-box;
-
     border: 2px solid ${Colors.primaryColor};
-
   `,
   InnerBox: styled.div`
     position: absolute;
-    user-select: auto;
+    user-select: none;
+    -webkit-user-select: none;
     display: inline-block;
     top: 0px;
     left: 0px;
-    //cursor: move;
-
     width: 100%;
     height: 100%;
+    pointer-events: none;
+    cursor: default;
   `,
   LeftLine: styled.div`
     position: absolute;
     height: 100%;
     width: 10px;
     left: -5px;
-
+    pointer-events: none;
   `,
   RightLine: styled.div`
     position: absolute;
     height: 100%;
     width: 10px;
     right: -5px;
+    pointer-events: none;
   `,
   BottomLine: styled.div`
     position: absolute;
     height: 10px;
     width: 100%;
     bottom: -5px;
+    pointer-events: none;
   `,
   TopLine: styled.div`
     position: absolute;
     height: 10px;
     width: 100%;
     top: -5px;
+    pointer-events: none;
   `,
   LeftTopCorner: styled.div`
-      position: absolute;
-      user-select: none;
-      width: 20px;
-      height: 20px;
-      left: -10px;
-      top: -10px;
-      cursor: nw-resize;
-      border-width: 2px;
-      border-radius: 9999px;
-
-      background-color: ${Colors.primaryColor};
-      border: 2px solid white;
-
-    }
+    position: absolute;
+    user-select: none;
+    width: 20px;
+    height: 20px;
+    left: -10px;
+    top: -10px;
+    cursor: nw-resize;
+    border-radius: 9999px;
+    pointer-events: auto;
+    background-color: ${Colors.primaryColor};
+    border: 2px solid white;
   `,
   LeftBottomCorner: styled.div`
     position: absolute;
@@ -404,15 +442,11 @@ const RL = {
     left: -10px;
     bottom: -10px;
     cursor: sw-resize;
-
-    border-width: 2px;
     border-radius: 9999px;
-
+    pointer-events: auto;
     background-color: ${Colors.primaryColor};
     border: 2px solid white;
   `,
-
-
   RightTopCorner: styled.div`
     position: absolute;
     user-select: none;
@@ -421,15 +455,12 @@ const RL = {
     right: -10px;
     top: -10px;
     cursor: ne-resize;
-
-    border-width: 2px;
     border-radius: 9999px;
-
+    pointer-events: auto;
     background-color: ${Colors.primaryColor};
     border: 2px solid white;
   `,
   RightBottomCorner: styled.div`
-
     position: absolute;
     user-select: none;
     width: 20px;
@@ -437,12 +468,65 @@ const RL = {
     right: -10px;
     bottom: -10px;
     cursor: se-resize;
-
-    border-width: 2px;
     border-radius: 9999px;
-
+    pointer-events: auto;
     background-color: ${Colors.primaryColor};
     border: 2px solid white;
+  `,
+  ButtonsWrapper: styled.div`
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    width: max-content;
+    max-width: calc(100% - 16px);
+    z-index: 4;
+    pointer-events: auto;
+  `,
+  ButtonText: styled.p`
+    text-align: center;
+    margin: 0;
+    font-size: 13px;
+    color: white;
+    font-family: ${Colors.fontFamily};
+  `,
+  MoveButton: styled(Button)`
+    &&& {
+      background: ${Colors.primaryColor};
+      text-align: center;
+      display: flex;
+      border: solid 1px ${Colors.primaryColor};
+      height: 34px;
+      width: 120px;
+      border-radius: 6px;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 5px rgb(0 0 0 / 5%);
+      cursor: grab;
+      pointer-events: auto;
+      color: white;
+    }
+
+    &&&:hover,
+    &&&:active,
+    &&&:focus {
+      border: solid 1px #dae3f2;
+      background: ${Colors.primaryColor} !important;
+      color: white;
+    }
+
+    &&&:active {
+      cursor: grabbing;
+    }
+
+    && .anticon {
+      font-size: 15px;
+      color: white;
+    }
   `
 }
 
