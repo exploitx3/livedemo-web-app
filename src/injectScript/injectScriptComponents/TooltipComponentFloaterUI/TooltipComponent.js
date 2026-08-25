@@ -47,11 +47,17 @@ function TooltipComponent(props) {
       wrapperWidth,
       wrapperHeight,
     isInEditor,
-    scaleValuesRef
+    scaleValuesRef,
+    isScaled
   } = props
 
   let innerWidth = wrapperWidth
   let innerHeight = wrapperHeight
+
+  // Counter Main's zoom scale so tooltip text stays sharp (same as HotspotContent)
+  let reverseScale = (!isScaled || !scaleValuesRef || !scaleValuesRef.current)
+    ? 1
+    : (1 / (scaleValuesRef.current.scaleValueX || 1))
 
   let [isVisible, setIsVisible] = useState(false)
 
@@ -374,6 +380,7 @@ function TooltipComponent(props) {
     themeTextColor={themeTextColor}
     tooltipX={tooltipX}
     tooltipY={tooltipY}
+    reverseScale={reverseScale}
     visible={isVisible}
     arrowColor={themeBackgroundColor}
 
@@ -530,7 +537,7 @@ const TC = {
 
   `,
   Wrapper: styled.div.withConfig({
-    shouldForwardProp: (prop) => !['tooltipX', 'tooltipY', 'visible', 'themeBackgroundColor', 'themeTextColor', 'arrowColor', 'isMoving'].includes(prop),
+    shouldForwardProp: (prop) => !['tooltipX', 'tooltipY', 'visible', 'themeBackgroundColor', 'themeTextColor', 'arrowColor', 'isMoving', 'reverseScale'].includes(prop),
   })`
     //width: 100%;
     //height: auto;
@@ -538,7 +545,8 @@ const TC = {
     transition: 0.5s all ease-out;
 
     transform-origin: top left;
-    transform: translate3d(${({tooltipX}) => Math.round(tooltipX)}px, ${({tooltipY}) => Math.round(tooltipY)}px, 0);
+    /* Round + translate3d + reverseScale: escape Main zoom blur (HotspotContent pattern) */
+    transform: translate3d(${({tooltipX}) => Math.round(tooltipX)}px, ${({tooltipY}) => Math.round(tooltipY)}px, 0) scale(${({reverseScale}) => reverseScale || 1});
 
     font-size: 1.5vw;
     font-family: ${Colors.fontFamilyApple};
@@ -547,8 +555,10 @@ const TC = {
 
     will-change: transform, visibility, opacity;
 
-
     -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
 
     //top: 50%;
     //left: 50%;

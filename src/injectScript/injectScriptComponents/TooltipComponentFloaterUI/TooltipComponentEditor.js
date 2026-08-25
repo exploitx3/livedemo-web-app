@@ -44,11 +44,18 @@ function TooltipComponentEditor(props) {
     changeStep,
       wrapperWidth,
       wrapperHeight,
-    isInEditor
+    isInEditor,
+    scaleValuesRef,
+    isScaled
   } = props
 
   let innerWidth = wrapperWidth
   let innerHeight = wrapperHeight
+
+  // Counter Main's zoom scale so tooltip text stays sharp (same as HotspotContent)
+  let reverseScale = (!isScaled || !scaleValuesRef || !scaleValuesRef.current)
+    ? 1
+    : (1 / (scaleValuesRef.current.scaleValueX || 1))
 
   let [isVisible, setIsVisible] = useState(false)
 
@@ -374,6 +381,7 @@ function TooltipComponentEditor(props) {
     themeTextColor={themeTextColor}
     tooltipX={tooltipX}
     tooltipY={tooltipY}
+    reverseScale={reverseScale}
     visible={isVisible}
     arrowColor={themeBackgroundColor}
 
@@ -525,7 +533,9 @@ const TC = {
     // transform: ${(props) => props.additionalStyles ? props.additionalStyles.transform : 'translate(-50%, -50%)'};
 
   `,
-  Wrapper: styled.div`
+  Wrapper: styled.div.withConfig({
+    shouldForwardProp: (prop) => !['tooltipX', 'tooltipY', 'visible', 'themeBackgroundColor', 'themeTextColor', 'arrowColor', 'isMoving', 'reverseScale'].includes(prop),
+  })`
     //width: 100%;
     //height: auto;
     // transition: ${({isMoving}) => isMoving ? 'none' : '0.5s all ease-out'};
@@ -538,17 +548,20 @@ const TC = {
     pointer-events: auto;
 
     transform-origin: top left;
-    transform: translateX(${({tooltipX}) => tooltipX}px) translateY(${({tooltipY}) => tooltipY}px);
+    /* Round + translate3d + reverseScale: escape Main zoom blur (HotspotContent pattern) */
+    transform: translate3d(${({tooltipX}) => Math.round(tooltipX)}px, ${({tooltipY}) => Math.round(tooltipY)}px, 0) scale(${({reverseScale}) => reverseScale || 1});
 
     font-size: 1.5vw;
     font-family: ${Colors.fontFamilyApple};
 
     visibility: ${({visible}) => visible ? 'visible' : 'hidden'};
 
-    //
-    //
-    //top: 50%;
-    //left: 50%;
+    will-change: transform, visibility, opacity;
+
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
 
     //width: 450px;
     width: max-content;

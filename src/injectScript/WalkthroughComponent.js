@@ -2888,6 +2888,8 @@ function WalkthroughComponent({
         wrapperWidth={innerWidth}
         wrapperHeight={innerHeight}
         isInEditor={isInEditor}
+        isScaled={isScaled}
+        scaleValuesRef={scaleValuesRef}
       />
     } else if (step.view.viewType === STEP_VIEWS.POPUP) {
 
