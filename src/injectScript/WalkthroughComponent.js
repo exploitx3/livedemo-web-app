@@ -2787,6 +2787,11 @@ function WalkthroughComponent({
       return ''
     }
 
+    // Videos play full-bleed — no hotspot/pointer/popup overlay on the step
+    if (step.screenType === ScreenTypes.SCREEN_VIDEO) {
+      return ''
+    }
+
     if (prevStep && prevStep._id === step._id) {
       prevStep = null
     }

@@ -89,14 +89,13 @@ export function deriveRenderSteps(storyDemo) {
             screenSteps.push(stepObj)
           })
         } else {
-          // Uploaded videos may have no steps yet — still need one render row
+          // Uploaded videos may have no steps yet — still need one render row (no overlay)
           screenSteps.push({
             screenId: screen._id,
             screenType: screen.type,
             asset: screen.asset,
             playbackRate: screen.playbackRate,
             zoomSpans: screen.zoomSpans ? screen.zoomSpans : [],
-            view: { viewType: 'none' },
           })
         }
 

@@ -99,8 +99,6 @@ const Step = ({
   let [internalStepState, setInternalStepState] = useState(stepObj)
   let internalStepRef = useRef(stepObj)
   function setInternalStep(step) {
-    debugger
-    console.log(step.autoPlayConfig)
     internalStepRef.current = step
     setInternalStepState(step)
   }
@@ -184,6 +182,9 @@ const Step = ({
 
   useEffect(() => {
     setInternalStep(stepObj)
+    if (stepObj?.view?.viewType) {
+      setViewType(stepObj.view.viewType)
+    }
 
     // Sync formData when stepObj changes to keep it in sync with backend
     if (stepObj?.view?.popup?.formId) {
@@ -284,8 +285,6 @@ const Step = ({
           type: 'update_step',
           stepData: newStepData
         }, '*')
-
-        debugger
 
         setInternalStep(newStepData)
         setIsUpdating(false)
@@ -615,10 +614,10 @@ const Step = ({
 
 
           }}>
-            {viewType === VIEW_TYPE_NAMES.POINTER ? <img src={PointerIcon} /> : <img src={PostIcon} />}
+            {viewType === VIEW_TYPES.POINTER ? <img src={PointerIcon} /> : <img src={PostIcon} />}
             <ST.OpenArrow type={isViewOpen ? 'down' : 'right'} />
             <ST.ViewTitleDiv>
-              <ST.ViewTitle>{VIEW_TYPE_NAMES[viewType.toUpperCase()]}</ST.ViewTitle>
+              <ST.ViewTitle>{(viewType && VIEW_TYPE_NAMES[viewType.toUpperCase()]) || ''}</ST.ViewTitle>
               <ST.ViewTitle_Updating>{isUpdating ? ' saving...' : isSaved ? ' saved' : ''}
               </ST.ViewTitle_Updating>
             </ST.ViewTitleDiv>
@@ -630,7 +629,7 @@ const Step = ({
               setOpenView(OPEN_VIEWS.TEXT_VIEW)
             }}>
           </ST.EditTextButton>
-          {viewType !== VIEW_TYPES.POPUP && 
+          {viewType !== VIEW_TYPES.POPUP &&
           (
             <ST.SettingsButton
               type="setting"

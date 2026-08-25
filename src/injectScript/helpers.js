@@ -448,7 +448,6 @@ export function deriveRenderSteps(storyDemo) {
                         duration: screen.duration,
                         zoomSpans: screen.zoomSpans ? screen.zoomSpans : [],
                         cursorPositions: screen.cursorPositions,
-                        view: { viewType: 'none' },
                     })
                 }
 
