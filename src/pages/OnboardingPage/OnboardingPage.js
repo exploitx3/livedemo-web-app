@@ -10,7 +10,7 @@ import {
   MdFiberManualRecord,
   MdIosShare,
 } from 'react-icons/md'
-import mainColors from '../../constants/mainColors'
+import mainColors, { primaryAlpha } from '../../constants/mainColors'
 import ENV from '../../config'
 import { Modal } from 'antd'
 import axios from '../../utils/axiosInstance'
@@ -1457,7 +1457,7 @@ const S = {
       p.$selected &&
       `
       background: linear-gradient(180deg, #fafaff 0%, #fff 100%);
-      box-shadow: 0 0 0 1px ${mainColors.primaryColor}14;
+      box-shadow: 0 0 0 1px ${primaryAlpha(8)};
     `}
   `,
   GoalIconWrap: styled.span`
@@ -2390,7 +2390,7 @@ const S = {
     flex-direction: column;
     border-radius: 0.75rem;
     border: 1px solid
-      ${(p) => (p.$borderAccent ? `${mainColors.primaryColor}55` : '#e5e7eb')};
+      ${(p) => (p.$borderAccent ? primaryAlpha(33) : '#e5e7eb')};
     background: #fff;
     overflow: hidden;
     opacity: ${(p) => (p.$fade ? 0.5 : 1)};

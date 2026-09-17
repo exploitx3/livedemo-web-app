@@ -213,7 +213,7 @@ const TM = {
   Center: styled.div`
     text-align: center;
     padding: 32px;
-    color: #666;
+    color: var(--ld-text-muted, #666);
     font-size: 0.9em;
   `,
   WaveformWrap: styled.div`
@@ -235,7 +235,7 @@ const TM = {
   `,
   InfoItem: styled.span`
     color: #555;
-    && b { color: #111; }
+    && b { color: var(--ld-text, #111); }
   `,
   SizeTag: styled.span`
     margin-left: auto;

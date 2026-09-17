@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import Colors from '../../../constants/mainColors.js'
+import Colors, { primaryAlpha } from '../../../constants/mainColors.js'
 import {Circle} from 'rc-progress';
 import {Modal} from 'antd'
 import {PauseOutlined} from "@ant-design/icons";
@@ -115,8 +115,13 @@ const S = {
   PlayButton: styled.svg`
     width: 100%;
     height: 100%;
+    color: #111;
   `,
   PauseButton: styled(PauseOutlined)`
+    && {
+      color: #111;
+    }
+
     && svg {
       width: 100%;
       height: 100%;
@@ -129,8 +134,6 @@ const S = {
   `,
   PlayButtonContainer: styled.div`
     z-index: 4;
-    //position: absolute;
-    //top: 0;
     width: 25px;
     height: 25px;
     justify-content: center;
@@ -146,15 +149,13 @@ const S = {
     top: 0;
 
     && .rc-progress-circle-path {
-      stroke: ${Colors.primaryColor}BB !important;
+      stroke: ${primaryAlpha(73)} !important;
     }
 
     && .rc-progress-circle-trail {
       stroke: #f1f3fe !important;
       stroke-width: 6px;
     }
-
-    //absolute inset-0 flex items-center justify-center p-0.5
   `,
   Container: styled.div`
     background: white;
@@ -165,10 +166,6 @@ const S = {
     align-items: center;
     width: 100%;
     height: 100%;
-    //display: flex;
-    //justify-content: center;
-
-    //flex items-center justify-center shadow-md rounded-full
   `
 }
 

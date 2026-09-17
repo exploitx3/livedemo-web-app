@@ -26,7 +26,7 @@ const StoryDemosView = memo((props) => {
 
   const cards = useMemo(
     () => generateStoryDemoCards(props.storydemos, props),
-    [props.storydemos, props.onDeleteLiveDemo, props.isChromeAppAuthorized, props.noDemoLimit]
+    [props.storydemos, props.onDeleteLiveDemo, props.onCloneLiveDemo, props.isChromeAppAuthorized, props.noDemoLimit]
   )
 
   return (
@@ -193,6 +193,7 @@ function generateStoryDemoCards(storyDemos, props) {
               key={storyDemo._id}
               storyDemo={storyDemo}
               onDeleteLiveDemo={props.onDeleteLiveDemo}
+              onCloneLiveDemo={props.onCloneLiveDemo}
               hidden={isHidden}
             />
           )
@@ -272,7 +273,7 @@ S.Col = styled(Col)`
 
 S.CardText = styled.span`
   font-family: ${mainColors.fontFamily};
-  color: #111;
+  color: ${mainColors.primaryText};
   font-size: 1.2em;
   text-transform: capitalize;
   white-space: nowrap;
@@ -291,7 +292,7 @@ S.InstallAppRow = styled.div`
 S.InstallAppText = styled.p`
     margin: 0px 0px 10px 0px;
     font-family: ${mainColors.fontFamily};
-    color: #111;
+    color: ${mainColors.primaryText};
     display: flex;
     justify-content: flex-start;
     align-items: center;

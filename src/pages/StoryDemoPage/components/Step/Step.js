@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import styled from 'styled-components'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
-import Colors from '../../../../constants/mainColors'
+import Colors, { selectedRingCss } from '../../../../constants/mainColors'
 import PopupAlignments from '../../../../constants/PopupAlignments'
 import axios from '../../../../utils/axiosInstance'
 //import { Button, Icon, Input, Modal, Select } from 'antd'
@@ -90,7 +90,9 @@ const Step = ({
   actions,
 
   screenIsLoading,
-  setScreenIsLoading
+  setScreenIsLoading,
+  isSelected,
+  dragHandleProps,
 }) => {
 
   // console.log('step rerendered ' + stepObj._id + ' ' + stepObj.index)
@@ -124,8 +126,8 @@ const Step = ({
   let [openView, setOpenView] = useState(OPEN_VIEWS.TEXT_VIEW)
 
   let [viewType, setViewType] = useState(stepObj.view.viewType)
-  let [hotspotViewPlacement, setHotspotViewPlacement] = useState(internalStepRef.current.view.hotspot.placement || 'auto')
-  let [pointerViewPlacement, setPointerViewPlacement] = useState(internalStepRef.current.view.pointer.placement || 'auto')
+  let [hotspotViewPlacement, setHotspotViewPlacement] = useState(internalStepRef.current.view?.hotspot?.placement || 'left')
+  let [pointerViewPlacement, setPointerViewPlacement] = useState(internalStepRef.current.view?.pointer?.placement || 'left')
 
   let [popupType, setPopupType] = useState((stepObj.view.popup && stepObj.view.popup.type) || 'popup')
   let [alignment, setAlignment] = useState((stepObj.view.popup && stepObj.view.popup.alignment) || PopupAlignments.center)
@@ -339,7 +341,7 @@ const Step = ({
             pointer: {
               selector: selector,
               selectorLocation: selectorLocation,
-              placement: (internalStepRef.current.view && internalStepRef.current.view.pointer && internalStepRef.current.view.pointer.placement) || 'auto'
+              placement: (internalStepRef.current.view && internalStepRef.current.view.pointer && internalStepRef.current.view.pointer.placement) || 'left'
             }
           }
         }
@@ -411,6 +413,9 @@ const Step = ({
           selector: (internalStep.view.pointer && internalStep.view.pointer.selector),
           selectorLocation: (internalStep.view.pointer && internalStep.view.pointer.selectorLocation),
           placement: pointerViewPlacement || (internalStep.view.pointer && internalStep.view.pointer.placement),
+          targetMode: (internalStep.view.pointer && internalStep.view.pointer.targetMode) || 'select',
+          tooltipX: internalStep.view.pointer && internalStep.view.pointer.tooltipX,
+          tooltipY: internalStep.view.pointer && internalStep.view.pointer.tooltipY,
         },
         popup: {
           type: popupType || (internalStep.view.popup && internalStep.view.popup.type),
@@ -427,8 +432,8 @@ const Step = ({
         viewType: (internalStep.view && internalStep.view.viewType),
         showStepNumbers: (internalStep.view.showStepNumbers && internalStep.view.showStepNumbers),
         nextButtonText: (internalStep.view.nextButtonText && internalStep.view.nextButtonText),
-        showHeader: (internalStep.view.showHeader && internalStep.view.showHeader),
         showFooter: (internalStep.view.showFooter && internalStep.view.showFooter),
+        hideBackButton: !!internalStep.view.hideBackButton,
       },
       autoPlayConfig: (internalStep.autoPlayConfig),
     }
@@ -578,6 +583,7 @@ const Step = ({
         pointerPlacement={pointerViewPlacement}
         iframeRef={iframeRef}
         disablePointerPickButton={disablePointerPickButton}
+        screenId={screenId}
       />
     } else if (viewType === VIEW_TYPES.HOTSPOT && openView === OPEN_VIEWS.OPTIONS_VIEW) {
 
@@ -597,24 +603,19 @@ const Step = ({
       <ST.ViewContainer
 
         isViewOpen={isViewOpen}
+        isSelected={isSelected}
       >
         <ST.ViewHeader>
           <ST.HeaderMain onClick={() => {
-
-            // if (isViewOpen) {
-
-            // setIsViewOpen(false)
-            // } else {
-
-            // setIsViewOpen(true)
-            // changeStep(calculatedStepIndex)
-            // }
-
             changeStep(calculatedStepIndex)
-
-
           }}>
-            {viewType === VIEW_TYPES.POINTER ? <img src={PointerIcon} /> : <img src={PostIcon} />}
+            {dragHandleProps ? (
+              <ST.StepIconDragHandle {...dragHandleProps} $isDraggable>
+                {viewType === VIEW_TYPES.POINTER ? <img src={PointerIcon} style={{ filter: Colors.iconInvertFilter }} alt="" draggable={false} /> : <img src={PostIcon} style={{ filter: Colors.iconInvertFilter }} alt="" draggable={false} />}
+              </ST.StepIconDragHandle>
+            ) : (
+              viewType === VIEW_TYPES.POINTER ? <img src={PointerIcon} style={{ filter: Colors.iconInvertFilter }} alt="" /> : <img src={PostIcon} style={{ filter: Colors.iconInvertFilter }} alt="" />
+            )}
             <ST.OpenArrow type={isViewOpen ? 'down' : 'right'} />
             <ST.ViewTitleDiv>
               <ST.ViewTitle>{(viewType && VIEW_TYPE_NAMES[viewType.toUpperCase()]) || ''}</ST.ViewTitle>
@@ -802,9 +803,9 @@ const ST = {
     justify-content: space-between;
     width: 100%;
     padding: 10px;
-    background: #fff;
-    border-left: 1px solid black;
-    border-right: 1px solid black;
+    background: var(--ld-surface, #fff);
+    border-left: 1px solid var(--ld-border, black);
+    border-right: 1px solid var(--ld-border, black);
 
   `,
   TypeLabel: styled.p`
@@ -851,7 +852,7 @@ const ST = {
     min-height: 200px;
 
 
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
     border-top: none;
@@ -895,7 +896,7 @@ const ST = {
     height: 35px;
 
     width: 100%;
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-radius: 6px;
     padding: 0px 5px;
     &&:hover .Step__DeleteButton,
@@ -918,10 +919,30 @@ const ST = {
     gap: 10px;
     width: 100%;
   `,
+  StepIconDragHandle: styled.span`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    touch-action: none;
+    cursor: ${({ $isDraggable }) => $isDraggable ? 'grab' : 'pointer'};
+
+    &:active {
+      cursor: ${({ $isDraggable }) => $isDraggable ? 'grabbing' : 'pointer'};
+    }
+
+    && img {
+      pointer-events: none;
+      user-select: none;
+    }
+  `,
 
   SettingsButton: styled(Icon)`
     display: flex;
     align-content: center;
+    align-items: center;
+    width: 18px;
+    height: 18px;
     margin-right: 15px;
     visibility: hidden;
 
@@ -930,7 +951,7 @@ const ST = {
     }
 
     && svg {
-      fill: black;
+      fill: var(--ld-text, black);
       width: 100%;
       height: 100%;
     }
@@ -939,6 +960,9 @@ const ST = {
   EditTextButton: styled(Icon)`
     display: flex;
     align-content: center;
+    align-items: center;
+    width: 18px;
+    height: 18px;
     margin-right: 15px;
     visibility: hidden;
 
@@ -1048,7 +1072,7 @@ const ST = {
     }
   `,
   ViewContainer: styled.div`
-    padding: 0px 10px;
+    box-sizing: border-box;
 
     display: flex;
     flex-direction: column;
@@ -1056,13 +1080,13 @@ const ST = {
     align-items: center;
 
     width: 100%;
-    // width: ${(props) => props.isViewOpen ? '275' : '125'}px;
-    // height: ${(props) => props.isViewOpen ? '325' : '125'}px;
-    border-radius: 4px;
-    //background: #F9F9F9;
+    border-radius: 6px;
+    transition: box-shadow 0.15s ease, background-color 0.15s ease, padding 0.15s ease;
 
-
-
+    ${(props) => props.isSelected ? selectedRingCss : `
+      padding: 0px 10px;
+      --ld-border: var(--ld-border-card, black);
+    `}
   `,
   ViewTitle_Updating: styled.p`
     font-size: 1em;
@@ -1080,7 +1104,7 @@ const ST = {
   `,
   ViewTitle: styled.h2`
     font-size: 1em;
-    color: #111;
+    color: var(--ld-text, #111);
     text-align: left;
     text-transform: capitalize;
     margin-bottom: 0px;

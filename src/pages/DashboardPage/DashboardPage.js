@@ -140,7 +140,8 @@ class DashboardPage extends Component {
           // Styling
           style: {
             borderRadius: '25px',
-            background: '#111',
+            background: mainColors.toastBackground,
+            color: '#fff',
           },
           className: '',
 
@@ -382,7 +383,7 @@ const S = {
   `,
   Content: styled(Content)`
     && {
-      background: white;
+      background: ${mainColors.App.sidebarColor};
       padding: 16px;
       overflow: scroll;
       overflow-x: hidden;
@@ -400,7 +401,7 @@ const S = {
     display: block;
     height: 100%;
     width: 100%;
-    background: white;
+    background: ${mainColors.App.sidebarColor};
 `,
   TutorialButton: styled(Button)`
       && {
@@ -425,7 +426,7 @@ const S = {
 
 `,
   DashboardContainer: styled.div`
-    background: white;
+    background: ${mainColors.App.sidebarColor};
     width: 100%;
   `,
   DashboardRow: styled(Row)`
@@ -469,8 +470,8 @@ const S = {
   `,
   AppButton: styled.a`
     text-decoration: none !important;
-    background: white;
-    border: 2px solid #111;
+    background: ${mainColors.surfaceColor};
+    border: 2px solid ${mainColors.primaryText};
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -501,7 +502,7 @@ const S = {
     filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(212deg) brightness(104%) contrast(97%);
   `,
   AppButtonText: styled.div`
-    color: #111;
+    color: ${mainColors.primaryText};
     font-size: 14px;
     font-weight: 600;
   `,

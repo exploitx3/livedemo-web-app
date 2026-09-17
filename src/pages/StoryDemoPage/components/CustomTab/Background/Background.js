@@ -282,7 +282,7 @@ const TH = {
     border-radius: 6px;
     overflow: hidden;
     cursor: pointer;
-    background: #eee;
+    background: var(--ld-surface, #eee);
     line-height: 0;
     && img {
       width: 100%;
@@ -374,7 +374,7 @@ const TH = {
     gap: 15px;
     margin: 10px 5px;
     padding: 15px;
-    background-color: #f3f3f3;
+    background-color: var(--ld-surface, #f3f3f3);
     height: 65px;
     border-radius: 6px;
     border: 1px solid ${Colors.primaryColor};

@@ -14,12 +14,14 @@ import PointerIcon from '../../../../../../static/images/pointerIcon.svg'
 import PostIcon from '../../../../../../static/images/postIcon.svg'
 import TextView from '../../../Step/components/TextView/TextView'
 import { deserialize } from '../../../ViewEditor/EditorInternal'
-import { MdAdsClick, MdAspectRatio, MdOutlineMouse } from 'react-icons/md'
+import { MdAdsClick, MdAspectRatio, MdOutlineMouse, MdOpenWith } from 'react-icons/md'
+import POINTER_TARGET_MODES from '../../../../../../constants/pointerTargetModes.js'
 import { htmlSerialize } from '../../../../../../utils/helperFunctions'
 import { deleteTransition, updateTransition } from '../../../../../../actions/storyDemoActions'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import Spinner from "../../../../../../components/Spinner/Spinner";
+import PlacementSelector from '../../../PlacementSelector/PlacementSelector'
 
 const { confirm } = Modal
 const { Option } = Select
@@ -35,27 +37,7 @@ const OPEN_VIEWS = {
   OPTIONS_VIEW: 'OPTIONS_VIEW',
 }
 
-const PLACEMENT_TYPES = {
-  TOP: 'top',
-  TOP_START: 'top-start',
-  TOP_END: 'top-end',
-  LEFT: 'left',
-  LEFT_START: 'left-start',
-  LEFT_END: 'left-end',
-  BOTTOM: 'bottom',
-  BOTTOM_START: 'bottom-start',
-  BOTTOM_END: 'bottom-end',
-  RIGHT: 'right',
-  RIGHT_START: 'right-start',
-  RIGHT_END: 'right-end',
-  AUTO: 'auto',
-  CENTER: 'center'
-}
-
-const POINTER_SELECT_TYPES = {
-  PICK: 'pick',
-  SELECT: 'select',
-}
+const POINTER_SELECT_TYPES = POINTER_TARGET_MODES
 
 const PointerTransition = function ({
                                       transitionItem,
@@ -79,11 +61,16 @@ const PointerTransition = function ({
   let [gotoType, setGotoType] = useState(transitionItem && transitionItem.gotoType && GOTO_TYPES[transitionItem.gotoType] ? GOTO_TYPES[transitionItem.gotoType] : GOTO_TYPES.screen)
   let [gotoWebsite, setGotoWebsite] = useState(transitionItem && transitionItem.gotoWebsite ? transitionItem.gotoWebsite : '')
 
-  let [pointerSelectType, setPointerSelectType] = useState(POINTER_SELECT_TYPES.SELECT)
+  let [pointerSelectType, setPointerSelectType] = useState(
+    (transitionItem.pointer && transitionItem.pointer.targetMode) || POINTER_SELECT_TYPES.SELECT
+  )
+  let [pointerTargetMode, setPointerTargetMode] = useState(
+    (transitionItem.pointer && transitionItem.pointer.targetMode) || POINTER_SELECT_TYPES.SELECT
+  )
   let [isPickingElement, setIsPickingElement] = useState(false)
 
   let [pointerSelector, setPointerSelector] = useState((transitionItem.pointer && transitionItem.pointer.selector) || '')
-  let [pointerPlacement, setPointerPlacement] = useState((transitionItem.pointer && transitionItem.pointer.placement) || 'auto')
+  let [pointerPlacement, setPointerPlacement] = useState((transitionItem.pointer && transitionItem.pointer.placement) || 'left')
   let [pointerSelectorLocation, setPointerSelectorLocation] = useState(
     (transitionItem.pointer && transitionItem.pointer.selectorLocation) || {
       positionX: 200,
@@ -106,7 +93,8 @@ const PointerTransition = function ({
 
     window.postMessage({
       type: 'editor_show_regions',
-      editorShowRegions: pointerSelectType === POINTER_SELECT_TYPES.SELECT
+      editorShowRegions: pointerSelectType === POINTER_SELECT_TYPES.SELECT,
+      editorPickMode: pointerSelectType === POINTER_SELECT_TYPES.PICK,
     }, '*')
 
 
@@ -115,7 +103,9 @@ const PointerTransition = function ({
   useEffect(() => {
 
     setPointerSelector((transitionItem.pointer && transitionItem.pointer.selector) || '')
-    setPointerPlacement((transitionItem.pointer && transitionItem.pointer.placement) || 'auto')
+    setPointerPlacement((transitionItem.pointer && transitionItem.pointer.placement) || 'left')
+    setPointerTargetMode((transitionItem.pointer && transitionItem.pointer.targetMode) || POINTER_SELECT_TYPES.SELECT)
+    setPointerSelectType((transitionItem.pointer && transitionItem.pointer.targetMode) || POINTER_SELECT_TYPES.SELECT)
     setPointerSelectorLocation(
       (transitionItem.pointer && transitionItem.pointer.selectorLocation) || {
         positionX: 200,
@@ -300,7 +290,7 @@ const PointerTransition = function ({
 
 
         }}>
-          {viewType === TRANSITION_TYPES.POINTER ? <img src={PointerIcon}/> : <img src={PostIcon}/>}
+          {viewType === TRANSITION_TYPES.POINTER ? <img src={PointerIcon} style={{ filter: Colors.iconInvertFilter }}/> : <img src={PostIcon} style={{ filter: Colors.iconInvertFilter }}/>}
           <NAV.OpenArrow type={'down'}/>
           <NAV.ViewTitle>{TRANSITION_TYPES[viewType.toUpperCase()]}</NAV.ViewTitle>
         </NAV.HeaderMain>
@@ -330,6 +320,9 @@ const PointerTransition = function ({
               selector: pointerSelector,
               selectorLocation: pointerSelectorLocation,
               placement: pointerPlacement,
+              targetMode: pointerTargetMode,
+              tooltipX: transitionItem.pointer?.tooltipX,
+              tooltipY: transitionItem.pointer?.tooltipY,
             },
             gotoType: gotoType,
             gotoWebsite: gotoWebsite,
@@ -364,6 +357,7 @@ const PointerTransition = function ({
               {!disablePointerPickButton ? (
                 <NAV.PickSelectorButton isSelected={pointerSelectType === POINTER_SELECT_TYPES.PICK} onClick={() => {
                   setPointerSelectType(POINTER_SELECT_TYPES.PICK)
+                  setPointerTargetMode(POINTER_SELECT_TYPES.PICK)
 
                   let newIsPickingElementValue = !isPickingElement
                   setIsPickingElement(newIsPickingElementValue)
@@ -373,15 +367,18 @@ const PointerTransition = function ({
                       .then(() => {
                         setIsPickingElement(false)
                         setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+                        setPointerTargetMode(POINTER_SELECT_TYPES.SELECT)
                       })
                       .catch(() => {
                         setIsPickingElement(false)
                         setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+                        setPointerTargetMode(POINTER_SELECT_TYPES.SELECT)
                       })
                   } else {
                     cancelSelector()
                     setIsPickingElement(false)
                     setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+                    setPointerTargetMode(POINTER_SELECT_TYPES.SELECT)
                   }
 
                 }}>
@@ -390,8 +387,19 @@ const PointerTransition = function ({
                 </NAV.PickSelectorButton>
               ) : ''}
 
+              <NAV.PickSelectorButton isSelected={pointerSelectType === POINTER_SELECT_TYPES.NONE} onClick={() => {
+                setPointerSelectType(POINTER_SELECT_TYPES.NONE)
+                setPointerTargetMode(POINTER_SELECT_TYPES.NONE)
+                cancelSelector()
+                setIsPickingElement(false)
+              }}>
+                <NAV.PickSelectorText>None</NAV.PickSelectorText>
+                <NAV.NoneClickIcon/>
+              </NAV.PickSelectorButton>
+
               <NAV.PickSelectorButton isSelected={pointerSelectType === POINTER_SELECT_TYPES.SELECT} onClick={() => {
                 setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+                setPointerTargetMode(POINTER_SELECT_TYPES.SELECT)
                 cancelSelector()
                 setIsPickingElement(false)
 
@@ -401,34 +409,12 @@ const PointerTransition = function ({
               </NAV.PickSelectorButton>
             </NAV.ActionSelectorLine>
 
-            <NAV.ActionSelectorLine>
+            {pointerSelectType !== POINTER_SELECT_TYPES.NONE ? (
+            <NAV.ActionSelectorLine style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
               <NAV.ActionSelectorText>Placement:</NAV.ActionSelectorText>
-
-              <NAV.Select
-                dropdownStyle={{
-                  background: Colors.App.sidebarColor,
-                  border: `1px solid ${Colors.primaryColor}`
-                  // boxShadow: `0 0 0 2px ${Colors.primaryColor}`
-                }}
-                value={pointerPlacement}
-                style={{
-                  width: 120
-                }}
-                onChange={(placementKey) => {
-
-                  setPointerPlacement(PLACEMENT_TYPES[placementKey])
-                }}>
-                {Object.entries(PLACEMENT_TYPES).map(([key, value], index, array) => {
-                  let isLast = index === array.length - 1
-                  return <Option style={{
-                    background: 'none',
-                    color: Colors.primaryColor,
-                    borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
-                  }} key={key} value={key}>{value}</Option>
-                })
-                }
-              </NAV.Select>
+              <PlacementSelector value={pointerPlacement} onChange={setPointerPlacement} />
             </NAV.ActionSelectorLine>
+            ) : ''}
 
           </React.Fragment>
           <NAV.RightSide>
@@ -492,6 +478,12 @@ const NAV = {
     height: 80px;
   `,
   SelectClickIcon: styled(MdAspectRatio)`
+    height: 25px;
+    width: 45px;
+
+    transition: all 0.3s;
+  `,
+  NoneClickIcon: styled(MdOpenWith)`
     height: 25px;
     width: 45px;
 
@@ -564,7 +556,7 @@ const NAV = {
     height: 35px;
 
     width: 100%;
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-radius: 6px;
     padding: 0px 5px;
 
@@ -664,7 +656,7 @@ const NAV = {
 
     width: 100%;
 
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
     border-top: none;
@@ -672,7 +664,7 @@ const NAV = {
   `,
   ViewTitle: styled.h2`
     font-size: 1em;
-    color: #111;
+    color: var(--ld-text, #111);
     text-align: center;
     text-transform: capitalize;
     margin-bottom: 0px;

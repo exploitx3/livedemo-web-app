@@ -36,7 +36,7 @@ const LeadsPage = function({}) {
 
         <S.Content>
 
-          <div id={'dashboard-container'} style={{background: 'white'}}>
+          <div id={'dashboard-container'} style={{background: mainColors.App.sidebarColor}}>
             <S.WorkspacesCol xs={24} lg={12}>
               <h2 style={{ fontSize: '24px' }}>Work in progress</h2>
             </S.WorkspacesCol>

@@ -245,11 +245,11 @@ const ST = {
   align-items: center;
   width: 100%;
   height: 400px;
-  border: 1px solid black;
+  border: 1px solid var(--ld-border, black);
   border-radius: 6px;
   padding: 0px 5px;
   justify-content: flex-start;
-  background: #ffffff;
+  background: var(--ld-surface, #ffffff);
 
   display: flex;
   align-items: flex-start;
@@ -342,7 +342,7 @@ const ST = {
     justify-content: space-between;
     width: 100%;
     margin-bottom: 10px;
-    background: #fff;
+    background: var(--ld-surface, #fff);
   `,
   TypeLabel: styled.p`
     margin: 0px;

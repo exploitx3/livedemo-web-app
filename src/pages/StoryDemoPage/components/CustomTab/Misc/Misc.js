@@ -332,7 +332,7 @@ const TH = {
 
     margin: 10px 5px;
     padding: 15px;
-    background-color: #f3f3f3;
+    background-color: var(--ld-surface, #f3f3f3);
     height: 65px;
     border-radius: 6px;
     border: 1px solid #1070ff;

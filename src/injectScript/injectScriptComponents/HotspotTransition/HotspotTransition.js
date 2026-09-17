@@ -185,7 +185,6 @@ function HotspotTransition({
         return calculatedStepIndex
     }
 
-    let showHeader = transition && transition.view && transition.view.showHeader
     let showFooter = transition && transition.view && transition.view.showFooter
 
 
@@ -208,7 +207,6 @@ function HotspotTransition({
         changeStep={changeStep}
 
         isOmniBarDisabled={isOmniBarDisabled}
-        showHeader={showHeader}
         showFooter={showFooter}
         size={size}
         onBack={onBack}
@@ -293,7 +291,7 @@ const HT = {
         color: ${({themeTextColor}) => themeTextColor};
         height: 100%;
         font-weight: 550;
-        font-family: ${Colors.fontFamily};
+        font-family: var(--ld-demo-font, ${Colors.fontFamily});
 
         //max-width: 250px;
         max-width: 29vw;

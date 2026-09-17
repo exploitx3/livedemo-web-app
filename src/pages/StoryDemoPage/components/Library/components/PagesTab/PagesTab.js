@@ -1,10 +1,11 @@
 
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import styled from 'styled-components'
 import 'tippy.js/dist/tippy.css' // optional
 import 'tippy.js/animations/shift-away.css'
 import Colors from '../../../../../../constants/mainColors'
+import formatLibraryDate from '../../formatLibraryDate'
 
 
 const PagesTab = ({pages, addScreen}) => {
@@ -17,18 +18,21 @@ const PagesTab = ({pages, addScreen}) => {
         {pages && pages.map((page) => {
 
           return (
-            <PT.ImageWrapper
+            <PT.Item
               key={page._id}
               onClick={() => {
               addScreen(page)
             }}>
-              <PT.Image src={page.imageUrl}/>
-              {page.recordingRole ? (
-                <PT.RoleBadge $role={page.recordingRole}>
-                  {page.recordingRole === 'base' ? 'Base' : 'Delta'}
-                </PT.RoleBadge>
-              ) : null}
-            </PT.ImageWrapper>
+              <PT.ImageWrapper>
+                <PT.Image src={page.imageUrl}/>
+                {page.recordingRole ? (
+                  <PT.RoleBadge $role={page.recordingRole}>
+                    {page.recordingRole === 'base' ? 'Base' : 'Delta'}
+                  </PT.RoleBadge>
+                ) : null}
+              </PT.ImageWrapper>
+              <PT.Date>{formatLibraryDate(page.createdAt, page._id)}</PT.Date>
+            </PT.Item>
           )
         })}
       </PT.Main>
@@ -43,9 +47,15 @@ const PT = {
   Main: styled.main`
     display: grid;
     
-    grid-gap: 2.5rem;
+    grid-gap: 2.5rem 2.5rem;
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: 150px;
+  `,
+  Item: styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    cursor: pointer;
   `,
   ImageWrapper: styled.figure`
     border: 7px solid #fff;
@@ -66,6 +76,14 @@ const PT = {
     height: 100%;
     border-radius: 8px;
 
+  `,
+  Date: styled.p`
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--ld-text-muted, #6b7280);
+    font-family: ${Colors.fontFamily};
   `,
   RoleBadge: styled.span`
     position: absolute;

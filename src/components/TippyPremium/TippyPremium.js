@@ -38,8 +38,11 @@ const TippyPremium = ({ children, title, description, learnMoreUrl, placement = 
       trigger="mouseenter focus"
       maxWidth={232}
       placement={placement}
+      appendTo={() => document.body}
+      zIndex={10000}
+      popperOptions={{ strategy: 'fixed' }}
     >
-      <span>{children}</span>
+      <span style={{ display: 'inline-flex' }}>{children}</span>
     </StyledTippy>
   )
 }

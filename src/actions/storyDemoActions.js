@@ -99,6 +99,74 @@ export function reloadStoryDemo(workspaceId, storyDemoId, authToken) {
 }
 
 
+// --- Version history (undo/redo) ---------------------------------------------
+// The history itself lives server-side in the StoryRevision collection; the
+// browser only ever holds the counts ({canUndo, canRedo, ...}), never revision
+// payloads, so history depth costs the client nothing.
+
+let historyBusy = false
+let historyReloadTimer = null
+
+function historyAction(pathSuffix) {
+  return function (workspaceId, storyDemoId, authToken) {
+    return function (dispatch) {
+      // Drop presses while one is in flight — the server pops one entry per call
+      if (historyBusy) return Promise.resolve(null)
+      historyBusy = true
+
+      return axios.post(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyDemoId}/${pathSuffix}`, {}, {
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      })
+        .then((res) => {
+          dispatch({
+            type: types.UPDATE_STORY_HISTORY_STATUS,
+            historyStatus: res.data
+          })
+
+          if (res.data.undone) {
+            // Debounce the heavyweight story refetch so holding Ctrl+Z stays a
+            // stream of cheap POSTs with one reload at the end
+            clearTimeout(historyReloadTimer)
+            historyReloadTimer = setTimeout(() => {
+              dispatch(reloadStoryDemo(workspaceId, storyDemoId, authToken))
+            }, 250)
+          }
+
+          return res.data
+        })
+        .finally(() => {
+          historyBusy = false
+        })
+    }
+  }
+}
+
+export const undoStoryDemo = historyAction('undo')
+export const redoStoryDemo = historyAction('redo')
+
+export function getStoryHistoryStatus(workspaceId, storyDemoId, authToken) {
+
+  return function (dispatch) {
+    // limit=0 -> counts only; revision payloads never reach the browser
+    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyDemoId}/history?limit=0`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    })
+      .then((res) => {
+        dispatch({
+          type: types.UPDATE_STORY_HISTORY_STATUS,
+          historyStatus: res.data
+        })
+
+        return res.data
+      })
+  }
+}
+
+
 export function addTransition(type, storyDemoId, screenId, workspaceId, authToken) {
 
 

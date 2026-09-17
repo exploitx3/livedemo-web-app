@@ -4,15 +4,20 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
-import UrlPreviewTopBar from './components/UrlPreviewTopBar'
 import { connect } from 'react-redux'
+import ConfigProvider from 'antd/es/config-provider'
+import 'antd/es/config-provider/style'
+import theme from 'antd/es/theme'
 import Logo from '../../static/images/logo-round.svg'
 import Carousel from 'antd/es/carousel'
 import 'antd/es/carousel/style'
 import mainColors from '../../constants/mainColors'
 import ENV from '../../config.json'
 import axios from 'axios'
-import Colors from '../../constants/mainColors'
+
+const LIGHT_PRIMARY = '#1070ff'
+const LIGHT_PRIMARY_DARKER = '#1060cd'
+const LIGHT_SECONDARY = '#42e6ec'
 
 const INITIAL_ROTATE_TEXT = [
   'A few seconds left...',
@@ -74,12 +79,33 @@ const spin = keyframes`
   to { transform: rotate(360deg); }
 `
 
+const LightPageRoot = styled.div`
+  min-height: 100dvh;
+  background: #fff;
+  color: #111827;
+  color-scheme: light;
+
+  --ld-background: #fff;
+  --ld-surface: #fff;
+  --ld-text: #1d1d1d;
+  --ld-text-muted: #6b7280;
+  --ld-spinner: #2c2c2c;
+  --ld-border: #e5e7eb;
+  --ld-border-card: #1070ff;
+  --ld-primary: ${LIGHT_PRIMARY};
+  --ld-primary-darker: ${LIGHT_PRIMARY_DARKER};
+  --ld-primary-accent: ${LIGHT_PRIMARY};
+  --ld-primary-accent-darker: ${LIGHT_PRIMARY_DARKER};
+  --ld-icon-invert: 0;
+`
+
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
   height: 100dvh;
   font-family: Inter, system-ui, sans-serif;
   color: #111827;
+  background: #fff;
   -webkit-font-smoothing: antialiased;
 `
 
@@ -423,6 +449,14 @@ const LoadingText = styled.p`
   animation: ${shimmer} 2s linear infinite;
 `
 
+const CountdownText = styled(LoadingText)`
+  overflow: hidden;
+  font-size: 64px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+`
+
 const CenteredContent = styled.div`
   position: relative;
   z-index: 10;
@@ -447,9 +481,9 @@ const TextHolder = styled.div`
 
 const ModalWrapper = styled.div`
   background:
-    radial-gradient(ellipse at 15% 85%, ${Colors.primaryColor}8c 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 10%, ${Colors.primaryColorDarker}73 0%, transparent 48%),
-    radial-gradient(ellipse at 50% 50%, ${Colors.secondaryColor}1f 0%, transparent 70%),
+    radial-gradient(ellipse at 15% 85%, color-mix(in srgb, ${LIGHT_PRIMARY} 55%, transparent) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 10%, color-mix(in srgb, ${LIGHT_PRIMARY_DARKER} 45%, transparent) 0%, transparent 48%),
+    radial-gradient(ellipse at 50% 50%, ${LIGHT_SECONDARY}1f 0%, transparent 70%),
     linear-gradient(145deg, #0d1b4b 0%, #101c3a 40%, #0a1229 100%);
 
   h3 {
@@ -503,8 +537,26 @@ function UrlPreviewPage({ authData }) {
   const [storyDemo, setStoryDemo] = useState(null)
   const [hasDemoLoaded, setHasDemoLoaded] = useState(false)
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false)
+  const [countdown, setCountdown] = useState(15)
   const pollIntervalRef = useRef(null)
 
+  useEffect(() => {
+    const html = document.documentElement
+    const body = document.body
+    const prevHtmlBackground = html.style.background
+    const prevBodyBackground = body.style.background
+    const prevColorScheme = html.style.colorScheme
+
+    html.style.background = '#fff'
+    body.style.background = '#fff'
+    html.style.colorScheme = 'light'
+
+    return () => {
+      html.style.background = prevHtmlBackground
+      body.style.background = prevBodyBackground
+      html.style.colorScheme = prevColorScheme
+    }
+  }, [])
 
   useEffect(() => {
     setIsAuthenticated(!!(authData && authData.token))
@@ -535,6 +587,12 @@ function UrlPreviewPage({ authData }) {
     return () => clearInterval(pollIntervalRef.current)
   }, [urlDemoId])
 
+  useEffect(() => {
+    if (hasDemoLoaded || countdown < 0) return
+    const timer = setTimeout(() => setCountdown((n) => n - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [countdown, hasDemoLoaded])
+
   const loadingTextArray = useMemo(
     () =>
       INITIAL_ROTATE_TEXT.concat(
@@ -557,7 +615,15 @@ function UrlPreviewPage({ authData }) {
   const redirectUrl = `${ENV.APP_URL}/?browserSessionId=${browserSessionId}`
 
   return (
-    <Wrapper>
+    <ConfigProvider theme={{
+      algorithm: theme.defaultAlgorithm,
+      token: {
+        fontFamily: mainColors.fontFamily,
+        colorPrimary: LIGHT_PRIMARY,
+      },
+    }}>
+      <LightPageRoot>
+        <Wrapper>
       <TopBar>
         <LeftSection>
           <a href={`${ENV.LANDING_URL}`} title="Home" style={{ display: 'flex', alignItems: 'center' }}>
@@ -608,20 +674,24 @@ function UrlPreviewPage({ authData }) {
                   <PreviewCard>
                     <GlowBorder />
                     <CenteredContent>
-                      <LoadingCarousel
-                        autoplay
-                        dots={false}
-                        autoplaySpeed={3900}
-                        speed={800}
-                        infinite
-                        pauseOnHover={false}
-                        slidesToShow={1}
-                        slidesToScroll={1}
-                      >
-                        {loadingTextArray.map((text, index) => (
-                          <LoadingText key={index}>{text}</LoadingText>
-                        ))}
-                      </LoadingCarousel>
+                      {countdown >= 0 ? (
+                        <CountdownText>{countdown}</CountdownText>
+                      ) : (
+                        <LoadingCarousel
+                          autoplay
+                          dots={false}
+                          autoplaySpeed={3900}
+                          speed={800}
+                          infinite
+                          pauseOnHover={false}
+                          slidesToShow={1}
+                          slidesToScroll={1}
+                        >
+                          {loadingTextArray.map((text, index) => (
+                            <LoadingText key={index}>{text}</LoadingText>
+                          ))}
+                        </LoadingCarousel>
+                      )}
                     </CenteredContent>
                   </PreviewCard>
                 )}
@@ -719,7 +789,7 @@ function UrlPreviewPage({ authData }) {
                   'Free to get started, no credit card',
                 ].map((text) => (
                   <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ width: 16, height: 16, color: Colors.primaryColor, flexShrink: 0 }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ width: 16, height: 16, color: LIGHT_PRIMARY, flexShrink: 0 }}>
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 6 9 17l-5-5" vectorEffect="non-scaling-stroke" />
                     </svg>
                     <span className="modal-text">{text}</span>
@@ -737,8 +807,8 @@ function UrlPreviewPage({ authData }) {
                     width: '100%',
                     height: 48,
                     borderRadius: 12,
-                    background: Colors.primaryColor,
-                    border: `1px solid ${Colors.primaryColorDarker}`,
+                    background: LIGHT_PRIMARY,
+                    border: `1px solid ${LIGHT_PRIMARY_DARKER}`,
                     color: '#fff',
                     fontSize: 16,
                     fontWeight: 600,
@@ -747,8 +817,8 @@ function UrlPreviewPage({ authData }) {
                     transition: 'background 0.15s, border-color 0.15s',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = Colors.primaryColorDarker; e.currentTarget.style.borderColor = Colors.primaryColorDarker }}
-                  onMouseLeave={e => { e.currentTarget.style.background = Colors.primaryColor; e.currentTarget.style.borderColor = Colors.primaryColorDarker }}
+                  onMouseEnter={e => { e.currentTarget.style.background = LIGHT_PRIMARY_DARKER; e.currentTarget.style.borderColor = LIGHT_PRIMARY_DARKER }}
+                  onMouseLeave={e => { e.currentTarget.style.background = LIGHT_PRIMARY; e.currentTarget.style.borderColor = LIGHT_PRIMARY_DARKER }}
                 >
                   Sign up for free
                 </a>
@@ -757,7 +827,9 @@ function UrlPreviewPage({ authData }) {
           </ModalWrapper>
         </div>
       )}
-    </Wrapper>
+        </Wrapper>
+      </LightPageRoot>
+    </ConfigProvider>
   )
 }
 

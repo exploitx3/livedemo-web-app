@@ -1,5 +1,6 @@
-import React, {useState} from 'react'
+import React, {useEffect, useMemo, useRef, useState} from 'react'
 import Colors from '../../../../../constants/mainColors'
+import GOOGLE_FONTS from '../../../../../constants/googleFontsTop200'
 import styled from 'styled-components'
 //import { Button, Icon, Input, Switch, Upload } from 'antd'
 import Button from 'antd/es/button'
@@ -7,11 +8,13 @@ import Icon from '../../../../../components/Icon/Icon'
 import Input from 'antd/es/input'
 import Switch from 'antd/es/switch'
 import Upload from 'antd/es/upload'
+import Select from 'antd/es/select'
 import ENV from '../../../../../config'
 import axios from 'axios'
 import {HexColorInput, HexColorPicker} from 'react-colorful'
 import message from "antd/es/message";
 import StaticUploadIcon from "../../../../../static/images/uploadIcon.svg";
+import FooterButtons from '../../../../../constants/FooterButtons'
 
 /*
   tabsWidth is used to manually set the width of the element
@@ -19,7 +22,44 @@ import StaticUploadIcon from "../../../../../static/images/uploadIcon.svg";
  */
 
 
+function loadGoogleFontPreview(fontFamily) {
+  if (!fontFamily || document.getElementById(`ld-font-${fontFamily}`)) {
+    return
+  }
+
+  const link = document.createElement('link')
+  link.id = `ld-font-${fontFamily}`
+  link.rel = 'stylesheet'
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily).replace(/%20/g, '+')}:wght@400;500;600;700&display=swap`
+  document.head.appendChild(link)
+}
+
+function applyDemoFont(fontFamily) {
+  loadGoogleFontPreview(fontFamily)
+
+  if (!/^[A-Za-z0-9 ]{1,50}$/.test(fontFamily || '')) {
+    document.documentElement.style.removeProperty('--ld-demo-font')
+    return
+  }
+
+  document.documentElement.style.setProperty('--ld-demo-font', `'${fontFamily}', sans-serif`)
+}
+
+function preloadFontSearchPreviews(query) {
+  if (!query) {
+    return
+  }
+
+  const normalized = query.toLowerCase()
+  GOOGLE_FONTS
+    .filter(font => font.toLowerCase().includes(normalized))
+    .slice(0, 10)
+    .forEach(loadGoogleFontPreview)
+}
+
+
 const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
+  const fontSearchTimerRef = useRef(null)
   const marginTop = 116
 
   let [isSaving, setIsSaving] = useState(false)
@@ -31,6 +71,10 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
   const [stepBackgroundColor, setStepBackgroundColor] = useState(storyDemo.custom.theme && storyDemo.custom.theme.stepBackgroundColor || Colors.primaryColor)
   const [buttonBackgroundColor, setButtonBackgroundColor] = useState((storyDemo.custom.theme && storyDemo.custom.theme.buttonBackgroundColor) || Colors.primaryColor)
   const [buttonTextColor, setButtonTextColor] = useState((storyDemo.custom.theme && storyDemo.custom.theme.buttonTextColor) || '#FFFFFF')
+  const [fontFamily, setFontFamily] = useState((storyDemo.custom.theme && storyDemo.custom.theme.fontFamily) || '')
+  const [showTooltipArrow, setShowTooltipArrow] = useState(storyDemo.custom?.theme?.showTooltipArrow ?? true)
+  const [hoverGlow, setHoverGlow] = useState(storyDemo.custom?.theme?.hoverGlow ?? true)
+  const [footerButtons, setFooterButtons] = useState(storyDemo.custom?.theme?.footerButtons || FooterButtons.backAndNext)
   const [watermarkConfigIsActive, setWatermarkConfigIsActive] = useState((storyDemo.custom.theme && !!storyDemo.custom.theme.watermarkConfig.isActive))
   const [watermarkConfigText, setWatermarkConfigText] = useState((storyDemo.custom.theme && storyDemo.custom.theme.watermarkConfig.text) || '')
   let [watermarkConfigImageUrl, setWatermarkConfigImageUrl] = useState(
@@ -40,6 +84,22 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
 
 
 
+
+  useEffect(() => applyDemoFont(fontFamily), [fontFamily])
+
+  const fontOptions = useMemo(() => {
+    const fonts = GOOGLE_FONTS.includes(fontFamily) || !fontFamily
+      ? GOOGLE_FONTS
+      : [fontFamily, ...GOOGLE_FONTS]
+
+    return [
+      {value: '', label: 'Default'},
+      ...fonts.map(font => ({
+        value: font,
+        label: <span style={{fontFamily: `'${font}', sans-serif`}}>{font}</span>
+      }))
+    ]
+  }, [fontFamily])
 
   const uploadProps = {
     name: 'watermarkImage',
@@ -70,7 +130,11 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
                   buttonTextColor,
                   watermarkConfigIsActive,
                   watermarkConfigText,
-                  watermarkConfigUrl
+                  watermarkConfigUrl,
+                  fontFamily,
+                  showTooltipArrow,
+                  hoverGlow,
+                  footerButtons
   ) {
     setIsSaving(true)
 
@@ -81,6 +145,10 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
       textColor: textColor,
       buttonBackgroundColor: buttonBackgroundColor,
       buttonTextColor: buttonTextColor,
+      fontFamily: fontFamily,
+      showTooltipArrow: showTooltipArrow,
+      hoverGlow: hoverGlow,
+      footerButtons: footerButtons,
       watermarkConfig: {
         isActive: watermarkConfigIsActive,
         text: watermarkConfigText,
@@ -126,7 +194,11 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
               buttonTextColor,
               watermarkConfigIsActive,
               watermarkConfigText,
-              watermarkConfigUrl
+              watermarkConfigUrl,
+              fontFamily,
+              showTooltipArrow,
+              hoverGlow,
+              footerButtons
             )
 
           }}/>
@@ -169,7 +241,11 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
                     buttonTextColor,
                     checked,
                     watermarkConfigText,
-                    watermarkConfigUrl
+                    watermarkConfigUrl,
+                    fontFamily,
+                    showTooltipArrow,
+                    hoverGlow,
+                    footerButtons
                   )
                 }}/>
 
@@ -204,6 +280,114 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
               <TH.ColorPicker color={buttonTextColor} onChange={setButtonTextColor}/>
               <TH.ColorInput color={buttonTextColor} onChange={setButtonTextColor}/>
             </TH.TextWrapper>
+            <TH.TextWrapper>
+              <TH.TextTitle>Font Family:</TH.TextTitle>
+              <TH.Text>Applied to hotspot, popup, and button text in demos</TH.Text>
+              <Select
+                showSearch
+                listHeight={256}
+                value={fontFamily || ''}
+                filterOption={(input, option) =>
+                  String(option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                onSearch={(query) => {
+                  clearTimeout(fontSearchTimerRef.current)
+                  fontSearchTimerRef.current = setTimeout(() => preloadFontSearchPreviews(query), 200)
+                }}
+                onChange={(value) => {
+                  setFontFamily(value)
+                  onSave(
+                    isChecked,
+                    stepBackgroundColor,
+                    textColor,
+                    buttonBackgroundColor,
+                    buttonTextColor,
+                    watermarkConfigIsActive,
+                    watermarkConfigText,
+                    watermarkConfigUrl,
+                    value,
+                    showTooltipArrow,
+                    hoverGlow,
+                    footerButtons
+                  )
+                }}
+                options={fontOptions}
+              />
+            </TH.TextWrapper>
+            <TH.TextWrapper style={{alignItems: 'flex-start'}}>
+              <TH.TextAndButton>
+                <TH.TextTitle>Show tooltip arrow:</TH.TextTitle>
+                <TH.CheckBox checked={showTooltipArrow} onChange={(checked) => {
+                  setShowTooltipArrow(checked)
+                  onSave(
+                    isChecked,
+                    stepBackgroundColor,
+                    textColor,
+                    buttonBackgroundColor,
+                    buttonTextColor,
+                    watermarkConfigIsActive,
+                    watermarkConfigText,
+                    watermarkConfigUrl,
+                    fontFamily,
+                    checked,
+                    hoverGlow,
+                    footerButtons
+                  )
+                }}/>
+              </TH.TextAndButton>
+              <TH.Text>Applied to Pointer tooltips in demos</TH.Text>
+            </TH.TextWrapper>
+            <TH.TextWrapper style={{alignItems: 'flex-start'}}>
+              <TH.TextAndButton>
+                <TH.TextTitle>Hover glow:</TH.TextTitle>
+                <TH.CheckBox checked={hoverGlow} onChange={(checked) => {
+                  setHoverGlow(checked)
+                  onSave(
+                    isChecked,
+                    stepBackgroundColor,
+                    textColor,
+                    buttonBackgroundColor,
+                    buttonTextColor,
+                    watermarkConfigIsActive,
+                    watermarkConfigText,
+                    watermarkConfigUrl,
+                    fontFamily,
+                    showTooltipArrow,
+                    checked,
+                    footerButtons
+                  )
+                }}/>
+              </TH.TextAndButton>
+              <TH.Text>Theme-colored glow on tooltip, hotspot, and transition cards</TH.Text>
+            </TH.TextWrapper>
+            <TH.TextWrapper>
+              <TH.TextTitle>Footer buttons:</TH.TextTitle>
+              <TH.Text>Back and Next, or a compact next arrow</TH.Text>
+              <Select
+                value={footerButtons}
+                onChange={(value) => {
+                  setFooterButtons(value)
+                  onSave(
+                    isChecked,
+                    stepBackgroundColor,
+                    textColor,
+                    buttonBackgroundColor,
+                    buttonTextColor,
+                    watermarkConfigIsActive,
+                    watermarkConfigText,
+                    watermarkConfigUrl,
+                    fontFamily,
+                    showTooltipArrow,
+                    hoverGlow,
+                    value
+                  )
+                }}
+                options={[
+                  {value: FooterButtons.backAndNext, label: 'Back and Next'},
+                  {value: FooterButtons.nextArrow, label: 'Next Arrow'},
+                ]}
+              />
+            </TH.TextWrapper>
             <TH.SaveButton loading={isSaving}
                            onClick={() => onSave(
                              isChecked,
@@ -213,7 +397,11 @@ const Theme = ({workspaceId, storyDemo, authData, reloadStoryDemo}) => {
                              buttonTextColor,
                              watermarkConfigIsActive,
                              watermarkConfigText,
-                             watermarkConfigUrl
+                             watermarkConfigUrl,
+                             fontFamily,
+                             showTooltipArrow,
+                             hoverGlow,
+                             footerButtons
                            )
                            }>Save</TH.SaveButton>
           </TH.Main__RightSide>
@@ -382,7 +570,7 @@ const TH = {
 
     margin: 10px 5px;
     padding: 15px;
-    background-color: #f3f3f3;
+    background-color: var(--ld-surface, #f3f3f3);
     height: 65px;
     border-radius: 6px;
     border: 1px solid #1070ff;

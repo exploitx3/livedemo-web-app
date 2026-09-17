@@ -24,12 +24,9 @@ const PopupContentView = ({
     liveDemo,
     changeToScreen,
     onNext,
+    audioProgress,
 }) => {
     const hasImage = showPreviewImage && previewImageUrl
-
-    // empty <p><br /></p> tags are editor trailing-newline junk, not real paragraphs
-    const realParagraphs = popupDescription.replace(/<p>(\s*<br\s*\/?>\s*)*<\/p>/g, '')
-    const multiParagraph = (realParagraphs.match(/<p[\s>]/g) || []).length > 1
 
     const textContent = (
         <>
@@ -39,7 +36,6 @@ const PopupContentView = ({
                 <C.Description
                     alignment={alignment}
                     textFontSize={textFontSize}
-                    $multiParagraph={multiParagraph}
                     dangerouslySetInnerHTML={{ __html: popupDescription }}
                 />
             )}
@@ -54,6 +50,7 @@ const PopupContentView = ({
                         changeToScreen={changeToScreen}
                         onNext={onNext}
                         alignment={alignment}
+                        audioProgress={audioProgress}
                     />
                 ))}
             </C.ButtonsWrapper>
@@ -204,7 +201,7 @@ const C = {
         gap: ${({ alignment }) => alignment === 'center' ? '10px' : '0px'};
         margin: 0;
         width: 85%;
-        overflow-y: scroll;
+        overflow: visible;
         min-height: 95px;
 
         && {
@@ -224,7 +221,7 @@ const C = {
         width: 85%;
         font-size: ${({ titleFontSize }) => titleFontSize};
         color: white;
-        font-family: ${Colors.fontFamilyApple};
+        font-family: var(--ld-demo-font, ${Colors.fontFamilyApple});
         margin: 0;
         font-weight: 750;
         padding-left: 10px;
@@ -237,33 +234,37 @@ const C = {
         }
     `,
 
-    Description: styled.p`
+    Description: styled.div`
         text-align: ${({ alignment }) => alignment};
         max-height: 40%;
         font-size: ${({ textFontSize }) => textFontSize};
         color: white;
-        font-family: ${Colors.fontFamilyApple};
+        font-family: var(--ld-demo-font, ${Colors.fontFamilyApple});
         margin: 0;
         padding-left: 10px;
         overflow: hidden;
         width: 85%;
         font-weight: 300;
+        white-space: normal !important;
+        overflow-wrap: break-word;
+        word-break: break-word;
 
-        && p { margin: 0; }
+        && blockquote {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            white-space: normal !important;
+        }
 
-        ${({ $multiParagraph }) => $multiParagraph && `
-            white-space: nowrap;
-            text-overflow: ellipsis;
-
-            p:last-child {
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            p:first-child { white-space: inherit; }
-            p:not(:last-child) { white-space: inherit; }
-        `}
+        && p,
+        && li {
+            margin: 0;
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
 
         @media (max-height: 235px) {
             && { display: none; }

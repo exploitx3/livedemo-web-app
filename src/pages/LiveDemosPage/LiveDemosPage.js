@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import StoryDemosView from './components/StoryDemosView/StoryDemosView'
 import AIRecordingsView from './components/AIRecordingsView/AIRecordingsView'
+import AIAgentsView from './components/AIAgentsView/AIAgentsView'
 import Header from '../../components/Header/Header'
 // //import { Button, Col, Layout, Modal } from 'antd'
 
@@ -28,6 +30,7 @@ import * as walkthroughActions from '../../actions/walkthroughActions'
 import mainColors from '../../constants/mainColors'
 import axios from '../../utils/axiosInstance'
 import * as ENV from '../../config.json'
+import TippyPremium from '../../components/TippyPremium/TippyPremium'
 
 import {chromeAppAuthenticate, showErrorsForResponse} from '../../utils/helperFunctions'
 import {updateCurrentSelectedWorkspace} from "../../actions/workspacesActions";
@@ -49,13 +52,17 @@ if(chrome) {
 const TABS = {
   LIVE_DEMOS: 'LiveDemos',
   AI_RECORDINGS: 'AI Recordings',
+  AI_AGENTS: 'AI Agents',
 }
 
 function LiveDemosPage(props) {
+  const navigate = useNavigate()
   let [liveDemos, setLiveDemos] = useState([])
   let [storyDemos, setStoryDemos] = useState(null)
   let [autoRecordings, setAutoRecordings] = useState(null)
+  let [aiAgents, setAiAgents] = useState(null)
   let [activeTab, setActiveTab] = useState(TABS.LIVE_DEMOS)
+  const allowAIAgents = props.authData?.featureFlags?.allowAIAgents === true
 
   function getLiveDemos(workspaceId, authToken) {
     return axios.get(`/workspaces/${workspaceId}/livedemos`,{
@@ -84,6 +91,15 @@ function LiveDemosPage(props) {
       .then((res) => res.data)
   }
 
+  function getAiAgents(workspaceId, authToken) {
+    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/agents`,{
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    })
+      .then((res) => res.data)
+  }
+
 
   useEffect(() => {
     if (props.authData.email) {
@@ -104,14 +120,9 @@ function LiveDemosPage(props) {
 
       setStoryDemos(null)
       setAutoRecordings(null)
+      setAiAgents(null)
 
       Promise.all([
-        // getLiveDemos(props.currentSelectedWorkspace._id, props.authData.token)
-        // .then((liveDemosArray) => {
-        //
-        //
-        //   setLiveDemos(liveDemosArray)
-        // }),
         getStoryDemos(props.currentSelectedWorkspace._id, props.authData.token)
           .then((storyDemosArray) => {
             setStoryDemos(storyDemosArray)
@@ -119,13 +130,86 @@ function LiveDemosPage(props) {
         getAutoRecordings(props.currentSelectedWorkspace._id, props.authData.token)
           .then((autoRecordingsArray) => {
             setAutoRecordings(autoRecordingsArray)
-          })
+          }),
+        ...(allowAIAgents ? [
+          getAiAgents(props.currentSelectedWorkspace._id, props.authData.token)
+            .then((agentsArray) => {
+              setAiAgents(agentsArray)
+            }),
+        ] : []),
         ])
     }
 
 
-  }, [props.currentSelectedWorkspace])
+  }, [props.currentSelectedWorkspace, allowAIAgents])
 
+
+  useEffect(() => {
+    if (!allowAIAgents && activeTab === TABS.AI_AGENTS) {
+      setActiveTab(TABS.LIVE_DEMOS)
+    }
+  }, [allowAIAgents, activeTab])
+
+  const refreshStoryDemos = useCallback(function refreshStoryDemos() {
+    if (!props.currentSelectedWorkspace?._id) return Promise.resolve()
+
+    return getStoryDemos(props.currentSelectedWorkspace._id, props.authData.token)
+      .then((storyDemosArray) => {
+        setStoryDemos(storyDemosArray)
+      })
+  }, [props.currentSelectedWorkspace, props.authData.token])
+
+  const refreshAiAgents = useCallback(function refreshAiAgents() {
+    if (!props.currentSelectedWorkspace?._id) return Promise.resolve()
+
+    return getAiAgents(props.currentSelectedWorkspace._id, props.authData.token)
+      .then((agentsArray) => setAiAgents(agentsArray))
+  }, [props.currentSelectedWorkspace, props.authData.token])
+
+  const createAiAgent = useCallback(function createAiAgent() {
+    const workspaceId = props.currentSelectedWorkspace._id
+
+    return axios.post(
+      `${ENV.STORIES_API}/workspaces/${workspaceId}/agents`,
+      { name: 'Untitled agent' },
+      { headers: { Authorization: `Bearer ${props.authData.token}` } }
+    )
+      .then((res) => {
+        navigate(`/workspace/${workspaceId}/aidemoagent/${res.data._id}`)
+      })
+      .catch((err) => showErrorsForResponse(err))
+  }, [props.currentSelectedWorkspace, props.authData.token, navigate])
+
+  const deleteAiAgent = useCallback(function deleteAiAgent(agent) {
+    return axios.delete(
+      `${ENV.STORIES_API}/workspaces/${agent.workspaceId}/agents/${agent._id}`,
+      { headers: { Authorization: `Bearer ${props.authData.token}` } }
+    )
+      .then(() => refreshAiAgents())
+      .catch((err) => showErrorsForResponse(err))
+  }, [props.authData.token, refreshAiAgents])
+
+  const setAiAgentPublished = useCallback(function setAiAgentPublished(agent, isPublished) {
+    return axios.post(
+      `${ENV.STORIES_API}/workspaces/${agent.workspaceId}/agents/${agent._id}/publish`,
+      { isPublished },
+      { headers: { Authorization: `Bearer ${props.authData.token}` } }
+    )
+      .then(() => refreshAiAgents())
+      .catch((err) => showErrorsForResponse(err))
+  }, [props.authData.token, refreshAiAgents])
+
+  const cloneLiveDemo = useCallback(function cloneLiveDemo(liveDemo) {
+    const authToken = props.authData.token
+
+    return axios.post(
+      `${ENV.STORIES_API}/workspaces/${liveDemo.workspaceId}/stories/${liveDemo._id.toString()}/clone`,
+      {},
+      { headers: { Authorization: `Bearer ${authToken}` } }
+    )
+      .then(() => refreshStoryDemos())
+      .catch((err) => showErrorsForResponse(err))
+  }, [props.authData.token, refreshStoryDemos])
 
   const showConfirmDeleteLiveDemo = useCallback(function showConfirmDeleteLiveDemo(liveDemo) {
 
@@ -170,16 +254,33 @@ function LiveDemosPage(props) {
                   animated={false}
                   defaultActiveKey={activeTab}
                   activeKey={activeTab}
-                  onChange={(newActiveTab) => setActiveTab(newActiveTab)}
+                  onChange={(newActiveTab) => {
+                    if (newActiveTab === TABS.AI_AGENTS && !allowAIAgents) return
+                    setActiveTab(newActiveTab)
+                  }}
                   tabPosition={'top'}
                 >
                   <TabPane tab={'LiveDemos'} key={TABS.LIVE_DEMOS} />
                   <TabPane tab={'AI Recordings'} key={TABS.AI_RECORDINGS} />
+                  <TabPane
+                    tab={
+                      <TippyPremium
+                        title="Unlock AI Agents"
+                        description="Upgrade your plan to create and manage AI Demo Agents."
+                        placement="bottom"
+                        disabled={allowAIAgents}
+                      >
+                        <span style={{ cursor: allowAIAgents ? 'pointer' : 'not-allowed' }}>AI Agents</span>
+                      </TippyPremium>
+                    }
+                    key={TABS.AI_AGENTS}
+                  />
                 </S.Tabs>
               </S.TabsContainer>
               {activeTab === TABS.LIVE_DEMOS && (
                 <StoryDemosView
                   onDeleteLiveDemo={showConfirmDeleteLiveDemo}
+                  onCloneLiveDemo={cloneLiveDemo}
                   storydemos={storyDemos}
                   isChromeAppAuthorized={props.isChromeAppAuthorized}
                   noDemoLimit={props.authData?.featureFlags?.noDemoLimit === true}
@@ -188,6 +289,15 @@ function LiveDemosPage(props) {
               {activeTab === TABS.AI_RECORDINGS && (
                 <AIRecordingsView
                   autoRecordings={autoRecordings}
+                />
+              )}
+              {allowAIAgents && activeTab === TABS.AI_AGENTS && (
+                <AIAgentsView
+                  agents={aiAgents}
+                  workspaceId={props.currentSelectedWorkspace?._id}
+                  onCreate={createAiAgent}
+                  onDelete={deleteAiAgent}
+                  onSetPublished={setAiAgentPublished}
                 />
               )}
             </S.WorkspacesCol>
@@ -277,7 +387,7 @@ const S = {
   `,
   Content: styled(Content)`
     && {
-      background: white;
+      background: ${mainColors.App.sidebarColor};
       padding: 16px;
       overflow: scroll;
       overflow-x: hidden;
@@ -295,7 +405,7 @@ const S = {
     display: block;
     height: 100%;
     width: 100%;
-    background: white;
+    background: ${mainColors.App.sidebarColor};
 `,
   TutorialButton: styled(Button)`
       && {
@@ -320,7 +430,7 @@ const S = {
 
 `,
   DashboardContainer: styled.div`
-    background: white;
+    background: ${mainColors.App.sidebarColor};
     width: 100%;
   `,
   DashboardRow: styled(Row)`

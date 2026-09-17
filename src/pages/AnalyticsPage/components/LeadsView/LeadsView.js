@@ -296,21 +296,21 @@ const S = {
   `,
   ChartWrapper: styled.div`
     padding: 20px;
-    border: 2px solid #F3F4F6;
+    border: 2px solid var(--ld-surface, #F3F4F6);
     border-radius: 8px;
     margin-bottom: 20px;
 
   `,
   SessionsListWrapper: styled.div`
     padding: 20px;
-    border: 2px solid #F3F4F6;
+    border: 2px solid var(--ld-surface, #F3F4F6);
     border-radius: 8px;
   `,
   SessionsList__Title: styled.p`
     margin: 0px 0px 0px 0px;
     
     font-size: 1.3em;
-    color: #111;
+    color: ${mainColors.primaryText};
     font-family: ${mainColors.fontFamily};
   `,
   ViewsRow: styled.div`
@@ -324,13 +324,13 @@ const S = {
   ViewsTitle: styled.p`
     margin: 0px 15px 0px 0px;
     font-size: 1.3em;
-    color: #111;
+    color: ${mainColors.primaryText};
     font-family: ${mainColors.fontFamily};
     
   `,
   Content: styled(Content)`
     && {
-      background: white;
+      background: ${mainColors.App.sidebarColor};
       padding: 16px;
       overflow: scroll;
       overflow-x: hidden;
@@ -348,7 +348,7 @@ const S = {
     display: block;
     height: 100%;
     width: 100%;
-    background: white;
+    background: ${mainColors.App.sidebarColor};
 `,
   TutorialButton: styled(Button)`
       && {

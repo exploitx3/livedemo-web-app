@@ -99,21 +99,21 @@ const CommonOptions = ({
     <ST.ActionSelectorLineMargin>
       <ST.CheckboxLineMargin
         onClick={() => {
-          updateViewField('showHeader', !internalStep.view.showHeader)
-        }}>
-        <ST.Checkbox
-          checked={internalStep.view.showHeader} />
-        <ST.CheckboxText>Show header</ST.CheckboxText>
-      </ST.CheckboxLineMargin>
-    </ST.ActionSelectorLineMargin>
-    <ST.ActionSelectorLineMargin>
-      <ST.CheckboxLineMargin
-        onClick={() => {
           updateViewField('showFooter', !internalStep.view.showFooter)
         }}>
         <ST.Checkbox
           checked={internalStep.view.showFooter} />
         <ST.CheckboxText>Show footer</ST.CheckboxText>
+      </ST.CheckboxLineMargin>
+    </ST.ActionSelectorLineMargin>
+    <ST.ActionSelectorLineMargin>
+      <ST.CheckboxLineMargin
+        onClick={() => {
+          updateViewField('hideBackButton', !internalStep.view.hideBackButton)
+        }}>
+        <ST.Checkbox
+          checked={internalStep.view.hideBackButton} />
+        <ST.CheckboxText>Hide back button</ST.CheckboxText>
       </ST.CheckboxLineMargin>
     </ST.ActionSelectorLineMargin>
     <ST.ActionSelectorLineMargin>
@@ -203,7 +203,7 @@ const ST = {
     justify-content: center;
     width: 100%;
 
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
     border-top: none;
@@ -247,7 +247,7 @@ const ST = {
     height: 35px;
 
     width: 100%;
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-radius: 6px;
     padding: 0px 5px;
     &&:hover .Step__DeleteButton,
@@ -379,7 +379,7 @@ const ST = {
   `,
   ViewTitle: styled.h2`
     font-size: 1em;
-    color: #111;
+    color: var(--ld-text, #111);
     text-align: center;
 
     margin-bottom: 0px;

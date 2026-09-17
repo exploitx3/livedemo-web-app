@@ -132,31 +132,35 @@ const S = {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f1f3fe;
-    border: 3px solid #f1f3fe;
-    background: white;
+    background: var(--ld-surface, white);
+    border: 3px solid var(--ld-border, #f1f3fe);
+    color: var(--ld-text, #111);
     cursor: pointer;
   `,
   EditIcon: styled(EditOutlined)`
     && svg {
       width: 100%;
       height: 100%;
+      fill: currentColor;
     }
 
     && {
       width: 25px;
       height: 25px;
+      color: inherit;
     }
   `,
   DeleteIcon: styled(DeleteOutlined)`
     && svg {
       width: 100%;
       height: 100%;
+      fill: currentColor;
     }
 
     && {
       width: 25px;
       height: 25px;
+      color: inherit;
     }
   `,
   TopWrapper: styled.div`

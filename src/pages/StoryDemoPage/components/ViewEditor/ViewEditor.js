@@ -47,11 +47,11 @@ const VE = {
     align-items: center;
     width: 100%;
     height: 200px;
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-radius: 6px;
     padding: 0px 5px;
     justify-content: flex-start;
-    background: #ffffff;
+    background: var(--ld-surface, #ffffff);
 
     && .slate-editor ol,
     && .slate-editor ul {

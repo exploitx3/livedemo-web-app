@@ -156,7 +156,8 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
       // Styling
       style: {
         borderRadius: '25px',
-        background: '#111',
+        background: Colors.toastBackground,
+        color: '#fff',
       },
       className: '',
 
@@ -226,7 +227,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
               textStyles={{
                 fontSize: '0.9em',
-                color: '#111',
+                color: 'var(--ld-text, #111)',
               }}
               buttonStyles={{
                 boxShadow: 'none',
@@ -250,7 +251,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
               textStyles={{
                 fontSize: '0.9em',
-                color: '#111',
+                color: 'var(--ld-text, #111)',
               }}
               buttonStyles={{
                 boxShadow: 'none',
@@ -274,7 +275,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
               textStyles={{
                 fontSize: '0.9em',
-                color: '#111',
+                color: 'var(--ld-text, #111)',
               }}
               buttonStyles={{
                 boxShadow: 'none',
@@ -304,7 +305,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
             padding: 16,
             display: "flex",
             justifyContent: "space-between",
-            borderBottom: `1px solid #bebebe`
+            borderBottom: `1px solid var(--ld-border, #bebebe)`
           }}>
            
             <SD.LeftSide>
@@ -334,7 +335,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
                   textStyles={{
                     fontSize: '0.9em',
-                    color: '#111',
+                    color: 'var(--ld-text, #111)',
                     marginLeft: '5px !important'
                   }}
                   buttonStyles={{
@@ -373,7 +374,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
                         textStyles={{
                           fontSize: '0.9em',
-                          color: '#111',
+                          color: 'var(--ld-text, #111)',
                         }}
                         buttonStyles={{
                           boxShadow: 'none',
@@ -394,7 +395,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
                         textStyles={{
                           fontSize: '0.9em',
-                          color: '#111',
+                          color: 'var(--ld-text, #111)',
                         }}
                         buttonStyles={{
                           boxShadow: 'none',
@@ -586,7 +587,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
               textStyles={{
                 fontSize: '0.9em',
-                color: '#111',
+                color: 'var(--ld-text, #111)',
               }}
               buttonStyles={{
                 boxShadow: 'none',
@@ -637,7 +638,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
                   textStyles={{
                     fontSize: '0.9em',
-                    color: '#111',
+                    color: 'var(--ld-text, #111)',
                     marginLeft: '5px !important'
                   }}
                   buttonStyles={{
@@ -685,7 +686,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
                       textStyles={{
                         fontSize: '0.9em',
-                        color: '#111',
+                        color: 'var(--ld-text, #111)',
                       }}
                       buttonStyles={{
                         boxShadow: 'none',
@@ -706,7 +707,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
                       textStyles={{
                         fontSize: '0.9em',
-                        color: '#111',
+                        color: 'var(--ld-text, #111)',
                       }}
                       buttonStyles={{
                         boxShadow: 'none',
@@ -736,7 +737,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
                       textStyles={{
                         fontSize: '0.9em',
-                        color: '#111',
+                        color: 'var(--ld-text, #111)',
                       }}
                       buttonStyles={{
                         boxShadow: 'none',
@@ -757,7 +758,7 @@ const ShareDropdown = ({ storyId, workspaceId, liveDemo, isPublished, onSetIsPub
 
                       textStyles={{
                         fontSize: '0.9em',
-                        color: '#111',
+                        color: 'var(--ld-text, #111)',
                       }}
                       buttonStyles={{
                         boxShadow: 'none',
@@ -821,7 +822,7 @@ const SD = {
     -webkit-tap-highlight-color: rgba(0,0,0,0);
     --antd-wave-shadow-color: #1890ff;
     visibility: visible;
-    color: ${props => props.$active ? '#1890ff' : 'rgba(0,0,0,.65)'};
+    color: ${props => props.$active ? '#1890ff' : 'var(--ld-text-muted, rgba(0,0,0,.65))'};
     border-bottom: ${props => props.$active ? '2px solid #1890ff' : 'none'};
     border-top: none;
     border-left: none;
@@ -857,7 +858,7 @@ const SD = {
   `,
   TabsBar: styled.div`
     margin: 0 0px 0 0;
-    border-bottom: 1px solid #bebebe;
+    border-bottom: 1px solid var(--ld-border, #bebebe);
   `,
   TabsContent: styled.div`
     width: 100%;
@@ -865,23 +866,23 @@ const SD = {
   ContentNotifyBox: styled.span`
     margin: 0px;
     font-size: 1em;
-    background: #f9f9f9;
+    background: var(--ld-surface, #f9f9f9);
     padding: 5px;
-    border: 2px solid #ccc;
+    border: 2px solid var(--ld-border, #ccc);
     border-radius: 8px;
   `,
   ContentNotifyText: styled.p`
     margin: 0px;
     word-break: break-word;
     text-align: left;
-    color: #111;
+    color: var(--ld-text, #111);
   `,
   Wrapper: styled.div`
     width: 385px;
     height: auto;
     border-radius: 6px;
-    border: 1px solid #e5e7eb;
-    background: #fefefe;
+    border: 1px solid var(--ld-border, #e5e7eb);
+    background: var(--ld-surface, #fefefe);
     box-shadow: 0 0 #0000, 0 0 #0000, 0px 0px 0px 1px rgba(17, 24, 39, .12), 0px 2px 2px -2px rgba(17, 24, 39, .03), 0px 4px 4px rgba(17, 24, 39, .03), 0px 8px 8px rgba(17, 24, 39, .03), 0px 16px 16px rgba(17, 24, 39, .03);
     transform: translate(-100px, 0px);
   `,
@@ -922,14 +923,14 @@ const SD = {
     gap: 15px;
   `,
   TitleText: styled.h1`
-    color: #111;
+    color: var(--ld-text, #111);
     font-size: 1.2em;
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
   `,
   DescText: styled.p`
-    color: #555;
+    color: var(--ld-text-muted, #555);
     margin: 0px;
     font-size: 1em;
   `,
@@ -943,11 +944,11 @@ const SD = {
     height: 36px;
     cursor: default;
 
-    background: #f3f4f6;
-    color: rgba(37, 36, 36, 0.81);
+    background: var(--ld-background, #f3f4f6);
+    color: var(--ld-text, rgba(37, 36, 36, 0.81));
     border-radius: 6px;
     outline: none;
-    border: 1px solid #ccc;
+    border: 1px solid var(--ld-border, #ccc);
     padding: 5px 7px;
   `,
   CopyButtonWrapper: styled.span`
@@ -972,14 +973,14 @@ const SD = {
     align-items: center;
   `,
   FirstLine: styled.div`
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid var(--ld-border, #ccc);
   `,
   SecondLine: styled.div`
     padding-bottom: 16px;
     width: 100%;
     display: block;
     position: relative;
-    //border-bottom: 1px solid #ccc;
+    //border-bottom: 1px solid var(--ld-border, #ccc);
   `,
   ThirdLine: styled.div`
     padding-bottom: 16px;
@@ -992,7 +993,7 @@ const SD = {
   `,
   WebsiteText: styled.p`
     line-height: 35px;
-    color: #555;
+    color: var(--ld-text-muted, #555);
     margin: 0px;
     font-size: 1em;
   `,

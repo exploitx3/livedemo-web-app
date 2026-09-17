@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import Logo from '../../static/images/logo-round.svg'
 //import { Icon, Layout, Menu, Select } from 'antd'
-import { FundOutlined, DeploymentUnitOutlined, SettingOutlined, CreditCardOutlined, LogoutOutlined, BarChartOutlined } from '@ant-design/icons'
+import { FundOutlined, DeploymentUnitOutlined, SettingOutlined, CreditCardOutlined, LogoutOutlined, BarChartOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons'
 
 
 import Icon from '../Icon/Icon'
@@ -24,13 +24,15 @@ import {
 } from '../../actions/workspacesActions'
 import { resetCurrentSelectedChannel, updateCurrentSelectedChannel } from '../../actions/channelsActions'
 import styled from 'styled-components'
-import Colors from '../../constants/mainColors'
+import Colors, { getTheme, setTheme, THEME_LABELS } from '../../constants/mainColors'
 import WorkspaceMemberRoles from '../../constants/WorkspaceMemberRoles'
 import ErrorBoundary from '../utilComponents/HOCs/ErrorBoundary'
 
 const { Header, Content, Footer, Sider } = Layout
 const { SubMenu } = Menu
 const { Option } = Select
+
+const THEME_KEY_PREFIX = 'theme:'
 
 const MENU_ITEMS = {
   Dashboard: '/',
@@ -408,7 +410,7 @@ class Sidebar extends Component {
           loading={loading}
           dropdownStyle={{
             background: Colors.App.sidebarColor,
-            border: `1px solid ${Colors.primaryColor}`
+            border: `1px solid ${Colors.primaryAccentColor}`
             // boxShadow: `0 0 0 2px ${Colors.primaryColor}`
           }}
           defaultValue={
@@ -449,6 +451,12 @@ class Sidebar extends Component {
     // In v6, onClick provides: { key, keyPath, domEvent, item }
     const actualKey = eventData.key || (eventData.domEvent?.currentTarget?.dataset?.menuId)
     const keyPath = eventData.keyPath || []
+
+    if (actualKey.startsWith(THEME_KEY_PREFIX)) {
+      setTheme(actualKey.slice(THEME_KEY_PREFIX.length))
+      this.forceUpdate() // refresh the checked theme in the submenu
+      return
+    }
 
     console.log('[Sidebar] onSelectItem STARTED', {
       timestamp: new Date().toISOString(),
@@ -605,6 +613,15 @@ class Sidebar extends Component {
   getBottomMenuItems = () => {
     return [
       {
+        key: 'Theme',
+        icon: <S.MenuIcon>{getTheme() === 'light' ? <MoonOutlined /> : <SunOutlined />}</S.MenuIcon>,
+        label: 'Theme',
+        children: Object.entries(THEME_LABELS).map(([name, label]) => ({
+          key: `${THEME_KEY_PREFIX}${name}`,
+          label: `${getTheme() === name ? '● ' : '○ '}${label}`
+        }))
+      },
+      {
         key: this.state.isDemo ? 'ExitDemo' : 'Logout',
         icon: <S.MenuIcon><LogoutOutlined /></S.MenuIcon>,
         label: this.state.isDemo ? "Exit Demo" : 'Logout'
@@ -684,7 +701,9 @@ class Sidebar extends Component {
             <S.Menu
               onClick={this.onSelectItem}
               selectedKeys={selectedKeys}
-              mode="inline"
+              /* vertical, not inline: the sidebar is icon-width, so the theme
+                 submenu has to open as a popup instead of expanding in place. */
+              mode="vertical"
               items={this.getBottomMenuItems()}
               theme="dark"
               style={{ marginTop: 'auto' }}
@@ -736,7 +755,7 @@ const S = {
     && svg {
       width: 20px !important;
       height: 20px !important;
-      fill: ${Colors.primaryColor} !important;
+      fill: ${Colors.primaryAccentColor} !important;
     }
   `,
   MdIcon: styled.i`
@@ -808,7 +827,7 @@ const S = {
       && li.ant-menu-item .ant-menu-item-icon svg {
         width: 30px !important;
         height: 30px !important;
-        fill: ${Colors.primaryColor} !important;
+        fill: ${Colors.primaryAccentColor} !important;
       }
 
       && li.ant-menu-item .anticon {
@@ -828,7 +847,7 @@ const S = {
       && li.ant-menu-item .anticon svg {
         width: 30px !important;
         height: 30px !important;
-        fill: ${Colors.primaryColor} !important;
+        fill: ${Colors.primaryAccentColor} !important;
       }
 
       && li.ant-menu-item > span {
@@ -891,6 +910,71 @@ const S = {
       }
 
       && li.ant-menu-item-selected > i > svg {
+        fill: white !important;
+      }
+
+      /* Theme picker is a submenu; without these rules its title sits off-center
+         (arrow + default padding) compared to plain items like Logout. */
+      && li.ant-menu-submenu {
+        margin: 0;
+        width: 101% !important;
+      }
+
+      && li.ant-menu-submenu > .ant-menu-submenu-title {
+        margin: 0;
+        padding: 0 !important;
+        width: 100%;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 0;
+      }
+
+      && li.ant-menu-submenu .ant-menu-submenu-arrow {
+        display: none !important;
+      }
+
+      && li.ant-menu-submenu .ant-menu-title-content {
+        display: none !important;
+      }
+
+      && li.ant-menu-submenu .ant-menu-item-icon {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        line-height: 1;
+        width: 30px !important;
+        height: 30px !important;
+      }
+
+      && li.ant-menu-submenu .anticon {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        vertical-align: middle;
+        width: 15px !important;
+        height: 15px !important;
+        line-height: 15px !important;
+        font-size: 15px !important;
+      }
+
+      && li.ant-menu-submenu .ant-menu-item-icon svg,
+      && li.ant-menu-submenu .anticon svg {
+        width: 30px !important;
+        height: 30px !important;
+        fill: ${Colors.primaryAccentColor} !important;
+      }
+
+      && li.ant-menu-submenu-active > .ant-menu-submenu-title,
+      && li.ant-menu-submenu-selected > .ant-menu-submenu-title {
+        background-color: ${Colors.primaryColor} !important;
+        color: white;
+      }
+
+      && li.ant-menu-submenu-active .ant-menu-item-icon svg,
+      && li.ant-menu-submenu-active .anticon svg,
+      && li.ant-menu-submenu-selected .ant-menu-item-icon svg,
+      && li.ant-menu-submenu-selected .anticon svg {
         fill: white !important;
       }
 
@@ -987,7 +1071,7 @@ const S = {
 
     && .ant-select-content-value {
       background: none;
-      color: ${Colors.primaryColor};
+      color: ${Colors.primaryAccentColor};
       border: none !important;
       box-shadow: none;
     }
@@ -995,17 +1079,17 @@ const S = {
 
     && .ant-select-selection {
       background: none;
-      color: ${Colors.primaryColor};
+      color: ${Colors.primaryAccentColor};
       border: 1px solid #d9d9d9;
       box-shadow: none;
     }
 
     && .ant-select-selection:hover {
-      border: 1px solid ${Colors.primaryColor};
+      border: 1px solid ${Colors.primaryAccentColor};
     }
 
     && .ant-select-arrow {
-      color: ${Colors.primaryColor};
+      color: ${Colors.primaryAccentColor};
     }
 
     && .ant-select-selection-selected-value {
@@ -1028,7 +1112,7 @@ const S = {
 
     & svg {
 
-      fill: ${Colors.primaryColor};
+      fill: ${Colors.primaryAccentColor};
     }
 `,
 }

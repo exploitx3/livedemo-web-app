@@ -1,6 +1,7 @@
 import axios from 'axios'
 import ENV from '../../config.json'
 import React, { useEffect, useRef, useState, forwardRef } from 'react'
+import { createPortal } from 'react-dom'
 import styled from 'styled-components'
 import ReCAPTCHA from 'react-google-recaptcha'
 import { Button } from 'antd'
@@ -11,9 +12,30 @@ import Colors from '../../../constants/mainColors.js'
 import StepViewTypes from '../../../constants/StepViewTypes.js'
 import ScreenPopupTypes from '../../../constants/ScreenPopupTypes.js'
 import { waitForElement } from '../../helpers.js'
-import { arrow, autoPlacement, computePosition, offset } from '@floating-ui/dom'
+import POINTER_TARGET_MODES from '../../../constants/pointerTargetModes.js'
+import { autoPlacement, computePosition, offset } from '@floating-ui/dom'
 import '@fontsource/lexend/latin.css'
 import TooltipContent from '../TooltipContent/TooltipContent.js'
+
+function useFullscreenPortalRoot() {
+  const [portalRoot, setPortalRoot] = useState(() => document.fullscreenElement || document.body)
+
+  useEffect(() => {
+    const sync = () => setPortalRoot(document.fullscreenElement || document.body)
+    document.addEventListener('fullscreenchange', sync)
+    document.addEventListener('webkitfullscreenchange', sync)
+    document.addEventListener('mozfullscreenchange', sync)
+    document.addEventListener('MSFullscreenChange', sync)
+    return () => {
+      document.removeEventListener('fullscreenchange', sync)
+      document.removeEventListener('webkitfullscreenchange', sync)
+      document.removeEventListener('mozfullscreenchange', sync)
+      document.removeEventListener('MSFullscreenChange', sync)
+    }
+  }, [])
+
+  return portalRoot
+}
 
 function TooltipComponent(props) {
   let {
@@ -37,6 +59,7 @@ function TooltipComponent(props) {
     themeTextColor,
     themeButtonBackgroundColor,
     themeButtonTextColor,
+    showTooltipArrow = true,
     themeOverlayBackgroundColor,
     iframeSize,
     forceUpdateVar,
@@ -48,36 +71,56 @@ function TooltipComponent(props) {
       wrapperHeight,
     isInEditor,
     scaleValuesRef,
-    isScaled
+    isScaled,
+    isOmniBarDisabled,
+    prevStep,
   } = props
 
   let innerWidth = wrapperWidth
   let innerHeight = wrapperHeight
 
-  // Counter Main's zoom scale so tooltip text stays sharp (same as HotspotContent)
-  let reverseScale = (!isScaled || !scaleValuesRef || !scaleValuesRef.current)
-    ? 1
-    : (1 / (scaleValuesRef.current.scaleValueX || 1))
+  let omniBarHeight = isOmniBarDisabled ? 0 : 40
+  let tabInfoWidth = (liveDemo && liveDemo.windowMeasures && liveDemo.windowMeasures.innerWidth)
+    ? liveDemo.windowMeasures.innerWidth
+    : (liveDemo && liveDemo.tabInfo ? liveDemo.tabInfo.width : 1366)
+  let tabInfoHeight = (liveDemo && liveDemo.windowMeasures && liveDemo.windowMeasures.innerHeight)
+    ? liveDemo.windowMeasures.innerHeight
+    : (liveDemo && liveDemo.tabInfo ? liveDemo.tabInfo.height : 664)
 
-  let [isVisible, setIsVisible] = useState(false)
+  let xPercentage = Math.min(tabInfoWidth, innerWidth / tabInfoWidth)
+  let yPercentage = Math.min(tabInfoHeight, innerHeight / tabInfoHeight)
 
-  let showHeader = step && step.view && step.view.showHeader
+  let isNoneMode = step.view.pointer?.targetMode === POINTER_TARGET_MODES.NONE
+  const [noneModePortalContainer, setNoneModePortalContainer] = useState(null)
+  let useContainerPosition = isNoneMode && !!noneModePortalContainer
+
+  useEffect(() => {
+    if (isNoneMode && tooltipWrapperRef?.current) {
+      setNoneModePortalContainer(tooltipWrapperRef.current)
+    } else {
+      setNoneModePortalContainer(null)
+    }
+  }, [isNoneMode, tooltipWrapperRef, forceUpdateVar, innerWidth, innerHeight])
+
+  function clampTooltipPosition(x, y, elemWidth, elemHeight) {
+    let maxW = innerWidth
+    let maxH = innerHeight
+    if (tooltipWrapperRef?.current) {
+      maxW = tooltipWrapperRef.current.clientWidth || innerWidth
+      maxH = tooltipWrapperRef.current.clientHeight || innerHeight
+    }
+    return {
+      x: Math.max(0, Math.min(x, Math.max(0, maxW - elemWidth))),
+      y: Math.max(0, Math.min(y, Math.max(0, maxH - elemHeight))),
+    }
+  }
+
+  let continuingPointer = !!(prevStep && prevStep.view && prevStep.view.viewType === StepViewTypes.POINTER)
+  let [isVisible, setIsVisible] = useState(continuingPointer)
+  const isVisibleRef = useRef(continuingPointer)
+  const portalRoot = useFullscreenPortalRoot()
+
   let showFooter = step && step.view && step.view.showFooter
-
-  let textFontSize = '2vw' // + (2.70 * (1 - widthDimensionPercentage))
-
-  if(wrapperWidth <= 1040) {
-    textFontSize = '15px'
-  } else if(wrapperWidth > 1040) {
-    textFontSize = '1.1vw'
-  }
-  if(wrapperWidth < 540) {
-    textFontSize = '2.7vw'
-  }
-
-  if(isInEditor) {
-    textFontSize = '15px'
-  }
 
   let width = iframeSize && iframeSize.width ? iframeSize.width : '100%'
   let height = iframeSize && iframeSize.height ? iframeSize.height : '100%'
@@ -91,10 +134,12 @@ function TooltipComponent(props) {
   }
 
 
-  let customHeader = (liveDemo.custom && liveDemo.custom.header) || {}
   let hideFooter = step.hideFooter
   let nextButtonText = step.view.nextButtonText
   let showStepNumbers = step.view.showStepNumbers === undefined ? true : !!step.view.showStepNumbers
+
+  // Match HotspotContent: fixed px sizes stay crisp (vw + CSS transform = soft text)
+  let textFontSize = showStepNumbers && showFooter ? '16px' : '15px'
 
   let nextButtonTextString = (nextButtonText ? nextButtonText : 'Next')
   let stepNumbersString = (showStepNumbers ? `(${index + 1}/${size})` : '')
@@ -104,7 +149,78 @@ function TooltipComponent(props) {
   let [dragBounds, setDragBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 })
   let [dragDisabled, setDragDisabled] = useState(true)
 
-  let [isMoving, setIsMoving] = useState(true)
+  let [isMoving, setIsMoving] = useState(!continuingPointer)
+  const [displayX, setDisplayX] = useState(tooltipX)
+  const [displayY, setDisplayY] = useState(tooltipY)
+  const [liveView, setLiveView] = useState(step.view)
+  const [liveIndex, setLiveIndex] = useState(index)
+  const moveGenRef = useRef(0)
+
+  function isPointerView(s) {
+    return !!(s && s.view && s.view.viewType === StepViewTypes.POINTER)
+  }
+
+  function moveDelayMs() {
+    if (!isVisibleRef.current || !isPointerView(prevStep)) return 0
+    if (prevStep.screenId && step.screenId && String(prevStep.screenId) !== String(step.screenId)) {
+      return 120
+    }
+    return 50
+  }
+
+  function placeArrow(placement) {
+    const arrowElem = arrowRef.current
+    if (!arrowElem || !wrapperRef.current || !showTooltipArrow) {
+      setIsArrowShown(false)
+      return
+    }
+    const side = (placement || 'bottom').split('-')[0]
+    const staticSide = { top: 'bottom', right: 'left', bottom: 'top', left: 'right' }[side]
+    wrapperRef.current.setAttribute('data-popper-placement', staticSide)
+    // Clear leftover inline offsets so CSS can keep the arrow centered on the edge
+    arrowElem.style.left = ''
+    arrowElem.style.top = ''
+    arrowElem.style.right = ''
+    arrowElem.style.bottom = ''
+    arrowElem.style.margin = ''
+    arrowElem.style.visibility = 'visible'
+    setIsArrowShown(true)
+  }
+
+  function applyPositionSmooth(x, y) {
+    if (!isVisibleRef.current) {
+      setIsMoving(true)
+    } else {
+      setIsMoving(false)
+    }
+    setDisplayX(x)
+    setDisplayY(y)
+    setTooltipX(x)
+    setTooltipY(y)
+    setLiveView(step.view)
+    setLiveIndex(index)
+    isVisibleRef.current = true
+    setIsVisible(true)
+    requestAnimationFrame(() => setIsMoving(false))
+  }
+
+  useEffect(() => {
+    if (!isPointerView(prevStep)) {
+      setLiveView(step.view)
+      setLiveIndex(index)
+      return
+    }
+    isVisibleRef.current = true
+    setIsVisible(true)
+    setIsMoving(false)
+  }, [step && step._id])
+
+  useEffect(() => {
+    if (isMoving) {
+      setDisplayX(tooltipX)
+      setDisplayY(tooltipY)
+    }
+  }, [tooltipX, tooltipY, isMoving])
 
   let isDragging = useRef(null)
 
@@ -129,9 +245,33 @@ function TooltipComponent(props) {
 
 
   useEffect(() => {
+    if (!isNoneMode) {
+      return
+    }
+
+    setIsArrowShown(false)
+    const gen = ++moveGenRef.current
+    const timer = setTimeout(() => {
+      if (gen !== moveGenRef.current) return
+      let tabX = step.view.pointer.tooltipX ?? 200
+      let tabY = step.view.pointer.tooltipY ?? 200
+      let x = tabX * xPercentage
+      let y = tabY * yPercentage
+      let elemW = wrapperRef.current?.offsetWidth || 0
+      let elemH = wrapperRef.current?.offsetHeight || 0
+      ;({ x, y } = clampTooltipPosition(x, y, elemW, elemH))
+      applyPositionSmooth(x, y)
+    }, moveDelayMs())
+    return () => clearTimeout(timer)
+  }, [step && step._id, isNoneMode, innerWidth, innerHeight])
+
+
+  useEffect(() => {
 
     if (step.view.viewType === StepViewTypes.POINTER) {
-      // document.querySelector(step.view.selector).style['z-index'] = "99999999";
+      if (isPointerView(prevStep)) {
+        return
+      }
       let targetSelector = step.view.pointer.selector
 
       if(targetSelector) {
@@ -183,99 +323,50 @@ function TooltipComponent(props) {
   }, [step, forceUpdateVar])
 
   useEffect(() => {
+    if (isNoneMode) {
+      return
+    }
+
     if(pointerInfo && pointerInfo.enabled && wrapperRef.current && arrowRef.current) {
-
-
-
-      let arrowElem = document.getElementById('arrow')
-      const arrowLen = 8 //arrowElem.offsetWidth;
-
-      // Get half the arrow box's hypotenuse length
-      const floatingOffset = Math.sqrt(2 * arrowLen ** 2) / 2;
-
-
-      let updatePosition = function() {
-
+      const gen = ++moveGenRef.current
+      const timer = setTimeout(() => {
+        if (gen !== moveGenRef.current) return
+        if (!pointerInfo.targetElement || !pointerInfo.targetElement.isConnected || !wrapperRef.current) {
+          return
+        }
 
         let middleware = []
 
 
         if(pointerInfo.placement === 'auto') {
-          middleware.push(autoPlacement())
+          middleware.push(autoPlacement({ alignment: 'center' }))
         }
 
-        middleware = middleware.concat([
-          offset(10),
-          arrow({
-            element: arrowRef.current,
+        middleware = middleware.concat([offset(10)])
+
+        setLiveView(step.view)
+        setLiveIndex(index)
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (gen !== moveGenRef.current || !wrapperRef.current) return
+            if (!pointerInfo.targetElement || !pointerInfo.targetElement.isConnected) return
+
+            computePosition(pointerInfo.targetElement, wrapperRef.current, {
+              placement: pointerInfo.placement === 'auto' ? undefined : pointerInfo.placement,
+              strategy: 'fixed',
+              middleware: middleware
+            })
+              .then((({x, y, placement}) => {
+                if (gen !== moveGenRef.current) return
+                applyPositionSmooth(x, y)
+                placeArrow(placement)
+              }))
           })
-        ])
-
-        // console.log('StepPointer pointerInfo')
-        // console.log(pointerInfo)
-
-        computePosition(pointerInfo.targetElement, wrapperRef.current, {
-          placement: pointerInfo.placement,
-          strategy: 'absolute',
-          middleware: middleware
         })
-          .then((({x, y, middlewareData, placement}) => {
+      }, moveDelayMs())
 
-            // console.log('StepPointer')
-            // console.log(step)
-            //
-            // console.log('StepPointer computePosition results')
-            // console.log('x=' + x)
-            // console.log('y=' + y)
-            // console.log('middlewareData')
-            // console.log(middlewareData)
-
-
-            setTooltipX(x)
-            setTooltipY(y)
-
-            const side = placement.split("-")[0];
-
-            // console.log('placement')
-            // console.log(placement)
-            // console.log('side')
-            // console.log(side)
-
-            const staticSide = {
-              top: "bottom",
-              right: "left",
-              bottom: "top",
-              left: "right"
-            }[side]
-
-
-            if (middlewareData.arrow) {
-              const { x, y } = middlewareData.arrow;
-
-              wrapperRef.current.setAttribute('data-popper-placement', staticSide)
-
-              Object.assign(arrowElem.style, {
-                // display: 'block',
-                left: x != null ? `${x}px` : "",
-                top: y != null ? `${y}px` : "",
-                // Ensure the static side gets unset when
-                // flipping to other placements' axes.
-                right: "",
-                bottom: "",
-                [staticSide]: `${-arrowLen / 2}px`,
-                visibility: step.view.viewType !== StepViewTypes.POPUP ? 'visible' : 'hidden'
-                // transform: "rotate(45deg)",
-              });
-            }
-
-            setIsArrowShown(true)
-            setIsVisible(true)
-
-          }))
-
-      }
-
-      updatePosition()
+      return () => clearTimeout(timer)
 
     } else if(pointerInfo && wrapperRef.current && arrowRef.current){
 
@@ -287,7 +378,7 @@ function TooltipComponent(props) {
     }
 
 
-  }, [pointerInfo.targetElement, wrapperRef.current, arrowRef.current])
+  }, [pointerInfo && pointerInfo.targetElement, step && step._id, portalRoot, showTooltipArrow])
 
   function sendFormData(formId, fieldsObj) {
     let formBody = Object.values(fieldsObj).reduce((accum, fieldObj) => {
@@ -372,17 +463,18 @@ function TooltipComponent(props) {
 
   }
 
-  return  <TC.Wrapper
+  return createPortal(
+    <TC.Wrapper
     id={'tooltip'}
     ref={wrapperRef}
     isMoving={isMoving}
     themeBackgroundColor={themeBackgroundColor}
     themeTextColor={themeTextColor}
-    tooltipX={tooltipX}
-    tooltipY={tooltipY}
-    reverseScale={reverseScale}
+    tooltipX={displayX}
+    tooltipY={displayY}
     visible={isVisible}
     arrowColor={themeBackgroundColor}
+    $useContainerPosition={useContainerPosition}
 
     // draggable={true}
     // onDrag={function (event) {
@@ -397,11 +489,12 @@ function TooltipComponent(props) {
     <TooltipContent
       liveDemo={liveDemo}
       continuous={true}
-      index={index}
-      view={step.view}
+      index={liveIndex}
+      view={liveView}
       size={size}
       onBack={onBack}
       onNext={onNext}
+      isInEditor={isInEditor}
       onSkip={onSkip}
       themeBackgroundColor={themeBackgroundColor}
       themeTextColor={themeTextColor}
@@ -409,8 +502,8 @@ function TooltipComponent(props) {
       themeButtonTextColor={themeButtonTextColor}
       themeOverlayBackgroundColor={themeOverlayBackgroundColor}
       textFontSize={textFontSize}
-      showHeader={showHeader}
       showFooter={showFooter}
+      showStepNumbers={showStepNumbers}
       // headerOnMouseDown={() => {
       //   if (step.view.viewType !== 'Pointer') {
       //     setIsTooltipDragging(true)
@@ -425,7 +518,9 @@ function TooltipComponent(props) {
       }}
     />
           <TC.Arrow ref={arrowRef} isArrowShown={isArrowShown} id={'arrow'} data-popper-arrow></TC.Arrow>
-        </TC.Wrapper>
+        </TC.Wrapper>,
+    useContainerPosition ? noneModePortalContainer : portalRoot
+  )
 
 
 
@@ -470,7 +565,7 @@ const TC = {
     overflow-y: auto;
     // max-height: 200px;
     display: block;
-    font-size: 1.4vw;
+    font-size: 15px;
 
 
 
@@ -537,31 +632,30 @@ const TC = {
 
   `,
   Wrapper: styled.div.withConfig({
-    shouldForwardProp: (prop) => !['tooltipX', 'tooltipY', 'visible', 'themeBackgroundColor', 'themeTextColor', 'arrowColor', 'isMoving', 'reverseScale'].includes(prop),
+    shouldForwardProp: (prop) => !['tooltipX', 'tooltipY', 'visible', 'themeBackgroundColor', 'themeTextColor', 'arrowColor', 'isMoving', '$useContainerPosition'].includes(prop),
   })`
     //width: 100%;
     //height: auto;
-    // transition: ${({isMoving}) => isMoving ? 'none' : '0.5s all ease-out'};
-    transition: 0.5s all ease-out;
+    transition: ${({ isMoving }) => (isMoving ? 'none' : 'transform 0.4s ease-in-out')};
+
+    position: ${({ $useContainerPosition }) => $useContainerPosition ? 'absolute' : 'fixed'};
+    top: 0;
+    left: 0;
+    z-index: 999999;
+    pointer-events: auto;
 
     transform-origin: top left;
-    /* Round + translate3d + reverseScale: escape Main zoom blur (HotspotContent pattern) */
-    transform: translate3d(${({tooltipX}) => Math.round(tooltipX)}px, ${({tooltipY}) => Math.round(tooltipY)}px, 0) scale(${({reverseScale}) => reverseScale || 1});
+    transform: translate3d(${({tooltipX}) => Math.round(tooltipX)}px, ${({tooltipY}) => Math.round(tooltipY)}px, 0);
 
-    font-size: 1.5vw;
-    font-family: ${Colors.fontFamilyApple};
+    font-size: 15px;
+    font-family: var(--ld-demo-font, ${Colors.fontFamilyApple});
 
     visibility: ${({visible}) => visible ? 'visible' : 'hidden'};
-
-    will-change: transform, visibility, opacity;
 
     -webkit-font-smoothing: antialiased !important;
     -moz-osx-font-smoothing: grayscale;
     -webkit-backface-visibility: hidden !important;
     backface-visibility: hidden !important;
-
-    //top: 50%;
-    //left: 50%;
 
     //width: 450px;
     width: max-content;
@@ -572,6 +666,7 @@ const TC = {
     //background: #2734c5;
     //background: #f8f8f8;
     border-radius: 5px;
+    overflow: visible;
     box-sizing: border-box;
     color: ${({themeTextColor}) => themeTextColor};
     //position: relative;
@@ -582,6 +677,39 @@ const TC = {
       width: 18px;
       height: 18px;
       visibility: hidden;
+      margin: 0;
+    }
+
+    &&[data-popper-placement^='right'] > #arrow {
+      right: -4px;
+      top: 50%;
+      margin-top: -9px;
+      left: auto;
+      bottom: auto;
+    }
+
+    &&[data-popper-placement^='left'] > #arrow {
+      left: -4px;
+      top: 50%;
+      margin-top: -9px;
+      right: auto;
+      bottom: auto;
+    }
+
+    &&[data-popper-placement^='bottom'] > #arrow {
+      bottom: -4px;
+      left: 50%;
+      margin-left: -9px;
+      top: auto;
+      right: auto;
+    }
+
+    &&[data-popper-placement^='top'] > #arrow {
+      top: -4px;
+      left: 50%;
+      margin-left: -9px;
+      bottom: auto;
+      right: auto;
     }
 
     #arrow::before {

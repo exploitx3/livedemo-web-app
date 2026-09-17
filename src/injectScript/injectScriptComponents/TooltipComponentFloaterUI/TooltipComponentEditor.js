@@ -1,6 +1,7 @@
 import axios from 'axios'
 import ENV from '../../../config.json'
 import React, { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import styled from 'styled-components'
 import ReCAPTCHA from 'react-google-recaptcha'
 import { Button } from 'antd'
@@ -8,10 +9,31 @@ import { CloseOutlined } from '@ant-design/icons'
 import Colors from '../../../constants/mainColors.js'
 import StepViewTypes from '../../../constants/StepViewTypes.js'
 import ScreenPopupTypes from '../../../constants/ScreenPopupTypes.js'
-import { waitForElement } from '../../helpers.js'
-import { arrow, autoPlacement, computePosition, offset } from '@floating-ui/dom'
+import { waitForElement, topPostMessage } from '../../helpers.js'
+import POINTER_TARGET_MODES from '../../../constants/pointerTargetModes.js'
+import { autoPlacement, computePosition, offset } from '@floating-ui/dom'
 import '@fontsource/lexend/latin.css'
 import TooltipContentEditor from '../TooltipContent/TooltipContentEditor.js'
+
+function useFullscreenPortalRoot() {
+  const [portalRoot, setPortalRoot] = useState(() => document.fullscreenElement || document.body)
+
+  useEffect(() => {
+    const sync = () => setPortalRoot(document.fullscreenElement || document.body)
+    document.addEventListener('fullscreenchange', sync)
+    document.addEventListener('webkitfullscreenchange', sync)
+    document.addEventListener('mozfullscreenchange', sync)
+    document.addEventListener('MSFullscreenChange', sync)
+    return () => {
+      document.removeEventListener('fullscreenchange', sync)
+      document.removeEventListener('webkitfullscreenchange', sync)
+      document.removeEventListener('mozfullscreenchange', sync)
+      document.removeEventListener('MSFullscreenChange', sync)
+    }
+  }, [])
+
+  return portalRoot
+}
 
 function TooltipComponentEditor(props) {
   let {
@@ -34,6 +56,7 @@ function TooltipComponentEditor(props) {
     themeTextColor,
     themeButtonBackgroundColor,
     themeButtonTextColor,
+    showTooltipArrow = true,
     themeOverlayBackgroundColor,
     setShowStartButton,
     iframeSize,
@@ -46,36 +69,67 @@ function TooltipComponentEditor(props) {
       wrapperHeight,
     isInEditor,
     scaleValuesRef,
-    isScaled
+    isScaled,
+    isOmniBarDisabled,
+    liveDemoRef,
+    screenId,
+    prevStep,
   } = props
 
   let innerWidth = wrapperWidth
   let innerHeight = wrapperHeight
 
-  // Counter Main's zoom scale so tooltip text stays sharp (same as HotspotContent)
-  let reverseScale = (!isScaled || !scaleValuesRef || !scaleValuesRef.current)
-    ? 1
-    : (1 / (scaleValuesRef.current.scaleValueX || 1))
+  let omniBarHeight = isOmniBarDisabled ? 0 : 40
+  let tabInfoWidth = (liveDemo && liveDemo.windowMeasures && liveDemo.windowMeasures.innerWidth)
+    ? liveDemo.windowMeasures.innerWidth
+    : (liveDemo && liveDemo.tabInfo ? liveDemo.tabInfo.width : 1366)
+  let tabInfoHeight = (liveDemo && liveDemo.windowMeasures && liveDemo.windowMeasures.innerHeight)
+    ? liveDemo.windowMeasures.innerHeight
+    : (liveDemo && liveDemo.tabInfo ? liveDemo.tabInfo.height : 664)
 
-  let [isVisible, setIsVisible] = useState(false)
+  let xPercentage = Math.min(tabInfoWidth, innerWidth / tabInfoWidth)
+  let yPercentage = Math.min(tabInfoHeight, innerHeight / tabInfoHeight)
+  let reverseX = 1 + ((tabInfoWidth - innerWidth) / innerWidth)
+  let reverseY = 1 + ((tabInfoHeight - innerHeight) / innerHeight)
 
-  let showHeader = step && step.view && step.view.showHeader
+  let isNoneMode = step.view.pointer?.targetMode === POINTER_TARGET_MODES.NONE
+  const [noneModePortalContainer, setNoneModePortalContainer] = useState(null)
+  let useContainerPosition = isNoneMode && !!noneModePortalContainer
+
+  useEffect(() => {
+    if (isNoneMode && tooltipWrapperRef?.current) {
+      setNoneModePortalContainer(tooltipWrapperRef.current)
+    } else {
+      setNoneModePortalContainer(null)
+    }
+  }, [isNoneMode, tooltipWrapperRef, forceUpdateVar, innerWidth, innerHeight])
+
+  function clampTooltipPosition(x, y, elemWidth, elemHeight) {
+    let maxW = innerWidth
+    let maxH = innerHeight
+    if (tooltipWrapperRef?.current) {
+      maxW = tooltipWrapperRef.current.clientWidth || innerWidth
+      maxH = tooltipWrapperRef.current.clientHeight || innerHeight
+    }
+    return {
+      x: Math.max(0, Math.min(x, Math.max(0, maxW - elemWidth))),
+      y: Math.max(0, Math.min(y, Math.max(0, maxH - elemHeight))),
+    }
+  }
+
+  function tabToContainerPosition(tabX, tabY) {
+    return {
+      x: tabX * xPercentage,
+      y: tabY * yPercentage,
+    }
+  }
+
+  let continuingPointer = !!(prevStep && prevStep.view && prevStep.view.viewType === StepViewTypes.POINTER)
+  let [isVisible, setIsVisible] = useState(continuingPointer)
+  const isVisibleRef = useRef(continuingPointer)
+  const portalRoot = useFullscreenPortalRoot()
+
   let showFooter = step && step.view && step.view.showFooter
-
-  let textFontSize = '2vw' // + (2.70 * (1 - widthDimensionPercentage))
-
-  if(wrapperWidth <= 1040) {
-    textFontSize = '15px'
-  } else if(wrapperWidth > 1040) {
-    textFontSize = '1.1vw'
-  }
-  if(wrapperWidth < 540) {
-    textFontSize = '2.7vw'
-  }
-
-  if(isInEditor) {
-    textFontSize = '15px'
-  }
 
   let width = iframeSize && iframeSize.width ? iframeSize.width : '100%'
   let height = iframeSize && iframeSize.height ? iframeSize.height : '100%'
@@ -89,10 +143,12 @@ function TooltipComponentEditor(props) {
   }
 
 
-  let customHeader = (liveDemo.custom && liveDemo.custom.header) || {}
   let hideFooter = step.hideFooter
   let nextButtonText = step.view.nextButtonText
   let showStepNumbers = step.view.showStepNumbers === undefined ? true : !!step.view.showStepNumbers
+
+  // Match HotspotContent: fixed px sizes stay crisp (vw + CSS transform = soft text)
+  let textFontSize = showStepNumbers && showFooter ? '16px' : '15px'
 
   let nextButtonTextString = (nextButtonText ? nextButtonText : 'Next')
   let stepNumbersString = (showStepNumbers ? `(${index + 1}/${size})` : '')
@@ -102,7 +158,77 @@ function TooltipComponentEditor(props) {
   let [dragBounds, setDragBounds] = useState({ left: 0, top: 0, bottom: 0, right: 0 })
   let [dragDisabled, setDragDisabled] = useState(true)
 
-  let [isMoving, setIsMoving] = useState(true)
+  let [isMoving, setIsMoving] = useState(!continuingPointer)
+  const [displayX, setDisplayX] = useState(tooltipX)
+  const [displayY, setDisplayY] = useState(tooltipY)
+  const [liveView, setLiveView] = useState(step.view)
+  const [liveIndex, setLiveIndex] = useState(index)
+  const moveGenRef = useRef(0)
+
+  function isPointerView(s) {
+    return !!(s && s.view && s.view.viewType === StepViewTypes.POINTER)
+  }
+
+  function moveDelayMs() {
+    if (!isVisibleRef.current || !isPointerView(prevStep)) return 0
+    if (prevStep.screenId && step.screenId && String(prevStep.screenId) !== String(step.screenId)) {
+      return 120
+    }
+    return 50
+  }
+
+  function placeArrow(placement) {
+    const arrowElem = arrowRef.current
+    if (!arrowElem || !wrapperRef.current || !showTooltipArrow) {
+      setIsArrowShown(false)
+      return
+    }
+    const side = (placement || 'bottom').split('-')[0]
+    const staticSide = { top: 'bottom', right: 'left', bottom: 'top', left: 'right' }[side]
+    wrapperRef.current.setAttribute('data-popper-placement', staticSide)
+    arrowElem.style.left = ''
+    arrowElem.style.top = ''
+    arrowElem.style.right = ''
+    arrowElem.style.bottom = ''
+    arrowElem.style.margin = ''
+    arrowElem.style.visibility = 'visible'
+    setIsArrowShown(true)
+  }
+
+  function applyPositionSmooth(x, y) {
+    if (!isVisibleRef.current) {
+      setIsMoving(true)
+    } else {
+      setIsMoving(false)
+    }
+    setDisplayX(x)
+    setDisplayY(y)
+    setTooltipX(x)
+    setTooltipY(y)
+    setLiveView(step.view)
+    setLiveIndex(index)
+    isVisibleRef.current = true
+    setIsVisible(true)
+    requestAnimationFrame(() => setIsMoving(false))
+  }
+
+  useEffect(() => {
+    if (!isPointerView(prevStep)) {
+      setLiveView(step.view)
+      setLiveIndex(index)
+      return
+    }
+    isVisibleRef.current = true
+    setIsVisible(true)
+    setIsMoving(false)
+  }, [step && step._id])
+
+  useEffect(() => {
+    if (isMoving) {
+      setDisplayX(tooltipX)
+      setDisplayY(tooltipY)
+    }
+  }, [tooltipX, tooltipY, isMoving])
 
   let isDragging = useRef(null)
 
@@ -127,9 +253,219 @@ function TooltipComponentEditor(props) {
 
 
   useEffect(() => {
+    if (!isNoneMode) {
+      return
+    }
+
+    setIsArrowShown(false)
+    const gen = ++moveGenRef.current
+    const timer = setTimeout(() => {
+      if (gen !== moveGenRef.current) return
+
+      function applyPosition() {
+        if (gen !== moveGenRef.current) return
+        let tabX = step.view.pointer.tooltipX ?? 200
+        let tabY = step.view.pointer.tooltipY ?? 200
+        let { x, y } = tabToContainerPosition(tabX, tabY)
+        let elemW = wrapperRef.current?.offsetWidth || 0
+        let elemH = wrapperRef.current?.offsetHeight || 0
+        if (elemW && elemH) {
+          ;({ x, y } = clampTooltipPosition(x, y, elemW, elemH))
+        }
+        applyPositionSmooth(x, y)
+        if (!elemW || !elemH) {
+          requestAnimationFrame(applyPosition)
+        }
+      }
+
+      applyPosition()
+    }, moveDelayMs())
+    return () => clearTimeout(timer)
+  }, [step && step._id, isNoneMode, innerWidth, innerHeight])
+
+
+  useEffect(() => {
+    if (!isNoneMode || !isInEditor || !noneModePortalContainer || !wrapperRef.current) {
+      return
+    }
+
+    let container = noneModePortalContainer
+    let dragElem = wrapperRef.current
+    let isDragging = false
+    let initialX = 0
+    let initialY = 0
+    let xOffset = 0
+    let yOffset = 0
+    let documentMouseMoveHandler = null
+    let documentMouseUpHandler = null
+    let documentTouchMoveHandler = null
+    let documentTouchEndHandler = null
+
+    function drag(e) {
+      if (!isDragging) {
+        return
+      }
+      e.preventDefault()
+
+      let containerRect = container.getBoundingClientRect()
+      let currentMouseX
+      let currentMouseY
+
+      if (e.type === 'touchmove') {
+        currentMouseX = e.touches[0].clientX - containerRect.left
+        currentMouseY = e.touches[0].clientY - containerRect.top
+      } else {
+        currentMouseX = e.clientX - containerRect.left
+        currentMouseY = e.clientY - containerRect.top
+      }
+
+      xOffset = currentMouseX - initialX
+      yOffset = currentMouseY - initialY
+
+      let elemW = dragElem.offsetWidth
+      let elemH = dragElem.offsetHeight
+      ;({ x: xOffset, y: yOffset } = clampTooltipPosition(xOffset, yOffset, elemW, elemH))
+
+      setTooltipX(xOffset)
+      setTooltipY(yOffset)
+    }
+
+    function dragStart(e) {
+      e.preventDefault()
+      e.stopPropagation()
+      isDragging = true
+      setIsMoving(true)
+
+      let containerRect = container.getBoundingClientRect()
+      let dragElemRect = dragElem.getBoundingClientRect()
+      let currentElemX = dragElemRect.left - containerRect.left
+      let currentElemY = dragElemRect.top - containerRect.top
+
+      let mouseX
+      let mouseY
+      if (e.type === 'touchstart') {
+        mouseX = e.touches[0].clientX - containerRect.left
+        mouseY = e.touches[0].clientY - containerRect.top
+      } else {
+        mouseX = e.clientX - containerRect.left
+        mouseY = e.clientY - containerRect.top
+      }
+
+      initialX = mouseX - currentElemX
+      initialY = mouseY - currentElemY
+      xOffset = currentElemX
+      yOffset = currentElemY
+
+      if (e.type === 'touchstart') {
+        documentTouchMoveHandler = drag
+        documentTouchEndHandler = dragEnd
+        document.addEventListener('touchmove', documentTouchMoveHandler, false)
+        document.addEventListener('touchend', documentTouchEndHandler, false)
+      } else {
+        documentMouseMoveHandler = drag
+        documentMouseUpHandler = dragEnd
+        document.addEventListener('mousemove', documentMouseMoveHandler, false)
+        document.addEventListener('mouseup', documentMouseUpHandler, false)
+      }
+    }
+
+    function dragEnd(e) {
+      if (!isDragging) {
+        return
+      }
+      e.preventDefault()
+      isDragging = false
+      setIsMoving(false)
+
+      if (documentMouseMoveHandler) {
+        document.removeEventListener('mousemove', documentMouseMoveHandler, false)
+        documentMouseMoveHandler = null
+      }
+      if (documentMouseUpHandler) {
+        document.removeEventListener('mouseup', documentMouseUpHandler, false)
+        documentMouseUpHandler = null
+      }
+      if (documentTouchMoveHandler) {
+        document.removeEventListener('touchmove', documentTouchMoveHandler, false)
+        documentTouchMoveHandler = null
+      }
+      if (documentTouchEndHandler) {
+        document.removeEventListener('touchend', documentTouchEndHandler, false)
+        documentTouchEndHandler = null
+      }
+
+      let saveX = xOffset * reverseX
+      let saveY = yOffset * reverseY
+
+      topPostMessage({
+        type: 'pointer_tooltip_set',
+        stepId: step._id,
+        screenId: screenId,
+        tooltipX: saveX,
+        tooltipY: saveY,
+      })
+
+      if (liveDemoRef?.current) {
+        let liveDemoInternal = liveDemoRef.current
+        let newStoryDemo = {...liveDemoInternal}
+        newStoryDemo.screens = newStoryDemo.screens.map((scr) => {
+          if (scr._id !== screenId) {
+            return scr
+          }
+          return {
+            ...scr,
+            steps: scr.steps.map((s) => {
+              if (s._id !== step._id) {
+                return s
+              }
+              return {
+                ...s,
+                view: {
+                  ...s.view,
+                  pointer: {
+                    ...(s.view.pointer || {}),
+                    tooltipX: saveX,
+                    tooltipY: saveY,
+                  },
+                },
+              }
+            }),
+          }
+        })
+        liveDemoRef.current = newStoryDemo
+      }
+    }
+
+    dragElem.addEventListener('touchstart', dragStart, false)
+    dragElem.addEventListener('mousedown', dragStart, false)
+
+    return () => {
+      dragElem.removeEventListener('touchstart', dragStart, false)
+      dragElem.removeEventListener('mousedown', dragStart, false)
+      if (documentMouseMoveHandler) {
+        document.removeEventListener('mousemove', documentMouseMoveHandler, false)
+      }
+      if (documentMouseUpHandler) {
+        document.removeEventListener('mouseup', documentMouseUpHandler, false)
+      }
+      if (documentTouchMoveHandler) {
+        document.removeEventListener('touchmove', documentTouchMoveHandler, false)
+      }
+      if (documentTouchEndHandler) {
+        document.removeEventListener('touchend', documentTouchEndHandler, false)
+      }
+    }
+  }, [isNoneMode, isInEditor, noneModePortalContainer, step._id, screenId, innerWidth, innerHeight])
+
+
+  useEffect(() => {
 
     if (step.view.viewType === StepViewTypes.POINTER) {
-      // document.querySelector(step.view.selector).style['z-index'] = "99999999";
+      // Editor: never scroll the captured page when pointer type/placement changes.
+      if (isInEditor || isNoneMode) {
+        return
+      }
+
       let targetSelector = step.view.pointer.selector
 
       if(targetSelector) {
@@ -181,102 +517,50 @@ function TooltipComponentEditor(props) {
   }, [step, forceUpdateVar])
 
   useEffect(() => {
+    if (isNoneMode) {
+      return
+    }
+
     if(pointerInfo && pointerInfo.enabled && wrapperRef.current && arrowRef.current) {
-
-
-
-      let arrowElem = document.getElementById('arrow')
-      const arrowLen = 8 //arrowElem.offsetWidth;
-
-      // Get half the arrow box's hypotenuse length
-      const floatingOffset = Math.sqrt(2 * arrowLen ** 2) / 2;
-
-
-      let updatePosition = function() {
-
+      const gen = ++moveGenRef.current
+      const timer = setTimeout(() => {
+        if (gen !== moveGenRef.current) return
+        if (!pointerInfo.targetElement || !pointerInfo.targetElement.isConnected || !wrapperRef.current) {
+          return
+        }
 
         let middleware = []
 
-
         if(pointerInfo.placement === 'auto') {
-          middleware.push(autoPlacement())
+          middleware.push(autoPlacement({ alignment: 'center' }))
         }
 
-        middleware = middleware.concat([
-          offset(10),
-          arrow({
-            element: arrowRef.current,
+        middleware = middleware.concat([offset(10)])
+
+        setLiveView(step.view)
+        setLiveIndex(index)
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (gen !== moveGenRef.current || !wrapperRef.current) return
+            if (!pointerInfo.targetElement || !pointerInfo.targetElement.isConnected) return
+
+            computePosition(pointerInfo.targetElement, wrapperRef.current, {
+              placement: pointerInfo.placement === 'auto' ? undefined : pointerInfo.placement,
+              strategy: 'fixed',
+              middleware: middleware
+            })
+              .then((({x, y, placement}) => {
+                if (gen !== moveGenRef.current) return
+                if (x < 0 && y < 0) return
+                applyPositionSmooth(x, y)
+                placeArrow(placement)
+              }))
           })
-        ])
-
-        // console.log('StepPointer pointerInfo')
-        // console.log(pointerInfo)
-
-        computePosition(pointerInfo.targetElement, wrapperRef.current, {
-          placement: pointerInfo.placement,
-          strategy: 'absolute',
-          middleware: middleware
         })
-          .then((({x, y, middlewareData, placement}) => {
+      }, moveDelayMs())
 
-            // console.log('StepPointer')
-            // console.log(step)
-            //
-            // console.log('StepPointer computePosition results')
-            // console.log('x=' + x)
-            // console.log('y=' + y)
-            // console.log('middlewareData')
-            // console.log(middlewareData)
-
-            if(x < 0 && y < 0) {
-              return
-            }
-
-            setTooltipX(x)
-            setTooltipY(y)
-
-            const side = placement.split("-")[0];
-
-            // console.log('placement')
-            // console.log(placement)
-            // console.log('side')
-            // console.log(side)
-
-            const staticSide = {
-              top: "bottom",
-              right: "left",
-              bottom: "top",
-              left: "right"
-            }[side]
-
-
-            if (middlewareData.arrow) {
-              const { x, y } = middlewareData.arrow;
-
-              wrapperRef.current.setAttribute('data-popper-placement', staticSide)
-
-              Object.assign(arrowElem.style, {
-                // display: 'block',
-                left: x != null ? `${x}px` : "",
-                top: y != null ? `${y}px` : "",
-                // Ensure the static side gets unset when
-                // flipping to other placements' axes.
-                right: "",
-                bottom: "",
-                [staticSide]: `${-arrowLen / 2}px`,
-                visibility: step.view.viewType !== StepViewTypes.POPUP ? 'visible' : 'hidden'
-                // transform: "rotate(45deg)",
-              });
-            }
-
-            setIsArrowShown(true)
-            setIsVisible(true)
-
-          }))
-
-      }
-
-      updatePosition()
+      return () => clearTimeout(timer)
 
     } else if(pointerInfo && wrapperRef.current && arrowRef.current){
 
@@ -288,7 +572,7 @@ function TooltipComponentEditor(props) {
     }
 
 
-  }, [pointerInfo.targetElement, wrapperRef.current])
+  }, [pointerInfo && pointerInfo.targetElement, step && step._id, portalRoot, showTooltipArrow])
 
   function sendFormData(formId, fieldsObj) {
     let formBody = Object.values(fieldsObj).reduce((accum, fieldObj) => {
@@ -373,17 +657,22 @@ function TooltipComponentEditor(props) {
 
   }
 
-  return  <TC.Wrapper
+  return createPortal(
+    <TC.Wrapper
     id={'tooltip'}
     ref={wrapperRef}
     isMoving={isMoving}
     themeBackgroundColor={themeBackgroundColor}
     themeTextColor={themeTextColor}
-    tooltipX={tooltipX}
-    tooltipY={tooltipY}
-    reverseScale={reverseScale}
+    tooltipX={displayX}
+    tooltipY={displayY}
     visible={isVisible}
     arrowColor={themeBackgroundColor}
+    $isDraggable={isNoneMode && isInEditor}
+    $useContainerPosition={useContainerPosition}
+    onClick={(e) => {
+      e.stopPropagation()
+    }}
 
     // draggable={true}
     // onDrag={function (event) {
@@ -398,20 +687,21 @@ function TooltipComponentEditor(props) {
     <TooltipContentEditor
       liveDemo={liveDemo}
       continuous={true}
-      index={index}
-      view={step.view}
+      index={liveIndex}
+      view={liveView}
       size={size}
       onBack={onBack}
-      onNext={onNext}
+      onNext={isInEditor ? () => {} : onNext}
       onSkip={onSkip}
+      isInEditor={isInEditor}
       themeBackgroundColor={themeBackgroundColor}
       themeTextColor={themeTextColor}
       themeButtonBackgroundColor={themeButtonBackgroundColor}
       themeButtonTextColor={themeButtonTextColor}
       themeOverlayBackgroundColor={themeOverlayBackgroundColor}
       textFontSize={textFontSize}
-      showHeader={showHeader}
       showFooter={showFooter}
+      showStepNumbers={showStepNumbers}
       // headerOnMouseDown={() => {
       //   if (step.view.viewType !== 'Pointer') {
       //     setIsTooltipDragging(true)
@@ -419,14 +709,14 @@ function TooltipComponentEditor(props) {
       // }
       // }
       onClick={() => {
-
-          let newIndex = index + 1
-          changeStep(newIndex)
-
+        // Editor tooltip is for editing — never advance the walkthrough.
+        // Same guard as HotspotStepEditor; otherwise drag/click leaves the screen.
       }}
     />
           <TC.Arrow ref={arrowRef} isArrowShown={isArrowShown} id={'arrow'} data-popper-arrow></TC.Arrow>
-        </TC.Wrapper>
+        </TC.Wrapper>,
+    useContainerPosition ? noneModePortalContainer : portalRoot
+  )
 
 
 
@@ -469,7 +759,7 @@ const TC = {
     overflow-y: auto;
     // max-height: 200px;
     display: block;
-    font-size: 1.4vw;
+    font-size: 15px;
 
 
 
@@ -534,29 +824,27 @@ const TC = {
 
   `,
   Wrapper: styled.div.withConfig({
-    shouldForwardProp: (prop) => !['tooltipX', 'tooltipY', 'visible', 'themeBackgroundColor', 'themeTextColor', 'arrowColor', 'isMoving', 'reverseScale'].includes(prop),
+    shouldForwardProp: (prop) => !['tooltipX', 'tooltipY', 'visible', 'themeBackgroundColor', 'themeTextColor', 'arrowColor', 'isMoving', '$isDraggable', '$useContainerPosition'].includes(prop),
   })`
     //width: 100%;
     //height: auto;
-    // transition: ${({isMoving}) => isMoving ? 'none' : '0.5s all ease-out'};
-    transition: 0.5s all ease-out;
+    transition: ${({ isMoving }) => (isMoving ? 'none' : 'transform 0.4s ease-in-out')};
 
-    /* Absolute like Hotspot so StepsWrapper does not keep an in-flow hit box at 0,0 */
-    position: absolute;
+    position: ${({ $useContainerPosition }) => $useContainerPosition ? 'absolute' : 'fixed'};
     top: 0;
     left: 0;
-    pointer-events: auto;
+    z-index: 999999;
+    pointer-events: ${({ $isDraggable }) => $isDraggable ? 'auto !important' : 'auto'};
+    cursor: ${({ $isDraggable }) => $isDraggable ? 'move' : 'auto'};
+    user-select: ${({ $isDraggable }) => $isDraggable ? 'none' : 'auto'};
 
     transform-origin: top left;
-    /* Round + translate3d + reverseScale: escape Main zoom blur (HotspotContent pattern) */
-    transform: translate3d(${({tooltipX}) => Math.round(tooltipX)}px, ${({tooltipY}) => Math.round(tooltipY)}px, 0) scale(${({reverseScale}) => reverseScale || 1});
+    transform: translate3d(${({tooltipX}) => Math.round(tooltipX)}px, ${({tooltipY}) => Math.round(tooltipY)}px, 0);
 
-    font-size: 1.5vw;
-    font-family: ${Colors.fontFamilyApple};
+    font-size: 15px;
+    font-family: var(--ld-demo-font, ${Colors.fontFamilyApple});
 
     visibility: ${({visible}) => visible ? 'visible' : 'hidden'};
-
-    will-change: transform, visibility, opacity;
 
     -webkit-font-smoothing: antialiased !important;
     -moz-osx-font-smoothing: grayscale;
@@ -572,6 +860,7 @@ const TC = {
     //background: #2734c5;
     //background: #f8f8f8;
     border-radius: 5px;
+    overflow: visible;
     box-sizing: border-box;
     color: ${({themeTextColor}) => themeTextColor};
     //position: relative;
@@ -582,6 +871,39 @@ const TC = {
       width: 18px;
       height: 18px;
       visibility: hidden;
+      margin: 0;
+    }
+
+    &&[data-popper-placement^='right'] > #arrow {
+      right: -4px;
+      top: 50%;
+      margin-top: -9px;
+      left: auto;
+      bottom: auto;
+    }
+
+    &&[data-popper-placement^='left'] > #arrow {
+      left: -4px;
+      top: 50%;
+      margin-top: -9px;
+      right: auto;
+      bottom: auto;
+    }
+
+    &&[data-popper-placement^='bottom'] > #arrow {
+      bottom: -4px;
+      left: 50%;
+      margin-left: -9px;
+      top: auto;
+      right: auto;
+    }
+
+    &&[data-popper-placement^='top'] > #arrow {
+      top: -4px;
+      left: 50%;
+      margin-left: -9px;
+      bottom: auto;
+      right: auto;
     }
 
     #arrow::before {

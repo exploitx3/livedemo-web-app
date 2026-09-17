@@ -337,7 +337,6 @@ function HotspotStep({
         return calculatedStepIndex
     }
 
-    let showHeader = step && step.view && step.view.showHeader
     let showFooter = step && step.view && step.view.showFooter
 
     // Check if prevStep was a hotspot and extract coordinates
@@ -375,7 +374,6 @@ function HotspotStep({
         scaleValuesRef={scaleValuesRef}
 
         isOmniBarDisabled={isOmniBarDisabled}
-        showHeader={showHeader}
         showFooter={showFooter}
         size={size}
         onBack={onBack}
@@ -440,7 +438,7 @@ const HT = {
         color: ${({ themeTextColor }) => themeTextColor};
         height: 100%;
         font-weight: 550;
-        font-family: ${Colors.fontFamily};
+        font-family: var(--ld-demo-font, ${Colors.fontFamily});
 
         //max-width: 250px;
         max-width: 29vw;

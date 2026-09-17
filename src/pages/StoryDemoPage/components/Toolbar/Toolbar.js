@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { bindActionCreators } from "redux";
 import { connect } from 'react-redux'
 import styled from 'styled-components'
@@ -48,11 +48,15 @@ const Toolbar = ({
   onFrameToScreenSuccess,
 }) => {
   const [isTextEditing, setIsTextEditing] = useState(false)
+  const editContextKey = `${screenId || ''}:${(currentStep && currentStep._id) || ''}`
+  const editContextRef = useRef(editContextKey)
 
   // Currently if there are no Steps I cannot add a ZoomSpan,
   // For example if there are only transitions I cannot add a ZoomSpan
   const isPopupStep = !!(currentStep && currentStep.view && currentStep.view.viewType === 'popup')
-  const addZoomVisible = isVideoOrScreenshot && !currentStep.zoomSpans && !isPopupStep
+  // Page screens with no steps get a placeholder render-step without an _id, which
+  // cannot own a step zoomSpan.
+  const addZoomVisible = (isVideoOrScreenshot || isPage) && !!currentStep?._id && !currentStep.zoomSpans && !isPopupStep
 
   const stepZoomSpanExists = !!currentStep?.zoomSpan
 
@@ -68,6 +72,87 @@ const Toolbar = ({
 
   }, [currentStep])
 
+  useEffect(() => {
+    const contextChanged = editContextRef.current !== editContextKey
+    if (contextChanged) {
+      editContextRef.current = editContextKey
+    }
+    const leftEditable = !(currentStep && currentStep.recordingRole)
+    if (!isTextEditing) {
+      return
+    }
+    if (!contextChanged && !leftEditable) {
+      return
+    }
+    setIsTextEditing(false)
+    const editorWindow = getEditorWindow()
+    if (editorWindow && typeof editorWindow.resetEditText === 'function') {
+      editorWindow.resetEditText()
+    }
+  }, [editContextKey, currentStep, isTextEditing])
+
+  function getEditorWindow() {
+    if (typeof window === 'undefined') {
+      return null
+    }
+    const fromIframe = iframeRef && iframeRef.current && iframeRef.current.contentWindow
+    return fromIframe || window
+  }
+
+  function persistScreenEdit(result, workspaceId, storyDemoId, authToken) {
+    const editScreenId = result.screenId
+    const headers = { Authorization: `Bearer ${authToken}` }
+    const hasStyle = result.color != null || result.backgroundColor != null || result.hidden != null || result.blurred != null
+    const hasImage = !!result.imageData
+    const hasText = result.text != null
+    const elementId = result.elementNodeId != null ? result.elementNodeId : result.rrwebNodeId
+
+    if (elementId == null && result.rrwebNodeId == null) {
+      return Promise.reject(new Error('EditText: missing rrweb node id'))
+    }
+
+    const body = {
+      selector: String((hasStyle || hasImage || result.textNodeId != null || result.elementNodeId != null)
+        ? elementId
+        : result.rrwebNodeId),
+    }
+    if (result.elementNodeId != null) {
+      body.elementNodeId = String(result.elementNodeId)
+    }
+    if (hasText) {
+      body.text = result.text
+      if (result.textNodeId != null) {
+        body.textNodeId = String(result.textNodeId)
+      }
+    }
+    if (result.color != null) {
+      body.color = result.color
+    }
+    if (result.backgroundColor != null) {
+      body.backgroundColor = result.backgroundColor
+    }
+    if (result.hidden != null) {
+      body.hidden = result.hidden
+    }
+    if (result.blurred != null) {
+      body.blurred = result.blurred
+    }
+    if (hasImage) {
+      body.imageData = result.imageData
+      body.imageKind = result.imageKind || 'src'
+    }
+
+    return axios.post(
+      `${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyDemoId}/screens/${editScreenId}/editText`,
+      body,
+      {
+        headers,
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+      },
+    )
+  }
+
   function onEditText(workspaceId, storyDemoId, screenId, authToken) {
 
     // EditText only for DOM/rrweb screens. Legacy static PageScreens are retired.
@@ -75,70 +160,41 @@ const Toolbar = ({
       return
     }
 
-    if (isTextEditing) {
-      setIsTextEditing(false)
-      iframeRef.current.contentWindow.resetEditText()
-
+    const editorWindow = getEditorWindow()
+    if (!editorWindow) {
       return
     }
 
-    return new Promise((resolve, reject) => {
-      setIsTextEditing(true)
-
-      function onFinishEditting(result) {
-        resolve(result)
+    if (isTextEditing) {
+      setIsTextEditing(false)
+      if (typeof editorWindow.resetEditText === 'function') {
+        editorWindow.resetEditText()
       }
+      return
+    }
 
-      setTimeout(() => {
-        reject()
-      }, 300 * 1000)
+    setIsTextEditing(true)
 
-      iframeRef.current.contentWindow.editText(onFinishEditting)
-
-    })
-      .then((result) => {
-        if (result.action === 'save' && result.text !== result.oldText) {
-          let screenId = result.screenId
-          let newText = result.text
-          let nodeId = result.rrwebNodeId
-
-          if (nodeId == null) {
-            console.error('EditText: missing rrweb node id')
-            return Promise.resolve({})
+    function onFinishEditting(result) {
+      if (!result || result.action !== 'save') {
+        return Promise.resolve({})
+      }
+      return persistScreenEdit(result, workspaceId, storyDemoId, authToken)
+        .then((res) => {
+          if (typeof editorWindow.reloadRrwebAfterTextEdit === 'function') {
+            return editorWindow.reloadRrwebAfterTextEdit().then(() => res && res.data)
           }
+          return res && res.data
+        })
+        .catch((err) => {
+          console.error('EditText failed', err)
+          throw err
+        })
+    }
 
-          return axios.post(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyDemoId}/screens/${screenId}/editText`,
-            {
-              'selector': String(nodeId),
-              'text': newText
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${authToken}`
-              }
-            })
-            .then((res) => {
-              if (iframeRef.current && iframeRef.current.contentWindow && iframeRef.current.contentWindow.reloadRrwebAfterTextEdit) {
-                return iframeRef.current.contentWindow.reloadRrwebAfterTextEdit().then(() => res.data)
-              }
-              return res.data
-            })
-        } else {
-          return Promise.resolve({})
-        }
-
-      })
-      .then((result) => {
-        setIsTextEditing(false)
-        // console.log(result)
-      })
-      .catch((err) => {
-        console.error('EditText failed', err)
-        setIsTextEditing(false)
-        if (iframeRef.current && iframeRef.current.contentWindow && iframeRef.current.contentWindow.resetEditText) {
-          iframeRef.current.contentWindow.resetEditText()
-        }
-      })
+    if (typeof editorWindow.editText === 'function') {
+      editorWindow.editText(onFinishEditting)
+    }
   }
 
   const canEditDomText = !!(currentStep && currentStep.recordingRole)
@@ -243,7 +299,7 @@ const Toolbar = ({
               type={isTextEditing ? 'close-circle' : 'edit'}
             />
           </TB.ToolbarIcon>
-          <TB.ToolbarText>Edit</TB.ToolbarText>
+          <TB.ToolbarText>{isTextEditing ? 'Done' : 'Edit'}</TB.ToolbarText>
         </TB.ToolbarButton>
         {currentStep && currentStep.screenType === ScreenTypes.SCREEN_VIDEO ? (
           <FrameToScreenToolbarButton
@@ -455,7 +511,7 @@ const TB = {
     line-height: 50px;
     margin: 0px 15px;
     font-size: 1.1em;
-    color: #111;
+    color: ${Colors.primaryText};
     padding: 0px 5px;
 
     display: flex;
@@ -467,13 +523,13 @@ const TB = {
     cursor: ${({ isDisabled }) => isDisabled ? 'not-allowed' : 'pointer'};
 
     svg, span > i > svg {
-      fill: ${({ isDisabled }) => isDisabled ? '#ccc' : '#111'} !important;
+      fill: ${({ isDisabled }) => isDisabled ? '#ccc' : 'var(--ld-text, #111)'} !important;
     }
 
-    color: ${({ isDisabled }) => isDisabled ? '#ccc' : '#111'};
+    color: ${({ isDisabled }) => isDisabled ? '#ccc' : 'var(--ld-text, #111)'};
 
     &:hover {
-      background: #F3F4F6;
+      background: var(--ld-surface, #F3F4F6);
     }
   `,
   ToolbarIcon: styled.span`

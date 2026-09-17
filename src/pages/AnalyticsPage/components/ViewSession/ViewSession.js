@@ -174,6 +174,43 @@ const S = {
     display: flex;
     justify-content: center;
     align-items: center;
+
+    /* rrweb-player ships a fixed light skin; every fallback below is its own
+       default value, so light mode is untouched. &&& outranks its 3-class
+       svelte selectors regardless of stylesheet order. */
+    &&& .rr-player,
+    &&& .rr-controller {
+      background: ${mainColors.surfaceColor};
+    }
+
+    &&& .rr-timeline__time,
+    &&& .switch .label {
+      color: var(--ld-text, #11103e);
+    }
+
+    &&& .rr-progress {
+      background: var(--ld-background, #eee);
+      border-top-color: ${mainColors.surfaceColor};
+      border-bottom-color: ${mainColors.surfaceColor};
+    }
+
+    &&& .rr-progress__step,
+    &&& .rr-controller__btns button:active {
+      background: var(--ld-border, #e0e1fe);
+    }
+
+    /* The inactive-period marker is inline-styled by the player. */
+    &&& .rr-progress > div[title='inactive period'] {
+      background: var(--ld-border, rgb(212, 212, 212)) !important;
+    }
+
+    &&& .rr-controller__btns button:not(.active) {
+      color: var(--ld-text, inherit);
+    }
+
+    &&& .rr-controller__btns button svg {
+      fill: currentColor;
+    }
   `
 }
 

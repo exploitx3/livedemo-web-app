@@ -18,6 +18,7 @@ import { Toaster } from 'react-hot-toast'
 import DemoLoginPage from '../pages/DemoLoginPage/DemoLoginPage'
 import { isMobile } from 'react-device-detect'
 import LiveDemoPreviewPage from '../pages/LiveDemoPreviewPage/LiveDemoPreviewPage'
+import AIDemoAgentPreviewPage from '../pages/AIDemoAgentPreviewPage/AIDemoAgentPreviewPage'
 import AutoRecordingPreviewPage from '../pages/AutoRecordingPreviewPage/AutoRecordingPreviewPage'
 import DesktopAuthPage from '../pages/DesktopAuthPage/DesktopAuthPage'
 import OnboardingPage from '../pages/OnboardingPage/OnboardingPage'
@@ -163,6 +164,8 @@ class App extends React.Component {
             <Route path="/desktop-auth" element={HOC.SwitchComponentIfAuth(<LoginPage />, <DesktopAuthPage />)} />
             <Route path="/livedemos/:livedemoId" element={<LiveDemoPreviewPage />} />
             <Route path="/livedemos/:livedemoId/links/:linkId" element={<LiveDemoPreviewPage />} />
+            <Route path="/agents/:agentId" element={<AIDemoAgentPreviewPage />} />
+            <Route path="/agents/:agentId/links/:linkId" element={<AIDemoAgentPreviewPage />} />
 
             <Route path="/refreshToken" element={<RefreshToken />} />
             <Route path="/email-verify" element={HOC.SwitchComponentIfAuth(<LoginPage />, <EmailVerifyPage />, { bypassEmailVerify: true })} />

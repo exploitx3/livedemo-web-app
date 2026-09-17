@@ -977,7 +977,7 @@ const ST = {
     align-items: center;
     justify-content: flex-start;
     width: 100%;
-    background: #fff;
+    background: var(--ld-surface, #fff);
     min-height: 200px;
   `,
   SelectorInput: styled(Input)`

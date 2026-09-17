@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react'
-import Colors from '../../../../../../constants/mainColors'
+import Colors, { isScreenStepSelected, primaryAlpha, selectedHeaderRingCss } from '../../../../../../constants/mainColors'
 //import { Button, Dropdown, Icon, Input, Menu, Modal } from 'antd'
 import Button from 'antd/es/button'
 import 'antd/es/button/style'
@@ -18,7 +18,7 @@ import StepViewTypes from '../../../../../../constants/StepViewTypes'
 import Simmer from 'simmerjs'
 import Step from '../../../Step/Step'
 import * as ENV from '../../../../../../config'
-import {Draggable} from '@hello-pangea/dnd'
+import {Draggable, Droppable} from '@hello-pangea/dnd'
 import Spinner from '../../../../../../components/Spinner/Spinner'
 import AddLine from '../../../AddLine/AddLine'
 import PointerTransition from '../PointerTransition/PointerTransition'
@@ -28,6 +28,7 @@ import {addStep, addTransition, updateScreen} from '../../../../../../actions/st
 import {connect} from 'react-redux'
 import {bindActionCreators} from 'redux'
 import elementPicker from '../../../../../../injectScript/storyElementPicker.js'
+import {clampScreenDragIndex, reorderArray} from '../../../../../../utils/screenOrder'
 
 const {confirm} = Modal
 
@@ -48,7 +49,7 @@ function getEditorDemoDocument() {
 
 const ScreenPage = ({
                       storyDemo, iframeRef, setScreens, setStoryDemo, tabsWidth, authData, changeStep, reloadStoryDemo,
-                      screen, screenIndex, calculatedStepIndex, previousStepIndex, previousStep, actions
+                      screen, screenIndex, calculatedStepIndex, previousStepIndex, previousStep, currentStepIndex, actions
                     }) => {
   // const screens = storyDemo && storyDemo.screens ? storyDemo.screens : []
 
@@ -76,6 +77,12 @@ const ScreenPage = ({
   let [isNameEditable, setIsNameEditable] = useState(false)
   screen.name = formatScreenName(screen)
   let [screenInternal, setScreenInternal] = useState(screen)
+
+  const isScreenStepActive = isScreenStepSelected(
+    currentStepIndex,
+    calculatedStepIndex,
+    screenInternal.steps?.length ?? 0
+  )
 
   useEffect(() => {
     // console.log(screen)
@@ -214,13 +221,6 @@ const ScreenPage = ({
     return
   }
 
-  function reorderArray(array, from, to) {
-    let newArray = [...array]
-    newArray.splice(to, 0, newArray.splice(from, 1)[0])
-
-    return newArray
-  }
-
   function onDragEnd(result) {
     // dropped outside the list
     if (!result.destination) {
@@ -264,7 +264,7 @@ const ScreenPage = ({
     let newIndex = result.destination.index
 
 
-    let newScreensArray = reorderArray(screens, oldIndex, newIndex)
+    let newScreensArray = reorderArray(screens, oldIndex, clampScreenDragIndex(screens, oldIndex, newIndex))
 
     setScreens(newScreensArray)
 
@@ -643,215 +643,220 @@ const ScreenPage = ({
   return (
 
     <SC.Wrapper id={viewName}>
+      <SC.ScreenWrapper>
+        {isLoading ? <Spinner/> : (
+          <Draggable
+            key={currentScreen._id}
+            draggableId={String(currentScreen._id)}
+            index={screenIndex}
+            type="screen"
+          >
+            {(provided) => (
+              <SC.ScreenHeader
+                ref={provided.innerRef}
+                {...provided.draggableProps}
+                isOpen={isOpen}
+                isSelected={isScreenStepActive}
+              >
+                <SC.DragWrapper {...provided.dragHandleProps}>
+                  <SC.DragIcon width="12" height="13" viewBox="0 0 12 13" fill="none"
+                               xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M0 0H2V2H0V0ZM5 0H7V2H5V0ZM10 0H12V2H10V0ZM0 5H2V7H0V5ZM5 5H7V7H5V5ZM10 5H12V7H10V5ZM0 10H2V12H0V10ZM5 10H7V12H5V10ZM10 10H12V12H10V10Z"
+                      fill="black"/>
+                  </SC.DragIcon>
+                </SC.DragWrapper>
+                <SC.HeaderMain onClick={() => {
+                  changeStep(calculatedStepIndex)
 
-      {isLoading ? <Spinner/> : (
-        <Draggable
-          key={currentScreen._id}
-          draggableId={currentScreen._id}
-          index={screenIndex}
-          isDragDisabled={currentScreen.recordingRole === 'delta'}
-        >
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.draggableProps}
-            >
+                  // last screen stays open so add controls remain visible
+                  if (screenIndex === screens.length - 1) return
+                  if (calculatedStepIndex === previousStepIndex || !isScreenOpen) {
+                    setIsScreenOpen(!isScreenOpen)
+                  }
+                }}>
+                  <SC.ScreenDemoImageWrapper>
+                    <SC.ScreenDemoImage src={getScreenImage(currentScreen)}/>
+                    {getScreenIcon(currentScreen)}
+                  </SC.ScreenDemoImageWrapper>
 
-              <SC.ScreenWrapper>
-                <SC.ScreenHeader isOpen={isOpen}>
-                  <SC.DragWrapper {...provided.dragHandleProps}>
-                    <SC.DragIcon width="12" height="13" viewBox="0 0 12 13" fill="none"
-                                 xmlns="http://www.w3.org/2000/svg">
-                      <path
-                        d="M0 0H2V2H0V0ZM5 0H7V2H5V0ZM10 0H12V2H10V0ZM0 5H2V7H0V5ZM5 5H7V7H5V5ZM10 5H12V7H10V5ZM0 10H2V12H0V10ZM5 10H7V12H5V10ZM10 10H12V12H10V10Z"
-                        fill="black"/>
-                    </SC.DragIcon>
-                  </SC.DragWrapper>
-                  <SC.HeaderMain onClick={() => {
-                    changeStep(calculatedStepIndex)
+                  <SC.ScreenTitle
+                    className={isNameEditable ? 'editing' : ''}
+                    onClick={(e) => {
+                      if (e.detail === 2) {
+                        setIsNameEditable(true)
+                      }
+                    }}
+                    contentEditable={isNameEditable}
+                    suppressContentEditableWarning={true}
+                    onKeyPress={function (event) {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
 
-                    // last screen stays open so add controls remain visible
-                    if (screenIndex === screens.length - 1) return
-                    if (calculatedStepIndex === previousStepIndex || !isScreenOpen) {
-                      setIsScreenOpen(!isScreenOpen)
-                    }
-                  }}>
-                    <SC.ScreenDemoImageWrapper>
-                      <SC.ScreenDemoImage src={getScreenImage(currentScreen)}/>
-                      {getScreenIcon(currentScreen)}
-                    </SC.ScreenDemoImageWrapper>
+                        event.target.blur()
+                      }
 
-                    <SC.ScreenTitle
-                      className={isNameEditable ? 'editing' : ''}
-                      onClick={(e) => {
-                        if (e.detail === 2) {
-                          setIsNameEditable(true)
-                        }
-                      }}
-                      contentEditable={isNameEditable}
-                      suppressContentEditableWarning={true}
-                      onKeyPress={function (event) {
-                        // console.log(event)
-                        if (event.key === "Enter") {
-                          event.preventDefault();
+                    }}
+                    onBlur={function (e) {
+                      setIsNameEditable(false)
 
-                          event.target.blur()
-                        }
+                      let newScreen = {...screenInternal}
+                      newScreen.name = e.target.innerText
 
-                      }}
-                      onBlur={function (e) {
-                        setIsNameEditable(false)
+                      if (newScreen.name !== screenInternal.name) {
+                        setScreenInternal(newScreen)
 
-                        let newScreen = {...screenInternal}
-                        newScreen.name = e.target.innerText
+                        actions.updateScreen({name: newScreen.name}, storyDemo.workspaceId, storyDemo._id, newScreen._id, authData.token)
+                      }
+                    }}
+                  >{screenInternal.name}</SC.ScreenTitle>
+                  {screenInternal.recordingRole ? (
+                    <SC.RecordingRoleBadge $role={screenInternal.recordingRole}>
+                      {screenInternal.recordingRole === 'base' ? 'Base' : 'Delta'}
+                    </SC.RecordingRoleBadge>
+                  ) : null}
+                </SC.HeaderMain>
+                <Dropdown trigger={['click']} menu={{ items: screenMenuItems }}>
+                  <SC.MenuButton>
 
-                        if (newScreen.name !== screenInternal.name) {
-                          setScreenInternal(newScreen)
+                    <SC.MenuIcon type={'ellipsis'}/>
+                  </SC.MenuButton>
+                </Dropdown>
 
-                          actions.updateScreen({name: newScreen.name}, storyDemo.workspaceId, storyDemo._id, newScreen._id, authData.token)
-                        }
-                      }}
-                    >{screenInternal.name}</SC.ScreenTitle>
-                    {screenInternal.recordingRole ? (
-                      <SC.RecordingRoleBadge $role={screenInternal.recordingRole}>
-                        {screenInternal.recordingRole === 'base' ? 'Base' : 'Delta'}
-                      </SC.RecordingRoleBadge>
-                    ) : null}
-                  </SC.HeaderMain>
-                  <Dropdown trigger={['click']} menu={{ items: screenMenuItems }}>
-                    <SC.MenuButton>
+              </SC.ScreenHeader>
+            )}
+          </Draggable>
+        )}
+        {isOpen && !isLoading ?
+          showTransition ? renderAllTransitions(isNavUpdating, currentScreen.customTransitions) : (
 
-                      <SC.MenuIcon type={'ellipsis'}/>
-                    </SC.MenuButton>
-                    {/*<a className="ant-dropdown-link" onClick={e => e.preventDefault()}>*/}
-                    {/*  Hover me <Icon type="down" />*/}
-                    {/*</a>*/}
-                  </Dropdown>
-
-                </SC.ScreenHeader>
-                {isOpen ?
-                  showTransition ? renderAllTransitions(isNavUpdating, currentScreen.customTransitions) : (
-
-                    <React.Fragment>
-                      {currentScreen.steps && currentScreen.steps.map((step, stepIndex, array) => {
+            <React.Fragment>
+              <Droppable droppableId={`steps-${currentScreen._id}`} type="step">
+                {(stepProvided) => (
+                  <div ref={stepProvided.innerRef} {...stepProvided.droppableProps}>
+                    {currentScreen.steps && currentScreen.steps.map((step, stepIndex) => {
 
 
-                        let calculatedStepIndex = stepIndex + 1
-                        if (screenIndex !== 0) {
-                          let totalStepsBefore = screens.slice(0, screenIndex).reduce((accum, scr) => {
-                            return accum += (scr.steps && scr.steps.length ? scr.steps.length : 1)
-                          }, 0)
+                      let calculatedStepIndex = stepIndex + 1
+                      if (screenIndex !== 0) {
+                        let totalStepsBefore = screens.slice(0, screenIndex).reduce((accum, scr) => {
+                          return accum += (scr.steps && scr.steps.length ? scr.steps.length : 1)
+                        }, 0)
 
-                          calculatedStepIndex += totalStepsBefore
-                        }
+                        calculatedStepIndex += totalStepsBefore
+                      }
 
-                        return (
-                          <React.Fragment>
-                            <SC.StepWrapper key={step._id}>
-                              <SC.StepIndex>Step {calculatedStepIndex}</SC.StepIndex>
-                              <Step
-                                deleteStep={() => {
-                                  setIsLoading(true)
+                      return (
+                        <Draggable
+                          key={step._id}
+                          draggableId={`step-${step._id}`}
+                          index={stepIndex}
+                          type="step"
+                        >
+                          {(provided, snapshot) => (
+                            <SC.StepDragItem
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              $isDragging={snapshot.isDragging}
+                            >
+                              <SC.StepWrapper>
+                                <SC.StepIndex>Step {calculatedStepIndex}</SC.StepIndex>
+                                <Step
+                                  deleteStep={() => {
+                                    setIsLoading(true)
 
-                                  return deleteStep(step._id, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
-                                    .then(() => {
-                                      let newScreen = {...screenInternal}
+                                    return deleteStep(step._id, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
+                                      .then(() => {
+                                        let newScreen = {...screenInternal}
 
-                                      // let prevStepData = null
-                                      newScreen.steps = []
-                                      screenInternal.steps.forEach((stepItem, index) => {
-                                        if (stepItem._id !== step._id) {
-                                          newScreen.steps.push(stepItem)
-                                        } else {
+                                        newScreen.steps = []
+                                        screenInternal.steps.forEach((stepItem) => {
+                                          if (stepItem._id !== step._id) {
+                                            newScreen.steps.push(stepItem)
+                                          }
+                                        })
+                                        setScreenInternal(newScreen)
 
-                                          // prevStepData = newScreen.steps[index - 1]
-                                        }
+                                        window.postMessage({
+                                          type: 'delete_step',
+                                          stepData: step,
+                                        }, '*')
+
+                                        setIsLoading(false)
 
                                       })
-                                      setScreenInternal(newScreen)
+                                  }}
+                                  storyDemoId={storyDemo._id}
+                                  storyDemo={storyDemo}
+                                  screenId={screenInternal._id}
+                                  workspaceId={storyDemo.workspaceId}
+                                  stepObj={step}
+                                  authData={authData}
+                                  getSelector={getSelector}
+                                  cancelSelector={cancelSelector}
+                                  changeStep={changeStep}
+                                  calculatedStepIndex={calculatedStepIndex}
+                                  isSelected={currentStepIndex === calculatedStepIndex}
+                                  iframeRef={iframeRef}
+                                  dragHandleProps={provided.dragHandleProps}
+                                />
+                              </SC.StepWrapper>
+                            </SC.StepDragItem>
+                          )}
+                        </Draggable>
+                      )
+                    })}
+                    {stepProvided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+              {addStepIsLoading ? <div style={{
+                height: '65px',
+                display: 'block',
+                position: 'relative',
+                width: '100%'
+              }}><Spinner/></div> : (
+                <AddLine
 
-                                      window.postMessage({
-                                        type: 'delete_step',
-                                        stepData: step,
-                                        // prevStepData: prevStepData
-                                      }, '*')
+                  onPointerClick={() => {
+                    setAddStepIsLoading(true)
+                    let newStepIndex = screenInternal.steps.length
 
-                                      setIsLoading(false)
+                    return actions.addStep(newStepIndex, StepViewTypes.POINTER, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
+                      .then(() => {
+                        setAddStepIsLoading(false)
+                        setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
+                      })
+                  }}
 
-                                    })
-                                }}
-                                storyDemoId={storyDemo._id}
-                                storyDemo={storyDemo}
-                                screenId={screenInternal._id}
-                                workspaceId={storyDemo.workspaceId}
-                                stepObj={step}
-                                authData={authData}
-                                getSelector={getSelector}
-                                cancelSelector={cancelSelector}
-                                changeStep={changeStep}
-                                calculatedStepIndex={calculatedStepIndex}
-                                iframeRef={iframeRef}
-                              />
-                            </SC.StepWrapper>
+                  onHotspotClick={() => {
+                    setAddStepIsLoading(true)
+                    let newStepIndex = screenInternal.steps.length
+                    return actions.addStep(newStepIndex, StepViewTypes.HOTSPOT, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
+                      .then(() => {
+                        setAddStepIsLoading(false)
+                        setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
+                      })
+                  }}
 
-                          </React.Fragment>
-                        )
-                      })}
-                      {addStepIsLoading ? <div style={{
-                        height: '65px',
-                        display: 'block',
-                        position: 'relative',
-                        width: '100%'
-                      }}><Spinner/></div> : (
-                        <AddLine
+                  onPopupClick={() => {
+                    setAddStepIsLoading(true)
 
-                          onPointerClick={() => {
-                            setAddStepIsLoading(true)
-                            let newStepIndex = screenInternal.steps.length
+                    let newStepIndex = screenInternal.steps.length
+                    return actions.addStep(newStepIndex, StepViewTypes.POPUP, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
+                      .then(() => {
+                        setAddStepIsLoading(false)
+                        setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
+                      })
+                  }}
 
-                            return actions.addStep(newStepIndex, StepViewTypes.POINTER, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
-                              .then(() => {
-                                setAddStepIsLoading(false)
-                                setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
-                              })
-                          }}
+                />)}
 
-                          onHotspotClick={() => {
-                            setAddStepIsLoading(true)
-                            let newStepIndex = screenInternal.steps.length
-                            return actions.addStep(newStepIndex, StepViewTypes.HOTSPOT, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
-                              .then(() => {
-                                setAddStepIsLoading(false)
-                                setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
-                              })
-                          }}
+            </React.Fragment>
 
-                          onPopupClick={() => {
-                            setAddStepIsLoading(true)
-
-                            let newStepIndex = screenInternal.steps.length
-                            return actions.addStep(newStepIndex, StepViewTypes.POPUP, storyDemo._id, screenInternal._id, storyDemo.workspaceId, authData.token)
-                              .then(() => {
-                                setAddStepIsLoading(false)
-                                setTimeout(() => changeStep(calculatedStepIndex + newStepIndex), 0)
-                              })
-                          }}
-
-                        />)}
-
-                    </React.Fragment>
-
-                  )
-                  : ''}
-
-
-              </SC.ScreenWrapper>
-            </div>
-          )}
-        </Draggable>
-      )}
-
-
+          )
+          : ''}
+      </SC.ScreenWrapper>
     </SC.Wrapper>
   )
 }
@@ -907,12 +912,17 @@ const SC = {
     top: 0;
     justify-content: center;
     align-items: center;
+    color: ${Colors.cardBorderColor};
 
 
     && svg {
-      width: 100%;
-      height: 100%;
-      fill: ${Colors.primaryColor};
+      width: 25px;
+      height: 25px;
+    }
+
+    && svg,
+    && svg path {
+      fill: currentColor;
     }
 
     && i {
@@ -924,7 +934,7 @@ const SC = {
     width: 25%;
     min-height: 55%;
     border-radius: 6px;
-    border: 2px solid ${Colors.primaryColor};
+    border: 2px solid ${Colors.cardBorderColor};
     position: relative;
     height: 80%;
 
@@ -942,7 +952,10 @@ const SC = {
     margin-left: 15px;
   `,
   DragIcon: styled.svg`
-
+    /* The paths carry fill="black" inline; CSS outranks presentation attributes. */
+    && path {
+      fill: var(--ld-text, black);
+    }
   `,
   MenuButton: styled.div`
 
@@ -973,7 +986,7 @@ const SC = {
     position: relative;
     width: 100%;
     height: 65px;
-    background: #F3F3F3;
+    background: var(--ld-surface, #F3F3F3);
     display: flex;
     flex-direction: row;
     justify-content: space-evenly;
@@ -982,14 +995,17 @@ const SC = {
 
     padding: 0px;
     border-radius: 6px;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
     border: 1px solid ${(props) => {
-      return props.isOpen ? Colors.primaryText : Colors.primaryColor
+      if (props.isSelected) return Colors.primaryColor
+      return Colors.cardBorderColor
     }
     };
 
-    &&:hover {
+    ${(props) => props.isSelected ? selectedHeaderRingCss : ''}
 
-      border: 1px solid ${Colors.primaryText};
+    &&:hover {
+      border-color: ${(props) => props.isSelected ? Colors.primaryColor : Colors.cardBorderColor};
     }
 
   `,
@@ -1024,7 +1040,7 @@ const SC = {
 
     &&.editing {
       cursor: text;
-      border-bottom: 1px solid black;
+      border-bottom: 1px solid var(--ld-border, black);
     }
   `,
   RecordingRoleBadge: styled.span.withConfig({
@@ -1063,7 +1079,7 @@ const SC = {
       padding: 0px;
       height: 25px;
       font-size: 1.2em;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
       color: #c4cacd;
     }
 
@@ -1150,7 +1166,7 @@ const SC = {
     }
 
     && svg {
-      fill: ${Colors.primaryColor}AA;
+      fill: ${primaryAlpha(67)};
       width: 100%;
       height: 100%;
     }
@@ -1175,12 +1191,12 @@ const SC = {
     &&::-webkit-scrollbar-track {
       -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
       border-radius: 10px;
-      background-color: #fff;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar {
       width: 3px;
-      background-color: #fff;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar-thumb {
@@ -1255,19 +1271,19 @@ const SC = {
         animation: fadeInFromNone 1s ease-in-out;
       }
 
-      background: aliceblue;
+      background: var(--ld-surface, aliceblue);
       height: 400px;
       overflow-y: auto;
 
       &&::-webkit-scrollbar-track {
         -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
         border-radius: 10px;
-        background-color: #fff;
+        background-color: var(--ld-background, #fff);
       }
 
       &&::-webkit-scrollbar {
         width: 2px;
-        background-color: #fff;
+        background-color: var(--ld-background, #fff);
       }
 
       &&::-webkit-scrollbar-thumb {
@@ -1278,16 +1294,16 @@ const SC = {
 
 
       .Requests__ItemUrl {
-        color: black;
+        color: var(--ld-text, black);
       }
     }
 
     &&:hover {
-      background: aliceblue;
+      background: var(--ld-surface, aliceblue);
     }
 
     &:hover .Requests__ItemUrl {
-      color: black;
+      color: var(--ld-text, black);
     }
 
     //border: 1px solid #d9d9d9;
@@ -1351,7 +1367,7 @@ const SC = {
     transition: all 0.5s linear;
 
     &:hover {
-      background: ${Colors.primaryColor}aa;
+      background: ${primaryAlpha(67)};
       //height: 24px;
       cursor: pointer;
     }
@@ -1386,12 +1402,12 @@ const SC = {
     &&::-webkit-scrollbar-track {
       -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
       border-radius: 10px;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar {
       width: 0px;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar-thumb {
@@ -1639,6 +1655,15 @@ const SC = {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+  `,
+  StepDragItem: styled.div`
+    width: 100%;
+
+    ${({ $isDragging }) => $isDragging ? `
+      && > * {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+    ` : ''}
   `,
   StepIndex: styled.p`
     margin: 5px 0px 0px 12px;

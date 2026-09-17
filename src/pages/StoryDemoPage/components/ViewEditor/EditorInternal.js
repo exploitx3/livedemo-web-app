@@ -642,8 +642,8 @@ export const Toolbar = React.forwardRef(
                 ? 'white'
                 : '#999'
               : active
-              ? 'black'
-              : '#666'};
+              ? 'var(--ld-text, black)'
+              : 'var(--ld-text-muted, #666)'};
           `
         )}
       />

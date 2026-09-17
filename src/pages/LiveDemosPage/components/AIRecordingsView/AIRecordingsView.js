@@ -140,8 +140,8 @@ S.Container = styled.div`
 `
 
 S.RecordingCard = styled.div`
-  background: #f8f9ff;
-  border: 1px solid #e0e7ff;
+  background: var(--ld-surface, #f8f9ff);
+  border: 1px solid var(--ld-border, #e0e7ff);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -168,7 +168,7 @@ S.Thumbnail = styled.img`
 S.RecordingTitle = styled.div`
   font-family: ${mainColors.fontFamily};
   font-size: 0.95em;
-  color: #111;
+  color: ${mainColors.primaryText};
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -185,7 +185,7 @@ S.RecordingMeta = styled.div`
 S.MetaText = styled.span`
   font-family: ${mainColors.fontFamily};
   font-size: 0.8em;
-  color: #888;
+  color: var(--ld-text-muted, #888);
 `
 
 S.StatusBadge = styled.span`
@@ -215,7 +215,7 @@ S.EmptyRow = styled.div`
 S.EmptyText = styled.p`
   margin: 0;
   font-family: ${mainColors.fontFamily};
-  color: #111;
+  color: ${mainColors.primaryText};
 `
 
 S.Skeleton = styled(Skeleton)`

@@ -173,8 +173,8 @@ const T = {
     line-height: 50px;
     margin: 0px 5px;
     font-size: 1.1em;
-    color: #111;
-    border: 1px solid #111;
+    color: var(--ld-text, #111);
+    border: 1px solid var(--ld-border, #111);
 
     display: flex;
     justify-content: center;
@@ -184,7 +184,7 @@ const T = {
 
     cursor: pointer;
 
-    background: #fff;
+    background: var(--ld-surface, #fff);
 
   `,
   ToolbarButton: styled.div`
@@ -265,7 +265,7 @@ const T = {
     font-size: 20px;
     font-weight: 550;
     font-family: ${Colors.fontFamily};
-    color: #111;
+    color: var(--ld-text, #111);
   `,
   HeaderDescription: styled.p`
     margin: 0px;

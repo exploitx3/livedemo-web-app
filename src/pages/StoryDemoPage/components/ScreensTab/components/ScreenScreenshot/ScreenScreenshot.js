@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react'
-import Colors from '../../../../../../constants/mainColors'
+import Colors, { isScreenStepSelected, primaryAlpha, selectedHeaderRingCss } from '../../../../../../constants/mainColors'
 //import { Button, Dropdown, Icon, Input, Menu, Modal } from 'antd'
 import Button from 'antd/es/button'
 import Dropdown from 'antd/es/dropdown'
@@ -10,7 +10,7 @@ import styled from 'styled-components'
 import axios from '../../../../../../utils/axiosInstance'
 import Simmer from 'simmerjs'
 import * as ENV from '../../../../../../config'
-import {Draggable} from '@hello-pangea/dnd'
+import {Draggable, Droppable} from '@hello-pangea/dnd'
 import Spinner from '../../../../../../components/Spinner/Spinner'
 import HotspotTransition from '../HotspotTransition/HotspotTransition'
 import Step from '../../../Step/Step'
@@ -21,6 +21,7 @@ import {MdAdsClick, MdOutlineMouse} from 'react-icons/md'
 import {addStep, addTransition, updateScreen} from '../../../../../../actions/storyDemoActions'
 import {connect} from 'react-redux'
 import {bindActionCreators} from 'redux'
+import {clampScreenDragIndex, reorderArray} from '../../../../../../utils/screenOrder'
 
 const {confirm} = Modal
 
@@ -41,6 +42,7 @@ const ScreenScreenshot = ({
                             reloadStoryDemo,
                             previousStepIndex,
                             previousStep,
+                            currentStepIndex,
                             screen,
                             screenIndex,
                             calculatedStepIndex,
@@ -73,6 +75,12 @@ const ScreenScreenshot = ({
   screen.name = formatScreenName(screen)
   let [isNameEditable, setIsNameEditable] = useState(false)
   let [screenInternal, setScreenInternal] = useState(screen)
+
+  const isScreenStepActive = isScreenStepSelected(
+    currentStepIndex,
+    calculatedStepIndex,
+    screenInternal.steps?.length ?? 0
+  )
 
 
   let [showTransition, setShowTransition] = useState(false)
@@ -250,13 +258,6 @@ const ScreenScreenshot = ({
       })
   }
 
-  function reorderArray(array, from, to) {
-    let newArray = [...array]
-    newArray.splice(to, 0, newArray.splice(from, 1)[0])
-
-    return newArray
-  }
-
   function onDragEnd(result) {
     // dropped outside the list
     if (!result.destination) {
@@ -300,7 +301,7 @@ const ScreenScreenshot = ({
     let newIndex = result.destination.index
 
 
-    let newScreensArray = reorderArray(screens, oldIndex, newIndex)
+    let newScreensArray = reorderArray(screens, oldIndex, clampScreenDragIndex(screens, oldIndex, newIndex))
 
     setScreens(newScreensArray)
 
@@ -539,43 +540,64 @@ const ScreenScreenshot = ({
     }
 
     return <React.Fragment>
-      {currentScreen.steps && currentScreen.steps.map((step, stepIndex, array) => {
+      <Droppable droppableId={`steps-${currentScreen._id}`} type="step">
+        {(stepProvided) => (
+          <div ref={stepProvided.innerRef} {...stepProvided.droppableProps}>
+            {currentScreen.steps && currentScreen.steps.map((step, stepIndex) => {
 
 
-        let calculatedStepIndex = stepIndex + 1
-        if (screenIndex !== 0) {
-          let totalStepsBefore = screens.slice(0, screenIndex).reduce((accum, scr) => {
-            return accum += (scr.steps && scr.steps.length ? scr.steps.length : 1)
-          }, 0)
+              let calculatedStepIndex = stepIndex + 1
+              if (screenIndex !== 0) {
+                let totalStepsBefore = screens.slice(0, screenIndex).reduce((accum, scr) => {
+                  return accum += (scr.steps && scr.steps.length ? scr.steps.length : 1)
+                }, 0)
 
-          calculatedStepIndex += totalStepsBefore
-        }
+                calculatedStepIndex += totalStepsBefore
+              }
 
-        return (
-          <React.Fragment>
-            <SC.StepWrapper key={step._id}>
-              <SC.StepIndex>Step {calculatedStepIndex}</SC.StepIndex>
-              <Step
-                storyDemoId={storyDemo._id}
-                storyDemo={storyDemo}
-                screenId={currentScreen._id}
-                workspaceId={storyDemo.workspaceId}
-                stepObj={step}
-                authData={authData}
-                getSelector={getSelector}
-                cancelSelector={cancelSelector}
-                changeStep={changeStep}
-                calculatedStepIndex={calculatedStepIndex}
-                iframeRef={iframeRef}
-                disablePointerPickButton={true}
-                screenIsLoading={isLoading}
-                setScreenIsLoading={setIsLoading}
-              />
-            </SC.StepWrapper>
-
-          </React.Fragment>
-        )
-      })}
+              return (
+                <Draggable
+                  key={step._id}
+                  draggableId={`step-${step._id}`}
+                  index={stepIndex}
+                  type="step"
+                >
+                  {(provided, snapshot) => (
+                    <SC.StepDragItem
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      $isDragging={snapshot.isDragging}
+                    >
+                      <SC.StepWrapper>
+                        <SC.StepIndex>Step {calculatedStepIndex}</SC.StepIndex>
+                        <Step
+                          storyDemoId={storyDemo._id}
+                          storyDemo={storyDemo}
+                          screenId={currentScreen._id}
+                          workspaceId={storyDemo.workspaceId}
+                          stepObj={step}
+                          authData={authData}
+                          getSelector={getSelector}
+                          cancelSelector={cancelSelector}
+                          changeStep={changeStep}
+                          calculatedStepIndex={calculatedStepIndex}
+                          isSelected={currentStepIndex === calculatedStepIndex}
+                          iframeRef={iframeRef}
+                          disablePointerPickButton={true}
+                          screenIsLoading={isLoading}
+                          setScreenIsLoading={setIsLoading}
+                          dragHandleProps={provided.dragHandleProps}
+                        />
+                      </SC.StepWrapper>
+                    </SC.StepDragItem>
+                  )}
+                </Draggable>
+              )
+            })}
+            {stepProvided.placeholder}
+          </div>
+        )}
+      </Droppable>
 
       {(addStepIsLoading ? <div style={{
         height: '65px',
@@ -713,96 +735,91 @@ const ScreenScreenshot = ({
   return (
 
     <SC.Wrapper id={viewName}>
+      <SC.ScreenWrapper>
+        {isLoading ? <div style={{width: 60, height: 60}}><Spinner/></div> : (
+          <Draggable
+            key={screen._id}
+            draggableId={String(screen._id)}
+            index={screenIndex}
+            type="screen"
+          >
+            {(provided) => (
+              <SC.ScreenHeader
+                ref={provided.innerRef}
+                {...provided.draggableProps}
+                isOpen={isOpen}
+                isSelected={isScreenStepActive}
+              >
+                <SC.DragWrapper {...provided.dragHandleProps}>
+                  <SC.DragIcon width="12" height="13" viewBox="0 0 12 13" fill="none"
+                               xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M0 0H2V2H0V0ZM5 0H7V2H5V0ZM10 0H12V2H10V0ZM0 5H2V7H0V5ZM5 5H7V7H5V5ZM10 5H12V7H10V5ZM0 10H2V12H0V10ZM5 10H7V12H5V10ZM10 10H12V12H10V10Z"
+                      fill="black"/>
+                  </SC.DragIcon>
+                </SC.DragWrapper>
+                <SC.HeaderMain onClick={() => {
+                  changeStep(calculatedStepIndex)
 
-      {isLoading ? <div style={{width: 60, height: 60}}><Spinner/></div> : (
+                  // last screen stays open so add controls remain visible
+                  if (screenIndex === screens.length - 1) return
+                  if (calculatedStepIndex === previousStepIndex || !isScreenOpen) {
+                    setIsScreenOpen(!isScreenOpen)
+                  }
+                }}>
+                  <SC.ScreenDemoImageWrapper>
+                    <SC.ScreenDemoImage src={getScreenImage(screen)}/>
+                    {getScreenIcon(screen)}
+                  </SC.ScreenDemoImageWrapper>
 
-        <Draggable key={screen._id} draggableId={screen._id} index={screenIndex}>
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.draggableProps}
-            >
+                  <SC.ScreenTitle
+                    className={isNameEditable ? 'editing' : ''}
+                    onClick={(e) => {
+                      if (e.detail === 2) {
+                        setIsNameEditable(true)
+                      }
+                    }}
+                    contentEditable={isNameEditable}
+                    suppressContentEditableWarning={true}
+                    onKeyPress={function (event) {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
 
-              <SC.ScreenWrapper>
-                <SC.ScreenHeader isOpen={isOpen}>
-                  <SC.DragWrapper {...provided.dragHandleProps}>
-                    <SC.DragIcon width="12" height="13" viewBox="0 0 12 13" fill="none"
-                                 xmlns="http://www.w3.org/2000/svg">
-                      <path
-                        d="M0 0H2V2H0V0ZM5 0H7V2H5V0ZM10 0H12V2H10V0ZM0 5H2V7H0V5ZM5 5H7V7H5V5ZM10 5H12V7H10V5ZM0 10H2V12H0V10ZM5 10H7V12H5V10ZM10 10H12V12H10V10Z"
-                        fill="black"/>
-                    </SC.DragIcon>
-                  </SC.DragWrapper>
-                  <SC.HeaderMain onClick={() => {
-                    changeStep(calculatedStepIndex)
+                        event.target.blur()
+                      }
 
-                    // last screen stays open so add controls remain visible
-                    if (screenIndex === screens.length - 1) return
-                    if (calculatedStepIndex === previousStepIndex || !isScreenOpen) {
-                      setIsScreenOpen(!isScreenOpen)
-                    }
-                  }}>
-                    <SC.ScreenDemoImageWrapper>
-                      <SC.ScreenDemoImage src={getScreenImage(screen)}/>
-                      {getScreenIcon(screen)}
-                    </SC.ScreenDemoImageWrapper>
+                    }}
+                    onBlur={function (e) {
+                      setIsNameEditable(false)
 
-                    <SC.ScreenTitle
-                      className={isNameEditable ? 'editing' : ''}
-                      onClick={(e) => {
-                        if (e.detail === 2) {
-                          setIsNameEditable(true)
-                        }
-                      }}
-                      contentEditable={isNameEditable}
-                      suppressContentEditableWarning={true}
-                      onKeyPress={function (event) {
-                        // console.log(event)
-                        if (event.key === "Enter") {
-                          event.preventDefault();
+                      let newScreen = {...screen}
+                      newScreen.name = e.target.innerText
 
-                          event.target.blur()
-                        }
+                      if (newScreen.name !== screenInternal.name) {
+                        setScreenInternal(newScreen)
+                        actions.updateScreen({name: newScreen.name}, storyDemo.workspaceId, storyDemo._id, newScreen._id, authData.token)
+                      }
+                    }}
 
-                      }}
-                      onBlur={function (e) {
-                        setIsNameEditable(false)
+                  >{screenInternal.name}</SC.ScreenTitle>
+                </SC.HeaderMain>
+                <Dropdown trigger={['click']} menu={{ items: screenMenuItems }}>
+                  <SC.MenuButton>
 
-                        let newScreen = {...screen}
-                        newScreen.name = e.target.innerText
+                    <SC.MenuIcon type={'ellipsis'}/>
+                  </SC.MenuButton>
+                </Dropdown>
 
-                        if (newScreen.name !== screenInternal.name) {
-                          setScreenInternal(newScreen)
-                          actions.updateScreen({name: newScreen.name}, storyDemo.workspaceId, storyDemo._id, newScreen._id, authData.token)
-                        }
-                      }}
-
-                    >{screenInternal.name}</SC.ScreenTitle>
-                  </SC.HeaderMain>
-                  <Dropdown trigger={['click']} menu={{ items: screenMenuItems }}>
-                    <SC.MenuButton>
-
-                      <SC.MenuIcon type={'ellipsis'}/>
-                    </SC.MenuButton>
-                    {/*<a className="ant-dropdown-link" onClick={e => e.preventDefault()}>*/}
-                    {/*  Hover me <Icon type="down" />*/}
-                    {/*</a>*/}
-                  </Dropdown>
-
-                </SC.ScreenHeader>
-                {isOpen ?
-                  (view === VIEWS.TRANSITIONS ?
-                    renderAllTransitions(screen, screens)
-                    : renderStepsView(screen, screens))
-                  : ''}
-
-
-              </SC.ScreenWrapper>
-            </div>
-          )}
-        </Draggable>
-
-      )}
+              </SC.ScreenHeader>
+            )}
+          </Draggable>
+        )}
+        {isOpen && !isLoading ?
+          (view === VIEWS.TRANSITIONS ?
+            renderAllTransitions(screen, screens)
+            : renderStepsView(screen, screens))
+          : ''}
+      </SC.ScreenWrapper>
     </SC.Wrapper>
   )
 }
@@ -862,12 +879,17 @@ const SC = {
     top: 0;
     justify-content: center;
     align-items: center;
+    color: ${Colors.cardBorderColor};
 
 
     && svg {
-      width: 100%;
-      height: 100%;
-      fill: ${Colors.primaryColor};
+      width: 25px;
+      height: 25px;
+    }
+
+    && svg,
+    && svg path {
+      fill: currentColor;
     }
 
     && i {
@@ -879,7 +901,7 @@ const SC = {
     width: 25%;
     min-height: 55%;
     border-radius: 6px;
-    border: 2px solid ${Colors.primaryColor};
+    border: 2px solid ${Colors.cardBorderColor};
     position: relative;
     height: 80%;
 
@@ -897,7 +919,10 @@ const SC = {
     margin-left: 15px;
   `,
   DragIcon: styled.svg`
-
+    /* The paths carry fill="black" inline; CSS outranks presentation attributes. */
+    && path {
+      fill: var(--ld-text, black);
+    }
   `,
   MenuButton: styled.div`
 
@@ -928,7 +953,7 @@ const SC = {
     position: relative;
     width: 100%;
     height: 65px;
-    background: #F3F3F3;
+    background: var(--ld-surface, #F3F3F3);
     display: flex;
     flex-direction: row;
     justify-content: space-evenly;
@@ -937,14 +962,17 @@ const SC = {
 
     padding: 0px;
     border-radius: 6px;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
     border: 1px solid ${(props) => {
-      return props.isOpen ? Colors.primaryText : Colors.primaryColor
+      if (props.isSelected) return Colors.primaryColor
+      return Colors.cardBorderColor
     }
     };
 
-    &&:hover {
+    ${(props) => props.isSelected ? selectedHeaderRingCss : ''}
 
-      border: 1px solid ${Colors.primaryText};
+    &&:hover {
+      border-color: ${(props) => props.isSelected ? Colors.primaryColor : Colors.cardBorderColor};
     }
 
   `,
@@ -978,7 +1006,7 @@ const SC = {
 
     &&.editing {
       cursor: text;
-      border-bottom: 1px solid black;
+      border-bottom: 1px solid var(--ld-border, black);
     }
   `,
   ReloadButton: styled(Button)`
@@ -991,7 +1019,7 @@ const SC = {
       padding: 0px;
       height: 25px;
       font-size: 1.2em;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
       color: #c4cacd;
     }
 
@@ -1078,7 +1106,7 @@ const SC = {
     }
 
     && svg {
-      fill: ${Colors.primaryColor}AA;
+      fill: ${primaryAlpha(67)};
       width: 100%;
       height: 100%;
     }
@@ -1103,12 +1131,12 @@ const SC = {
     &&::-webkit-scrollbar-track {
       -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
       border-radius: 10px;
-      background-color: #fff;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar {
       width: 3px;
-      background-color: #fff;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar-thumb {
@@ -1183,19 +1211,19 @@ const SC = {
         animation: fadeInFromNone 1s ease-in-out;
       }
 
-      background: aliceblue;
+      background: var(--ld-surface, aliceblue);
       height: 400px;
       overflow-y: auto;
 
       &&::-webkit-scrollbar-track {
         -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
         border-radius: 10px;
-        background-color: #fff;
+        background-color: var(--ld-background, #fff);
       }
 
       &&::-webkit-scrollbar {
         width: 2px;
-        background-color: #fff;
+        background-color: var(--ld-background, #fff);
       }
 
       &&::-webkit-scrollbar-thumb {
@@ -1206,16 +1234,16 @@ const SC = {
 
 
       .Requests__ItemUrl {
-        color: black;
+        color: var(--ld-text, black);
       }
     }
 
     &&:hover {
-      background: aliceblue;
+      background: var(--ld-surface, aliceblue);
     }
 
     &:hover .Requests__ItemUrl {
-      color: black;
+      color: var(--ld-text, black);
     }
 
     //border: 1px solid #d9d9d9;
@@ -1279,7 +1307,7 @@ const SC = {
     transition: all 0.5s linear;
 
     &:hover {
-      background: ${Colors.primaryColor}aa;
+      background: ${primaryAlpha(67)};
       //height: 24px;
       cursor: pointer;
     }
@@ -1314,12 +1342,12 @@ const SC = {
     &&::-webkit-scrollbar-track {
       -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
       border-radius: 10px;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar {
       width: 0px;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar-thumb {
@@ -1561,6 +1589,15 @@ const SC = {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+  `,
+  StepDragItem: styled.div`
+    width: 100%;
+
+    ${({ $isDragging }) => $isDragging ? `
+      && > * {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+    ` : ''}
   `,
   StepIndex: styled.p`
     margin: 5px 0px 0px 12px;

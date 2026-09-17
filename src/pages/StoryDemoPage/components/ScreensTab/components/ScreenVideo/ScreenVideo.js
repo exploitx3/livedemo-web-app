@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import Colors from '../../../../../../constants/mainColors'
+import Colors, { isScreenStepSelected, primaryAlpha, selectedHeaderRingCss } from '../../../../../../constants/mainColors'
 //import { Button, Dropdown, Icon, Input, Menu, Modal } from 'antd'
 
 import Button from 'antd/es/button'
@@ -20,15 +20,18 @@ import PointerTransition from '../PointerTransition/PointerTransition'
 import {bindActionCreators} from "redux";
 import {addStep, addTransition, updateScreen} from "../../../../../../actions/storyDemoActions";
 import {connect} from "react-redux";
+import {clampScreenDragIndex, reorderArray} from '../../../../../../utils/screenOrder'
 
 const { confirm } = Modal
 
 
 const ScreenVideo = ({
                   storyDemo, iframeRef, setScreens, setStoryDemo, tabsWidth, authData, changeStep, reloadStoryDemo,
-                  screen, screenIndex, calculatedStepIndex, previousStep, previousStepIndex, actions
+                  screen, screenIndex, calculatedStepIndex, previousStep, previousStepIndex, currentStepIndex, actions
                 }) => {
   const screens = storyDemo && storyDemo.screens ? storyDemo.screens : []
+
+  const isScreenStepActive = isScreenStepSelected(currentStepIndex, calculatedStepIndex, 0)
 
   let [isScreenOpen, setIsScreenOpen] = useState(false)
   // last screen must stay open — add UI lives in the open body
@@ -195,13 +198,6 @@ const ScreenVideo = ({
   }
 
 
-  function reorderArray(array, from, to) {
-    let newArray = [...array]
-    newArray.splice(to, 0, newArray.splice(from, 1)[0])
-
-    return newArray
-  }
-
   function onDragEnd(result) {
     // dropped outside the list
     if (!result.destination) {
@@ -245,7 +241,7 @@ const ScreenVideo = ({
     let newIndex = result.destination.index
 
 
-    let newScreensArray = reorderArray(screens, oldIndex, newIndex)
+    let newScreensArray = reorderArray(screens, oldIndex, clampScreenDragIndex(screens, oldIndex, newIndex))
 
     setScreens(newScreensArray)
 
@@ -503,7 +499,7 @@ const ScreenVideo = ({
     <SC.Wrapper id={viewName}>
 
 
-      <Draggable key={screenInternal._id} draggableId={screenInternal._id} index={screenIndex}>
+      <Draggable key={screenInternal._id} draggableId={String(screenInternal._id)} index={screenIndex} type="screen">
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
@@ -511,7 +507,7 @@ const ScreenVideo = ({
           >
 
             <SC.ScreenWrapper>
-              <SC.ScreenHeader isOpen={isOpen}>
+              <SC.ScreenHeader isOpen={isOpen} isSelected={isScreenStepActive}>
                 <SC.DragWrapper {...provided.dragHandleProps}>
                   <SC.DragIcon width="12" height="13" viewBox="0 0 12 13" fill="none"
                                xmlns="http://www.w3.org/2000/svg">
@@ -649,12 +645,17 @@ const SC = {
     top: 0;
     justify-content: center;
     align-items: center;
+    color: ${Colors.cardBorderColor};
 
 
     && svg {
-      width: 100%;
-      height: 100%;
-      fill: ${Colors.primaryColor};
+      width: 25px;
+      height: 25px;
+    }
+
+    && svg,
+    && svg path {
+      fill: currentColor;
     }
 
     && i {
@@ -666,7 +667,7 @@ const SC = {
     width: 25%;
     min-height: 55%;
     border-radius: 6px;
-    border: 2px solid ${Colors.primaryColor};
+    border: 2px solid ${Colors.cardBorderColor};
     position: relative;
     height: 80%;
 
@@ -686,7 +687,10 @@ const SC = {
     margin-left: 15px;
   `,
   DragIcon: styled.svg`
-
+    /* The paths carry fill="black" inline; CSS outranks presentation attributes. */
+    && path {
+      fill: var(--ld-text, black);
+    }
   `,
   MenuButton: styled.div`
 
@@ -717,7 +721,7 @@ const SC = {
     position: relative;
     width: 100%;
     height: 65px;
-    background: #F3F3F3;
+    background: var(--ld-surface, #F3F3F3);
     display: flex;
     flex-direction: row;
     justify-content: space-evenly;
@@ -726,13 +730,17 @@ const SC = {
 
     padding: 0px;
     border-radius: 6px;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
     border: 1px solid ${(props) => {
-    return props.isOpen ? Colors.primaryText : Colors.primaryColor
+    if (props.isSelected) return Colors.primaryColor
+    return Colors.cardBorderColor
   }
     };
-    &&:hover {
 
-      border: 1px solid ${Colors.primaryText};
+    ${(props) => props.isSelected ? selectedHeaderRingCss : ''}
+
+    &&:hover {
+      border-color: ${(props) => props.isSelected ? Colors.primaryColor : Colors.cardBorderColor};
     }
 
   `,
@@ -766,7 +774,7 @@ const SC = {
 
     &&.editing {
         cursor: text;
-        border-bottom: 1px solid black;
+        border-bottom: 1px solid var(--ld-border, black);
     }
   `,
   ReloadButton: styled(Button)`
@@ -779,7 +787,7 @@ const SC = {
       padding: 0px;
       height: 25px;
       font-size: 1.2em;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
       color: #c4cacd;
     }
 
@@ -866,7 +874,7 @@ const SC = {
     }
 
     && svg {
-      fill: ${Colors.primaryColor}AA;
+      fill: ${primaryAlpha(67)};
       width: 100%;
       height: 100%;
     }
@@ -891,12 +899,12 @@ const SC = {
     &&::-webkit-scrollbar-track {
       -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
       border-radius: 10px;
-      background-color: #fff;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar {
       width: 3px;
-      background-color: #fff;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar-thumb {
@@ -971,19 +979,19 @@ const SC = {
         animation: fadeInFromNone 1s ease-in-out;
       }
 
-      background: aliceblue;
+      background: var(--ld-surface, aliceblue);
       height: 400px;
       overflow-y: auto;
 
       &&::-webkit-scrollbar-track {
         -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
         border-radius: 10px;
-        background-color: #fff;
+        background-color: var(--ld-background, #fff);
       }
 
       &&::-webkit-scrollbar {
         width: 2px;
-        background-color: #fff;
+        background-color: var(--ld-background, #fff);
       }
 
       &&::-webkit-scrollbar-thumb {
@@ -994,16 +1002,16 @@ const SC = {
 
 
       .Requests__ItemUrl {
-        color: black;
+        color: var(--ld-text, black);
       }
     }
 
     &&:hover {
-      background: aliceblue;
+      background: var(--ld-surface, aliceblue);
     }
 
     &:hover .Requests__ItemUrl{
-      color: black;
+      color: var(--ld-text, black);
     }
     //border: 1px solid #d9d9d9;
   `,
@@ -1066,7 +1074,7 @@ const SC = {
     transition: all 0.5s linear;
 
     &:hover {
-      background: ${Colors.primaryColor}aa;
+      background: ${primaryAlpha(67)};
       //height: 24px;
       cursor: pointer;
     }
@@ -1102,12 +1110,12 @@ const SC = {
      &&::-webkit-scrollbar-track {
       -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
       border-radius: 10px;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar {
       width: 0px;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar-thumb {

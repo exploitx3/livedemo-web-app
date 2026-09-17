@@ -25,7 +25,8 @@ function Form({
                   themeTextColor,
                   themeButtonBackgroundColor,
                   themeButtonTextColor,
-                  themeOverlayBackgroundColor
+                  themeOverlayBackgroundColor,
+                  audioProgress,
               }) {
 
     let formDoc = step.view && step.view.popup && step.view.popup.formId
@@ -258,6 +259,7 @@ function Form({
                                   titleFontSize={titleFontSize}
                                   textFontSize={textFontSize}
                                   buttonFontSize={buttonFontSize}
+                                  audioProgress={audioProgress}
                         />
                         {/*<F.CaptchaNotice>This site is protected by reCAPTCHA and the Google*/}
 

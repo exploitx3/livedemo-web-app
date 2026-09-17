@@ -59,7 +59,7 @@ function formatAbsoluteDate(dateString) {
 const CardRoot = styled.div`
   position: relative;
   border-radius: 12px;
-  background: #ffffff;
+  background: ${mainColors.surfaceColor};
   user-select: none;
   cursor: pointer;
   display: flex;
@@ -69,6 +69,7 @@ const CardRoot = styled.div`
   z-index: 10;
   border: 2px solid transparent;
   box-sizing: border-box;
+  overflow: visible;
 
   &:not([data-hidden='true']):hover {
     box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
@@ -99,6 +100,15 @@ const CardRoot = styled.div`
 
   &[data-hidden='true']:hover .locked-demo-message {
     opacity: 1;
+  }
+
+  &[data-menu-open='true'] {
+    z-index: 20;
+  }
+
+  &[data-menu-open='true'] .hover-actions {
+    opacity: 1;
+    visibility: visible;
   }
 `
 
@@ -182,25 +192,18 @@ const ThumbnailGradient = styled.div`
 `
 
 const HoverActions = styled.div.attrs({ className: 'hover-actions' })`
-  z-index: 10;
+  z-index: 30;
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 12px;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-              visibility 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-`
-
-const HoverActionsRight = styled.div`
+  top: 16px;
+  right: 16px;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 4px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              visibility 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 `
 
 const IconButton = styled.button`
@@ -236,7 +239,7 @@ const DropdownMenu = styled.div`
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background: white;
+  background: ${mainColors.surfaceColor};
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
   border: 1px solid rgba(0,0,0,0.07);
@@ -250,13 +253,13 @@ const DropdownItem = styled.div`
   padding: 6px 10px;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #111827;
+  color: ${mainColors.primaryText};
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s ease;
   white-space: nowrap;
 
-  &:hover { background: #f9fafb; }
+  &:hover { background: rgba(150, 150, 150, 0.12); }
 
   &[data-danger='true'] {
     color: #dc2626;
@@ -265,6 +268,8 @@ const DropdownItem = styled.div`
 `
 
 const Body = styled.div`
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   padding: 12px;
@@ -281,7 +286,7 @@ const BodyTop = styled.div`
 const Title = styled.div`
   font-size: 0.875rem;
   font-weight: 600;
-  color: #111827;
+  color: ${mainColors.primaryText};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -362,10 +367,11 @@ const NavIconBadge = styled.div`
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const StoryDemoCard = ({ storyDemo, onDeleteLiveDemo, hidden }) => {
+const StoryDemoCard = ({ storyDemo, onDeleteLiveDemo, onCloneLiveDemo, hidden }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false)
   const [isImageError, setIsImageError] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isCloning, setIsCloning] = useState(false)
   const menuRef = useRef(null)
   const navigate = useNavigate()
 
@@ -424,7 +430,7 @@ const StoryDemoCard = ({ storyDemo, onDeleteLiveDemo, hidden }) => {
     toast('Copied to clipboard', {
       duration: 2500,
       position: 'top-center',
-      style: { borderRadius: '25px', background: '#111', color: '#fff' },
+      style: { borderRadius: '25px', background: mainColors.toastBackground, color: '#fff' },
       ariaProps: { role: 'status', 'aria-live': 'polite' },
     })
   }
@@ -437,8 +443,25 @@ const StoryDemoCard = ({ storyDemo, onDeleteLiveDemo, hidden }) => {
     }
   }
 
+  function handleClone(e) {
+    e.stopPropagation()
+    setMenuOpen(false)
+    if (isCloning || !onCloneLiveDemo) return
+
+    setIsCloning(true)
+    Promise.resolve(onCloneLiveDemo(storyDemo))
+      .then(() => {
+        toast.success('Demo copied', {
+          duration: 2500,
+          position: 'top-center',
+          style: { borderRadius: '25px', background: mainColors.toastBackground, color: '#fff' },
+        })
+      })
+      .finally(() => setIsCloning(false))
+  }
+
   return (
-    <CardRoot data-hidden={hidden ? 'true' : 'false'} onClick={handleCardClick}>
+    <CardRoot data-hidden={hidden ? 'true' : 'false'} data-menu-open={menuOpen ? 'true' : 'false'} onClick={handleCardClick}>
       <CardInsetShadow />
 
       <ThumbnailArea>
@@ -459,59 +482,56 @@ const StoryDemoCard = ({ storyDemo, onDeleteLiveDemo, hidden }) => {
           <ThumbnailOverlay />
           <ThumbnailGradient />
         </ThumbnailInner>
-
-        {hidden === false ? (
-          <HoverActions>
-            <span />
-            <HoverActionsRight>
-              <IconButton onClick={handleCopyLink} aria-label="Copy share link" title="Copy share link">
-                <LinkIcon />
-              </IconButton>
-              <MenuWrapper ref={menuRef}>
-                <IconButton
-                  onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v) }}
-                  aria-label="More options"
-                  aria-expanded={menuOpen}
-                >
-                  <EllipsisIcon />
-                </IconButton>
-                {menuOpen && (
-                  <DropdownMenu onClick={(e) => e.stopPropagation()}>
-                    <DropdownItem onClick={(e) => { e.stopPropagation(); setMenuOpen(false); navigate(`/workspace/${storyDemo.workspaceId}/storydemo/${storyDemo._id}`) }}>
-                      Open
-                    </DropdownItem>
-                    <DropdownItem data-danger="true" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDeleteLiveDemo(storyDemo) }}>
-                      Delete
-                    </DropdownItem>
-                  </DropdownMenu>
-                )}
-              </MenuWrapper>
-            </HoverActionsRight>
-          </HoverActions>
-        ) : (
-          <HoverActions>
-            <span />
-            <HoverActionsRight>
-              <MenuWrapper ref={menuRef}>
-                <IconButton
-                  onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v) }}
-                  aria-label="More options"
-                  aria-expanded={menuOpen}
-                >
-                  <EllipsisIcon />
-                </IconButton>
-                {menuOpen && (
-                  <DropdownMenu onClick={(e) => e.stopPropagation()}>
-                    <DropdownItem data-danger="true" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDeleteLiveDemo(storyDemo) }}>
-                      Delete
-                    </DropdownItem>
-                  </DropdownMenu>
-                )}
-              </MenuWrapper>
-            </HoverActionsRight>
-          </HoverActions>
-        )}
       </ThumbnailArea>
+
+      {hidden === false ? (
+        <HoverActions>
+          <IconButton onClick={handleCopyLink} aria-label="Copy share link" title="Copy share link">
+            <LinkIcon />
+          </IconButton>
+          <MenuWrapper ref={menuRef}>
+            <IconButton
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v) }}
+              aria-label="More options"
+              aria-expanded={menuOpen}
+            >
+              <EllipsisIcon />
+            </IconButton>
+            {menuOpen && (
+              <DropdownMenu onClick={(e) => e.stopPropagation()}>
+                <DropdownItem onClick={(e) => { e.stopPropagation(); setMenuOpen(false); navigate(`/workspace/${storyDemo.workspaceId}/storydemo/${storyDemo._id}`) }}>
+                  Open
+                </DropdownItem>
+                <DropdownItem onClick={handleClone} style={{ opacity: isCloning ? 0.6 : 1, pointerEvents: isCloning ? 'none' : 'auto' }}>
+                  {isCloning ? 'Copying…' : 'Copy'}
+                </DropdownItem>
+                <DropdownItem data-danger="true" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDeleteLiveDemo(storyDemo) }}>
+                  Delete
+                </DropdownItem>
+              </DropdownMenu>
+            )}
+          </MenuWrapper>
+        </HoverActions>
+      ) : (
+        <HoverActions>
+          <MenuWrapper ref={menuRef}>
+            <IconButton
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v) }}
+              aria-label="More options"
+              aria-expanded={menuOpen}
+            >
+              <EllipsisIcon />
+            </IconButton>
+            {menuOpen && (
+              <DropdownMenu onClick={(e) => e.stopPropagation()}>
+                <DropdownItem data-danger="true" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDeleteLiveDemo(storyDemo) }}>
+                  Delete
+                </DropdownItem>
+              </DropdownMenu>
+            )}
+          </MenuWrapper>
+        </HoverActions>
+      )}
 
       <Body>
         <BodyTop>

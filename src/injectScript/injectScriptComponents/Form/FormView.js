@@ -86,6 +86,7 @@ function FormView({
   textFontSize = '1rem',
   buttonFontSize = '1rem',
   style = {},
+  audioProgress,
 }) {
   let [fieldsObjData, setFieldsObjData] = useState(() => buildInitialFieldsState(formData.fields))
   let invalidNameSet = new Set(invalidFieldNames || [])
@@ -284,6 +285,7 @@ function FormView({
               }}
               fontSize="0.875rem"
               alignment={alignment}
+              audioProgress={audioProgress}
             />
           ))}
         </FS.ButtonsWrapper>

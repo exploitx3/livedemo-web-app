@@ -491,7 +491,7 @@ const S = {
 
   Content: styled(Content)`
     && {
-      background: white;
+      background: var(--ld-background, white);
 
       overflow: hidden;
       //overflow-x: hidden;
@@ -592,7 +592,7 @@ const S = {
     max-width: 100%;
     font-size: 1.7em;
     font-weight: 500;
-    color: #111;
+    color: var(--ld-text, #111);
     font-family: ${mainColors.fontFamilyLexend};
     padding-bottom: 30px;
     text-align: center;
@@ -657,7 +657,7 @@ const S = {
     max-width: 100%;
     font-size: 1.7em;
     font-weight: 500;
-    color: #111;
+    color: var(--ld-text, #111);
     font-family: ${mainColors.fontFamilyLexend};
     padding-bottom: 30px;
   `

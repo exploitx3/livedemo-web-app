@@ -594,7 +594,7 @@ const S = {
 
   Content: styled(Content)`
     && {
-      background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+      background: linear-gradient(to bottom, var(--ld-surface, #f8f9fa) 0%, var(--ld-background, #ffffff) 100%);
       overflow: scroll;
       width: 100%;
       height: 100%;
@@ -660,7 +660,7 @@ const S = {
     max-width: 100%;
     font-size: 1.7em;
     font-weight: 500;
-    color: #111;
+    color: var(--ld-text, #111);
     font-family: ${mainColors.fontFamily};
     padding-bottom: 30px;
     text-align: center;
@@ -691,16 +691,16 @@ const S = {
     }
 
     &::-webkit-scrollbar-track {
-      background: #f0f0f0;
+      background: var(--ld-surface, #f0f0f0);
       border-radius: 5px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: #c1c1c1;
+      background: var(--ld-border, #c1c1c1);
       border-radius: 5px;
 
       &:hover {
-        background: #a1a1a1;
+        background: var(--ld-text-muted, #a1a1a1);
       }
     }
 
@@ -722,14 +722,14 @@ const S = {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     padding: 20px;
     border-radius: 12px;
-    background: ${props => props.isSelected ? mainColors.primaryColor : '#ffffff'};
-    border: 2px solid ${props => props.isSelected ? mainColors.primaryColor : '#e8e8e8'};
+    background: ${props => props.isSelected ? mainColors.primaryColor : 'var(--ld-surface, #ffffff)'};
+    border: 2px solid ${props => props.isSelected ? mainColors.primaryColor : 'var(--ld-border, #e8e8e8)'};
     box-shadow: ${props => props.isSelected ? '0 8px 24px rgba(24, 144, 255, 0.25)' : '0 2px 8px rgba(0, 0, 0, 0.08)'};
 
     &:hover {
       transform: translateY(-8px) scale(1.02);
       box-shadow: 0 12px 32px rgba(24, 144, 255, 0.2);
-      background: ${props => props.isSelected ? mainColors.primaryColor : '#ffffff'};
+      background: ${props => props.isSelected ? mainColors.primaryColor : 'var(--ld-surface, #ffffff)'};
       border-color: #1890ff;
     }
 
@@ -748,7 +748,7 @@ const S = {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     margin-bottom: 16px;
     transition: all 0.3s ease;
-    background: #f5f5f5;
+    background: var(--ld-background, #f5f5f5);
 
     &:hover {
       box-shadow: 0 6px 20px rgba(24, 144, 255, 0.25);
@@ -763,7 +763,7 @@ const S = {
   DemoSuggestionName: styled.h3`
     font-size: 1.1em;
     font-weight: 600;
-    color: ${props => props.isSelected ? '#ffffff' : '#1a1a1a'};
+    color: ${props => props.isSelected ? '#ffffff' : 'var(--ld-text, #1a1a1a)'};
     font-family: ${mainColors.fontFamily};
     text-align: center;
     margin: 0 0 16px 0;
@@ -788,9 +788,9 @@ const S = {
     margin: 16px 0 0 0;
     padding: 16px;
     width: 100%;
-    background: #f8f9fa;
+    background: var(--ld-background, #f8f9fa);
     border-radius: 8px;
-    border: 1px solid #e8e8e8;
+    border: 1px solid var(--ld-border, #e8e8e8);
 
     @media screen and (max-width: 700px) {
       margin: 12px 0 0 0;
@@ -803,7 +803,7 @@ const S = {
     margin-bottom: 12px;
     font-size: 0.9em;
     line-height: 1.6;
-    color: #333;
+    color: var(--ld-text-muted, #333);
     font-family: ${mainColors.fontFamily};
 
     &:last-child {
@@ -825,7 +825,7 @@ const S = {
   DemoSuggestionStepExplanation: styled.span`
     font-family: Roboto;
     flex: 1;
-    color: #1a1a1a;
+    color: var(--ld-text, #1a1a1a);
     font-size: 1.3em;
   `,
   IFrameWrapper: styled.div`
@@ -870,7 +870,7 @@ const S = {
   AutoRecordingTitle: styled.h2`
     font-size: 1.6em;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--ld-text, #1a1a1a);
     font-family: ${mainColors.fontFamily};
     text-align: center;
     margin: 0 0 24px 0;

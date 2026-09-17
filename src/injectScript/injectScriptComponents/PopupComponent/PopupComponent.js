@@ -24,7 +24,8 @@ function PopupComponenet(props) {
         themeTextColor,
         themeButtonBackgroundColor,
         themeButtonTextColor,
-        isOverlayEnabled
+        isOverlayEnabled,
+        audioProgress,
     } = props
 
     const overlayBackgroundColor = (step && step.view && step.view.popup && step.view.popup.overlayBackgroundColor) || 'rgba(0,0,0,0.65)'
@@ -134,6 +135,7 @@ function PopupComponenet(props) {
                 liveDemo={liveDemo}
                 changeToScreen={changeToScreen}
                 onNext={onNext}
+                audioProgress={audioProgress}
             />
         } else if (step.view.popup.type === 'embed') {
             return (
@@ -193,6 +195,7 @@ function PopupComponenet(props) {
                         themeTextColor={themeTextColor}
                         themeButtonBackgroundColor={themeButtonBackgroundColor}
                         themeButtonTextColor={themeButtonTextColor}
+                        audioProgress={audioProgress}
                     />
                 </React.Fragment>
             }
@@ -217,6 +220,7 @@ const P = {
     Wrapper: styled.div`
       width: 100%;
       height: 100%;
+      font-family: var(--ld-demo-font, inherit);
       display: flex;
       flex-direction: column;
       /* flex-start + child margin-block:auto — center when short, no top clip when tall */

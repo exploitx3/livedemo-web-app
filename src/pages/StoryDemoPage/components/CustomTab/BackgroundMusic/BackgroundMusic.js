@@ -271,8 +271,8 @@ const BM = {
     padding: 0 6px 0 3px;
     height: 28px;
     border-radius: 8px;
-    border: 1px solid ${({ $isSelected }) => $isSelected ? Colors.primaryColor : '#e5e7eb'};
-    background: ${({ $isSelected }) => $isSelected ? '#f0f4ff' : '#fff'};
+    border: 1px solid ${({ $isSelected }) => $isSelected ? Colors.primaryColor : 'var(--ld-border, #e5e7eb)'};
+    background: ${({ $isSelected }) => $isSelected ? '#f0f4ff' : 'var(--ld-surface, #fff)'};
     transition: all 0.15s ease;
     cursor: pointer;
 
@@ -287,8 +287,8 @@ const BM = {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: ${({ $isSelected }) => $isSelected ? Colors.primaryColor : '#f3f4f6'};
-    color: ${({ $isSelected }) => $isSelected ? '#fff' : '#374151'};
+    background: ${({ $isSelected }) => $isSelected ? Colors.primaryColor : 'var(--ld-surface, #f3f4f6)'};
+    color: ${({ $isSelected }) => $isSelected ? '#fff' : 'var(--ld-text-muted, #374151)'};
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -297,7 +297,7 @@ const BM = {
     flex-shrink: 0;
 
     &&:hover {
-      background: ${({ $isSelected }) => $isSelected ? Colors.primaryColor : '#e5e7eb'};
+      background: ${({ $isSelected }) => $isSelected ? Colors.primaryColor : 'var(--ld-border, #e5e7eb)'};
     }
 
     && svg {
@@ -313,12 +313,12 @@ const BM = {
     background: none;
     border: none;
     cursor: pointer;
-    color: #111827;
+    color: var(--ld-text, #111827);
     white-space: nowrap;
   `,
   AudioUrlText: styled.p`
     font-size: 0.75em;
-    color: #888;
+    color: var(--ld-text-muted, #888);
     word-break: break-all;
     margin: 0;
   `,
@@ -374,7 +374,7 @@ const BM = {
     gap: 15px;
     margin: 10px 5px;
     padding: 15px;
-    background-color: #f3f3f3;
+    background-color: var(--ld-surface, #f3f3f3);
     height: 65px;
     border-radius: 6px;
     border: 1px solid ${Colors.primaryColor};

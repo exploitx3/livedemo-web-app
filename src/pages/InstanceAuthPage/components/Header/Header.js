@@ -142,7 +142,7 @@ const S = {
     text-overflow: ellipsis;
     max-width: 500px;
     font-size: 0.8em;
-    color: #111;
+    color: var(--ld-text, #111);
 
 
     @media (max-width: 700px) {
@@ -164,7 +164,7 @@ const S = {
 
   `,
   Seperator: styled.span`
-    color: #e5e7eb;
+    color: var(--ld-border, #e5e7eb);
     margin: 0px 10px;
   `,
   Header: styled(LayoutHeader)`

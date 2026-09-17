@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import Colors from '../../../../constants/mainColors'
+import Colors, { primaryAlpha } from '../../../../constants/mainColors'
 //import { Button, Icon, Input, Modal } from 'antd'
 
 import Button from 'antd/es/button'
@@ -15,6 +15,7 @@ import ScreenPage from './components/ScreenPage/ScreenPage'
 import ScreenVideo from './components/ScreenVideo/ScreenVideo'
 import ScreenScreenshot from './components/ScreenScreenshot/ScreenScreenshot'
 import Spinner from '../../../../components/Spinner/Spinner'
+import { clampScreenDragIndex, reorderArray } from '../../../../utils/screenOrder'
 
 import { updateCurrentSelectedWorkspace } from '../../../../actions/workspacesActions'
 import { getWorkspaceEncryptionKey } from '../../../../actions/secureStorageActions'
@@ -62,13 +63,6 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
   // }, [storyDemo, storyDemo.screens])
 
 
-  function reorderArray(array, from, to) {
-    let newArray = [...array]
-    newArray.splice(to, 0, newArray.splice(from, 1)[0])
-
-    return newArray
-  }
-
   function onDragEnd(result) {
     // dropped outside the list
     if (!result.destination) {
@@ -79,96 +73,63 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
       return
     }
 
-    let sourceIndex = result.source.index
-    let destinationIndex = result.destination.index
-    let isSourceSmaller = sourceIndex < destinationIndex
-    // let screensToUpdate = isSourceSmaller ? screens.slice(sourceIndex + 1, destinationIndex + 1) : screens.slice(destinationIndex, sourceIndex)
+    if (result.source.droppableId !== result.destination.droppableId) {
+      return
+    }
 
-    // let changeNumber = isSourceSmaller ? -1 : +1
-    // console.log(result)
+    const droppableId = result.source.droppableId
 
-    let screenId = result.draggableId
+    if (droppableId.startsWith('steps-')) {
+      const screenId = droppableId.slice('steps-'.length)
+      const screen = screens.find((scr) => scr._id === screenId)
+      if (!screen || !screen.steps || screen.steps.length < 2) {
+        return
+      }
+
+      const oldIndex = result.source.index
+      const newIndex = result.destination.index
+      const newSteps = reorderArray(screen.steps, oldIndex, newIndex).map((step, index) => ({
+        ...step,
+        index,
+      }))
+
+      const newScreensArray = screens.map((scr) =>
+        scr._id === screenId ? { ...scr, steps: newSteps } : scr
+      )
+
+      setScreens(newScreensArray)
+
+      window.postMessage({
+        type: 'reorder_steps',
+        screenId,
+        steps: newSteps,
+      }, '*')
+
+      return axios.post(
+        `${ENV.STORIES_API}/workspaces/${currentStoryDemo.workspaceId}/stories/${currentStoryDemo._id}/screens/${screenId}/updateStepOrder`,
+        {
+          steps: newSteps.map((step, index) => ({
+            _id: step._id,
+            index,
+          })),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${authData.token}`,
+          },
+        }
+      )
+        .then(() => reloadStoryDemo())
+        .catch((err) => {
+          console.error('Failed to reorder steps', err)
+          return reloadStoryDemo()
+        })
+    }
+
     let oldIndex = result.source.index
     let newIndex = result.destination.index
 
-
-
-    let newScreensArray = reorderArray(screens, oldIndex, newIndex)
-
-    // Base screens are draggable; keep their deltas immediately after (chain stays valid).
-    const dragged = screens[oldIndex]
-    if (dragged && dragged.recordingRole === 'base') {
-      const baseId = String(dragged._id)
-      const deltas = newScreensArray
-        .filter((s) => s.recordingRole === 'delta' && String(s.baseScreenId) === baseId)
-        .sort((a, b) => {
-          if (a.fromTimeMs != null && b.fromTimeMs != null) {
-            return a.fromTimeMs - b.fromTimeMs
-          }
-          return (a.index || 0) - (b.index || 0)
-        })
-      if (deltas.length) {
-        const withoutDeltas = newScreensArray.filter(
-          (s) => !(s.recordingRole === 'delta' && String(s.baseScreenId) === baseId)
-        )
-        const basePos = withoutDeltas.findIndex((s) => String(s._id) === baseId)
-        if (basePos >= 0) {
-          withoutDeltas.splice(basePos + 1, 0, ...deltas)
-          newScreensArray = withoutDeltas
-        }
-      }
-    }
-
-    // Client-side guard: do not allow breaking rrweb chain order.
-    // Non-rrweb screens (screenshot/video) may sit between chain members.
-    const proposed = newScreensArray.map((screen, index) => ({
-      _id: screen._id,
-      index,
-      recordingRole: screen.recordingRole,
-      baseScreenId: screen.baseScreenId,
-      fromTimeMs: screen.fromTimeMs,
-    }))
-    for (const screen of proposed) {
-      if (screen.recordingRole !== 'delta' || !screen.baseScreenId) continue
-      const base = proposed.find((s) => String(s._id) === String(screen.baseScreenId))
-      if (!base || screen.index <= base.index) {
-        console.warn('Blocked reorder that would break rrweb chain')
-        return
-      }
-    }
-    const chains = new Map()
-    for (const screen of proposed) {
-      if (!screen.recordingRole) continue
-      const chainId = screen.recordingRole === 'base'
-        ? String(screen._id)
-        : String(screen.baseScreenId)
-      if (!chains.has(chainId)) chains.set(chainId, [])
-      chains.get(chainId).push(screen)
-    }
-    for (const [, members] of chains) {
-      members.sort((a, b) => a.index - b.index)
-      if (members[0].recordingRole !== 'base') {
-        console.warn('Blocked reorder that would break rrweb chain')
-        return
-      }
-      for (let i = 1; i < members.length; i++) {
-        if (members[i].recordingRole !== 'delta') {
-          console.warn('Blocked reorder that would break rrweb chain')
-          return
-        }
-        if (
-          members[i - 1].fromTimeMs != null &&
-          members[i].fromTimeMs != null &&
-          members[i].fromTimeMs < members[i - 1].fromTimeMs
-        ) {
-          console.warn('Blocked reorder that would break rrweb chain')
-          return
-        }
-      }
-    }
-
-    // setScreens(newScreensArray)
-
+    let newScreensArray = reorderArray(screens, oldIndex, clampScreenDragIndex(screens, oldIndex, newIndex))
 
     setIsLoading(true)
 
@@ -248,6 +209,7 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
 
         previousStep={previousStep}
         previousStepIndex={previousStepIndex}
+        currentStepIndex={currentStepIndex}
         setScreens={setScreens}
         tabsWidth={tabsWidth}
         changeStep={changeStep}
@@ -268,6 +230,7 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
 
         previousStep={previousStep}
         previousStepIndex={previousStepIndex}
+        currentStepIndex={currentStepIndex}
         setScreens={setScreens}
         tabsWidth={tabsWidth}
         changeStep={changeStep}
@@ -288,6 +251,7 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
 
         previousStep={previousStep}
         previousStepIndex={previousStepIndex}
+        currentStepIndex={currentStepIndex}
         setScreens={setScreens}
         tabsWidth={tabsWidth}
         changeStep={changeStep}
@@ -314,7 +278,7 @@ const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, t
           {isLoading ? (<Spinner/>) : (
             <ST.Section>
               <DragDropContext onDragEnd={onDragEnd}>
-                <Droppable droppableId={'droppable'}>
+                <Droppable droppableId={'droppable'} type="screen">
                   {(provided, snapshot) => (
                     <ST.DroppableWrapper
                       ref={provided.innerRef}
@@ -406,7 +370,10 @@ const ST = {
     margin-left: 15px;
   `,
   DragIcon: styled.svg`
-
+    /* The paths carry fill="black" inline; CSS outranks presentation attributes. */
+    && path {
+      fill: var(--ld-text, black);
+    }
   `,
   MenuButton: styled.div`
 
@@ -437,7 +404,7 @@ const ST = {
     position: relative;
     width: 100%;
     height: 65px;
-    background: #F3F3F3;
+    background: var(--ld-surface, #F3F3F3);
     display: flex;
     flex-direction: row;
     justify-content: space-evenly;
@@ -476,7 +443,7 @@ const ST = {
       padding: 0px;
       height: 25px;
       font-size: 1.2em;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
       color: #c4cacd;
     }
 
@@ -563,7 +530,7 @@ const ST = {
     }
 
     && svg {
-      fill: ${Colors.primaryColor}AA;
+      fill: ${primaryAlpha(67)};
       width: 100%;
       height: 100%;
     }
@@ -588,12 +555,12 @@ const ST = {
     &&::-webkit-scrollbar-track {
       -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
       border-radius: 10px;
-      background-color: #fff;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar {
       width: 3px;
-      background-color: #fff;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar-thumb {
@@ -668,19 +635,19 @@ const ST = {
         animation: fadeInFromNone 1s ease-in-out;
       }
 
-      background: aliceblue;
+      background: var(--ld-surface, aliceblue);
       height: 400px;
       overflow-y: auto;
 
       &&::-webkit-scrollbar-track {
         -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
         border-radius: 10px;
-        background-color: #fff;
+        background-color: var(--ld-background, #fff);
       }
 
       &&::-webkit-scrollbar {
         width: 2px;
-        background-color: #fff;
+        background-color: var(--ld-background, #fff);
       }
 
       &&::-webkit-scrollbar-thumb {
@@ -691,16 +658,16 @@ const ST = {
 
 
       .Requests__ItemUrl {
-        color: black;
+        color: var(--ld-text, black);
       }
     }
 
     &&:hover {
-      background: aliceblue;
+      background: var(--ld-surface, aliceblue);
     }
 
     &:hover .Requests__ItemUrl{
-      color: black;
+      color: var(--ld-text, black);
     }
     //border: 1px solid #d9d9d9;
   `,
@@ -763,7 +730,7 @@ const ST = {
     transition: all 0.5s linear;
 
     &:hover {
-      background: ${Colors.primaryColor}aa;
+      background: ${primaryAlpha(67)};
       //height: 24px;
       cursor: pointer;
     }
@@ -799,12 +766,12 @@ const ST = {
      &&::-webkit-scrollbar-track {
       -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
       border-radius: 10px;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar {
       width: 0px;
-      background-color: #FFF;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar-thumb {

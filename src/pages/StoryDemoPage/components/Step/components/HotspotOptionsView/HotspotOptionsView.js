@@ -4,7 +4,6 @@ import Button from 'antd/es/button'
 import Icon from '../../../../../../components/Icon/Icon'
 import Input from 'antd/es/input'
 import Modal from 'antd/es/modal'
-import Select from 'antd/es/select'
 import Checkbox from 'antd/es/checkbox'
 import Colors from '../../../../../../constants/mainColors'
 import React from 'react'
@@ -12,9 +11,7 @@ import styled from 'styled-components'
 import { MdAdsClick, MdArrowRightAlt } from 'react-icons/md'
 import CommonOptions from '../CommonOptions/CommonOptions'
 import AutoPlayOptions from '../AutoPlayOptions/AutoPlayOptions'
-import 'antd/es/select/style'
-
-const { Option } = Select
+import PlacementSelector from '../../../PlacementSelector/PlacementSelector'
 
 
 const VIEW_TYPE_NAMES = {
@@ -43,32 +40,6 @@ const OPEN_VIEWS = {
   OPTIONS_VIEW: 'OPTIONS_VIEW',
 }
 
-/*
-  top, top-start, top-end
-  bottom, bottom-start, bottom-end
-  left, left-start, left-end
-  right, right-start, right-end
-  auto (it will choose the best position)
-  center (set the target to body)
- */
-const PLACEMENT_TYPES = {
-  TOP: 'top',
-  TOP_START: 'top-start',
-  TOP_END: 'top-end',
-  LEFT: 'left',
-  LEFT_START: 'left-start',
-  LEFT_END: 'left-end',
-  BOTTOM: 'bottom',
-  BOTTOM_START: 'bottom-start',
-  BOTTOM_END: 'bottom-end',
-  RIGHT: 'right',
-  RIGHT_START: 'right-start',
-  RIGHT_END: 'right-end',
-  AUTO: 'auto',
-  CENTER: 'center'
-}
-
-
 const { confirm } = Modal
 
 const HotspotOptionsView = ({
@@ -82,33 +53,9 @@ const HotspotOptionsView = ({
 
   return <React.Fragment>
     <ST.ViewSelectorWrapper>
-      <ST.ActionSelectorLine>
+      <ST.ActionSelectorLine style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
         <ST.ActionSelectorText>Placement:</ST.ActionSelectorText>
-
-        <ST.Select
-          dropdownStyle={{
-            background: Colors.App.sidebarColor,
-            border: `1px solid ${Colors.primaryColor}`
-            // boxShadow: `0 0 0 2px ${Colors.primaryColor}`
-          }}
-          value={viewPlacement}
-          style={{
-            width: 120
-          }}
-          onChange={(placementKey) => {
-
-            setViewPlacement(PLACEMENT_TYPES[placementKey])
-          }}>
-          {Object.entries(PLACEMENT_TYPES).map(([key, value], index, array) => {
-            let isLast = index === array.length - 1
-            return <Option style={{
-              background: 'none',
-              color: Colors.primaryColor,
-              borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
-            }} key={key} value={key}>{value}</Option>
-          })
-          }
-        </ST.Select>
+        <PlacementSelector value={viewPlacement} onChange={setViewPlacement} />
       </ST.ActionSelectorLine>
       <CommonOptions
         setInternalStep={setInternalStep}
@@ -172,7 +119,7 @@ const ST = {
     justify-content: center;
     width: 100%;
 
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
     border-top: none;
@@ -216,7 +163,7 @@ const ST = {
     height: 35px;
 
     width: 100%;
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-radius: 6px;
     padding: 0px 5px;
     &&:hover .Step__DeleteButton,
@@ -348,7 +295,7 @@ const ST = {
   `,
   ViewTitle: styled.h2`
     font-size: 1em;
-    color: #111;
+    color: var(--ld-text, #111);
     text-align: center;
 
     margin-bottom: 0px;
@@ -430,35 +377,6 @@ const ST = {
     }
 
   `,
-  Select: styled(Select)`
-    flex-grow: 1;
-
-    && .ant-select-content-value {
-      background: none;
-      color: ${Colors.primaryColor};
-      border: none !important;
-      box-shadow: none;
-    }
-
-    && .ant-select-selection {
-      background: none;
-      color: ${Colors.primaryColor};
-      border: 1px solid #d9d9d9;
-      box-shadow: none;
-    }
-
-    && .ant-select-selection:hover {
-      border: 1px solid ${Colors.primaryColor};
-    }
-
-    && .ant-select-arrow {
-      color: ${Colors.primaryColor};
-    }
-
-    && .ant-select-selection-selected-value {
-      width: 90%;
-    }
-`,
   ClickIcon: styled(MdAdsClick)`
     height: 25px;
     width: 45px;

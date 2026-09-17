@@ -140,7 +140,7 @@ const M = {
     }
   `,
   Panel: styled.div`
-    background: #ffffff;
+    background: ${Colors.surfaceColor};
     border-radius: 16px;
     width: 480px;
     max-width: calc(100vw - 32px);
@@ -256,7 +256,7 @@ const M = {
   `,
   InviteItemEmail: styled.span`
     font-size: 13px;
-    color: #2d3748;
+    color: ${Colors.secondaryText};
     flex: 1;
     font-family: ${Colors.fontFamily};
   `,
@@ -294,10 +294,10 @@ const M = {
     padding: 0 14px;
     font-size: 14px;
     font-family: ${Colors.fontFamily};
-    color: #2d3748;
+    color: ${Colors.secondaryText};
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
-    background: white;
+    background: ${Colors.surfaceColor};
 
     &::placeholder { color: #b0bac9; }
 

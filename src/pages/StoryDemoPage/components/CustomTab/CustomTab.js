@@ -6,7 +6,6 @@ import styled from 'styled-components'
 import Icon from '../../../../components/Icon/Icon'
 
 import Spinner from '../../../../components/Spinner/Spinner'
-import CustomHeader from './CustomHeader/CustomHeader'
 import Theme from './Theme/Theme'
 import Background from './Background/Background'
 import BackgroundMusic from './BackgroundMusic/BackgroundMusic'
@@ -54,12 +53,6 @@ const CustomTab = ({ storyDemo, authData, tabsWidth, changeIframeStep, reloadSto
       <S.MainView style={{ top: marginTop, width: tabsWidth }}>
         {isUpdating ? (<Spinner/>) : ''}
 
-        <CustomHeader
-          storyDemo={storyDemo}
-          workspaceId={storyDemo.workspaceId}
-          authData={authData}
-          reloadStoryDemo={reloadStoryDemo}
-        />
         <Theme
           storyDemo={storyDemo}
           workspaceId={storyDemo.workspaceId}

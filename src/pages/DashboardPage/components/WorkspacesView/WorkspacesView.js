@@ -324,7 +324,7 @@ S.WorkspacesContainer = styled.div`
 S.WorkspaceCard = styled.div`
   width: 220px;
   border-radius: 16px;
-  background: #fff;
+  background: ${Colors.surfaceColor};
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   transition: box-shadow 0.2s, transform 0.2s;

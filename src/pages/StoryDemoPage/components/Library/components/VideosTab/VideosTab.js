@@ -1,10 +1,11 @@
 
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import styled from 'styled-components'
 import 'tippy.js/dist/tippy.css' // optional
 import 'tippy.js/animations/shift-away.css'
 import Colors from '../../../../../../constants/mainColors'
+import formatLibraryDate from '../../formatLibraryDate'
 
 
 const VideosTab = ({videos, addScreen}) => {
@@ -16,11 +17,14 @@ const VideosTab = ({videos, addScreen}) => {
         {videos && videos.map((video) => {
 
           return (
-            <VT.ImageWrapper onClick={() => {
+            <VT.Item key={video._id} onClick={() => {
               addScreen(video._id)
             }}>
-              <VT.Image src={`https://image.mux.com/${video.asset.playback_ids && video.asset.playback_ids[0].id}/thumbnail.png`}/>
-            </VT.ImageWrapper>
+              <VT.ImageWrapper>
+                <VT.Image src={`https://image.mux.com/${video.asset.playback_ids && video.asset.playback_ids[0].id}/thumbnail.png`}/>
+              </VT.ImageWrapper>
+              <VT.Date>{formatLibraryDate(video.createdAt, video._id)}</VT.Date>
+            </VT.Item>
           )
         })}
       </VT.Main>
@@ -35,9 +39,15 @@ const VT = {
   Main: styled.main`
     display: grid;
     
-    grid-gap: 2.5rem;
+    grid-gap: 2.5rem 2.5rem;
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: 150px;
+  `,
+  Item: styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    cursor: pointer;
   `,
   ImageWrapper: styled.figure`
     border: 7px solid #fff;
@@ -58,6 +68,14 @@ const VT = {
     height: 100%;
     border-radius: 8px;
 
+  `,
+  Date: styled.p`
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--ld-text-muted, #6b7280);
+    font-family: ${Colors.fontFamily};
   `
 }
 

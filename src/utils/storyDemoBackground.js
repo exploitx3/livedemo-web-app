@@ -38,7 +38,13 @@ export function resolveStoryDemoOuterBackground(storyDemo) {
 
   return {
     mode: 'css',
-    css: legacy || '#FFFFFF',
+    // --ld-* are only set when the app runs in dark mode; embeds and injected
+    // pages never define them, so they get the light grey-on-grey dots.
+    css:
+      // Legacy theme color only stands in for a missing background config; an
+      // explicitly disabled background must fall through to the default.
+      (!bg && legacy) ||
+      'radial-gradient(var(--ld-dot, #d4d8de) 1px, transparent 1px) 0 0 / 16px 16px, var(--ld-background, #f4f5f7)',
     padding: resolveOuterPaddingPx(bg)
   }
 }

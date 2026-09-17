@@ -593,19 +593,19 @@ const F = {
     padding: 18px 24px;
     border-bottom: 1px solid #e8edf5;
     text-align: left;
-    background: white;
+    background: ${Colors.surfaceColor};
   `,
   Title: styled.h2`
     font-weight: 600;
     font-size: 16px;
     margin: 0;
-    color: #1a202c;
+    color: ${Colors.primaryText};
     font-family: ${Colors.fontFamilyLexend};
     letter-spacing: -0.2px;
   `,
 
   MainSection: styled.section`
-    background: #f7f9fc;
+    background: var(--ld-background, #f7f9fc);
     flex-grow: 1;
     overflow-y: auto;
     padding: 8px 0 16px;
@@ -639,8 +639,8 @@ const F = {
       border-radius: 10px;
       font-size: 14px;
       font-family: ${Colors.fontFamily};
-      color: #2d3748;
-      background: white;
+      color: ${Colors.secondaryText};
+      background: ${Colors.surfaceColor};
       padding: 0 14px;
       transition: border-color 0.15s, box-shadow 0.15s;
 
@@ -656,7 +656,7 @@ const F = {
   Select: styled(Select)`
     text-transform: capitalize;
     width: 70%;
-    background: white;
+    background: ${Colors.surfaceColor};
 
     && .ant-select-content-value {
       background: none;
@@ -813,7 +813,7 @@ const F = {
   IntegrationName: styled.h3`
     font-size: 16px;
     font-weight: 500;
-    color: #1a1a1a;
+    color: ${Colors.primaryText};
     margin: 0 0 8px 0;
     font-family: ${Colors.fontFamily || 'inherit'};
   `,
@@ -844,7 +844,7 @@ const F = {
     align-items: center;
     gap: 10px;
     padding: 10px 14px;
-    background: #f7f9fc;
+    background: var(--ld-background, #f7f9fc);
     border: 1px solid #e8edf5;
     border-radius: 10px;
   `,
@@ -871,7 +871,7 @@ const F = {
   AdminReadOnlyName: styled.span`
     font-size: 13px;
     font-weight: 600;
-    color: #2d3748;
+    color: ${Colors.secondaryText};
     font-family: ${Colors.fontFamily};
     white-space: nowrap;
     overflow: hidden;
@@ -900,7 +900,7 @@ const F = {
 const S = {
   Content: styled(Content)`
     && {
-        background: white;
+        background: ${Colors.App.sidebarColor};
         padding: 16px;
         overflow: scroll;
         overflow-x: hidden;
@@ -917,12 +917,12 @@ const S = {
       &&::-webkit-scrollbar-track {
         -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
         border-radius: 10px;
-        background-color: #FFF;
+        background-color: ${Colors.App.sidebarColor};
       }
 
       &&::-webkit-scrollbar {
         width: 0px;
-        background-color: #FFF;
+        background-color: ${Colors.App.sidebarColor};
       }
 
       &&::-webkit-scrollbar-thumb {

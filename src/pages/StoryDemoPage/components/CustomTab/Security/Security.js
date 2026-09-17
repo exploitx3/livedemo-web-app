@@ -112,7 +112,7 @@ const TH = {
   Description: styled.p`
     margin: 0;
     font-size: 0.85em;
-    color: #666;
+    color: var(--ld-text-muted, #666);
     line-height: 1.5;
   `,
   Code: styled.code`
@@ -171,7 +171,7 @@ const TH = {
     gap: 15px;
     margin: 10px 5px;
     padding: 15px;
-    background-color: #f3f3f3;
+    background-color: var(--ld-surface, #f3f3f3);
     height: 65px;
     border-radius: 6px;
     border: 1px solid ${Colors.primaryColor};

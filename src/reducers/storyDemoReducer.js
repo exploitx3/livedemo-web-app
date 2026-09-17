@@ -7,6 +7,7 @@ import {
   DELETE_TRANSITION,
   UPDATE_RENDER_STEPS,
   UPDATE_STEP,
+  UPDATE_STORY_HISTORY_STATUS,
   UPDATE_STEP_ZOOM_SPAN,
   UPDATE_STORY_DEMO,
   UPDATE_SCREEN,
@@ -173,6 +174,19 @@ export default function storyDemoReducer(state = initialState.storyDemoReducer, 
       return {
         ...newState,
         renderSteps: JSON.parse(JSON.stringify(action.renderSteps))
+      }
+    case UPDATE_STORY_HISTORY_STATUS:
+
+      // Counts only ({canUndo, canRedo, undoCount, redoCount}) — the revision
+      // payloads themselves never enter the browser, they stay in Mongo
+      return {
+        ...newState,
+        historyStatus: {
+          canUndo: !!action.historyStatus.canUndo,
+          canRedo: !!action.historyStatus.canRedo,
+          undoCount: action.historyStatus.undoCount || 0,
+          redoCount: action.historyStatus.redoCount || 0
+        }
       }
     case ADD_STEP_ZOOM_SPAN:
       let addStepZoomSpan = JSON.parse(JSON.stringify(action.zoomSpan))

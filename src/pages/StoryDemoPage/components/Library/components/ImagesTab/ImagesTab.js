@@ -1,7 +1,9 @@
 
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import styled from 'styled-components'
+import Colors from '../../../../../../constants/mainColors'
+import formatLibraryDate from '../../formatLibraryDate'
 
 
 const ImagesTab = ({images, addScreen}) => {
@@ -13,11 +15,14 @@ const ImagesTab = ({images, addScreen}) => {
         {images && images.map((image) => {
 
           return (
-            <IT.ImageWrapper onClick={() => {
+            <IT.Item key={image._id} onClick={() => {
               addScreen(image._id)
             }}>
-              <IT.Image src={image.imageUrl}/>
-            </IT.ImageWrapper>
+              <IT.ImageWrapper>
+                <IT.Image src={image.imageUrl}/>
+              </IT.ImageWrapper>
+              <IT.Date>{formatLibraryDate(image.createdAt, image._id)}</IT.Date>
+            </IT.Item>
           )
         })}
       </IT.Main>
@@ -31,9 +36,15 @@ const IT = {
   Main: styled.main`
     display: grid;
     
-    grid-gap: 2.5rem;
+    grid-gap: 2.5rem 2.5rem;
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: 150px;
+  `,
+  Item: styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    cursor: pointer;
   `,
   ImageWrapper: styled.figure`
     border: 7px solid #fff;
@@ -53,6 +64,14 @@ const IT = {
     height: 100%;
     border-radius: 8px;
 
+  `,
+  Date: styled.p`
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--ld-text-muted, #6b7280);
+    font-family: ${Colors.fontFamily};
   `
 }
 

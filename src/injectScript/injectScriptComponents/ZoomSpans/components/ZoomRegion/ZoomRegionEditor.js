@@ -1,4 +1,4 @@
-import React, {useRef, useState} from 'react'
+import React, {useEffect, useRef, useState} from 'react'
 import styled from 'styled-components'
 import Colors from '../../../../../constants/mainColors.js'
 import {InputNumber, Button, Checkbox} from 'antd'
@@ -39,14 +39,23 @@ const ZoomRegion = React.forwardRef(({
                                      }, ref) => {
 
 
-  let offsetX
-  let offsetY
-
+  // Persisted geometry is stored in the units of the editor that authored it.
+  // Convert once, here, so every ref below is in *rendered* px.
   let scaleMultiplier = editorWidth === innerWidth ? 1 : innerWidth / editorWidth
 
   let calculatedBoxWidth = (initBoxWidth * scaleMultiplier) || 1
+  let renderedX = x * scaleMultiplier
+  let renderedY = y * scaleMultiplier
+
   let boxWidth = useRef(calculatedBoxWidth)
   let boxHeight = useRef(calculatedBoxWidth * scaleWidth)
+
+  const offsetXRef = useRef(0)
+  const offsetYRef = useRef(0)
+  const isDraggingRef = useRef(false)
+  const isMountedRef = useRef(true)
+  const activeListenersRef = useRef({move: null, up: null, captureTarget: null})
+
   let [delayState, setDelay] = useState(delay)
   let [durationState, setDuration] = useState(duration)
   let [skipDelay, setSkipDelay] = useState(delay === 0)
@@ -54,12 +63,90 @@ const ZoomRegion = React.forwardRef(({
   let lastDelayRef = useRef(delay > 0 ? delay : 0.5)
   let lastDurationRef = useRef(duration > 0 ? duration : 1.5)
 
-  let boxTransformX = useRef(x)
-  let boxTransformY = useRef(y)
+  let boxTransformX = useRef(renderedX)
+  let boxTransformY = useRef(renderedY)
 
-  x = x * scaleMultiplier
-  y = y * scaleMultiplier
+  x = renderedX
+  y = renderedY
 
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      removeActiveListeners()
+    }
+  }, [])
+
+  useEffect(() => {
+    // Don't clobber live gesture geometry when the parent re-renders mid-drag
+    if (isDraggingRef.current) {
+      return
+    }
+    boxWidth.current = (initBoxWidth * scaleMultiplier) || 1
+    boxHeight.current = boxWidth.current * scaleWidth
+    boxTransformX.current = renderedX
+    boxTransformY.current = renderedY
+  }, [initBoxWidth, scaleMultiplier, scaleWidth, renderedX, renderedY])
+
+  function removeActiveListeners() {
+    if (activeListenersRef.current.move) {
+      window.document.removeEventListener('pointermove', activeListenersRef.current.move)
+      activeListenersRef.current.move = null
+    }
+    if (activeListenersRef.current.up) {
+      window.document.removeEventListener('pointerup', activeListenersRef.current.up)
+      activeListenersRef.current.up = null
+    }
+    activeListenersRef.current.captureTarget = null
+  }
+
+  // Pointer capture keeps the gesture alive when the cursor crosses the rrweb
+  // iframe underneath -- without it the iframe swallows the moves and the box
+  // stops tracking the cursor on page screens.
+  function capturePointer(e) {
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+      activeListenersRef.current.captureTarget = e.currentTarget
+    } catch (err) {
+      // older browsers -- document listeners still work off the iframe
+    }
+  }
+
+  function releasePointer(e) {
+    const captureTarget = activeListenersRef.current.captureTarget
+    removeActiveListeners()
+
+    if (captureTarget && captureTarget.releasePointerCapture && e) {
+      try {
+        captureTarget.releasePointerCapture(e.pointerId)
+      } catch (err) {
+        // ignore
+      }
+    }
+  }
+
+  function readTransformIntoRefs(el) {
+    let transformStr = el.style.transform
+
+    if (!transformStr || transformStr === 'none') {
+      const computed = window.getComputedStyle(el).transform
+      const matrixMatch = computed && computed.match(/matrix\(([^)]+)\)/)
+      if (matrixMatch) {
+        const values = matrixMatch[1].split(',').map(v => parseFloat(v.trim()))
+        boxTransformX.current = values[4] || boxTransformX.current
+        boxTransformY.current = values[5] || boxTransformY.current
+      }
+      return
+    }
+
+    try {
+      let transformArr = transformStr.split('(')[1].split(',')
+      boxTransformX.current = parseFloat(transformArr[0].slice(0, -2))
+      boxTransformY.current = parseFloat(transformArr[1].slice(0, -3))
+    } catch (err) {
+      // keep current ref values
+    }
+  }
 
   function onChange(overrides = {}) {
     let changeData = {
@@ -106,38 +193,28 @@ const ZoomRegion = React.forwardRef(({
   }
 
   function dragMove(e) {
+    e.preventDefault()
+
     const el = ref.current
-    // const el = e.target
-//
-    // boxTransformX = e.pageX - offsetX
-    // boxTransformY = e.pageY - offsetY
+    if (!el) {
+      return
+    }
 
-    let newBTransformX = (e.pageX - wrapperLeftPos) - offsetX
-    let newBTransformY = (e.pageY - wrapperTopPos) - offsetY
-
-    newBTransformX = Math.min(
-      (e.pageX - wrapperLeftPos) - offsetX,
+    let newBTransformX = Math.min(
+      (e.pageX - wrapperLeftPos) - offsetXRef.current,
       (innerWidth - boxWidth.current))
 
     newBTransformX = Math.max(newBTransformX, 0)
 
-    newBTransformY = Math.min(
-      (e.pageY - wrapperTopPos) - offsetY,
+    let newBTransformY = Math.min(
+      (e.pageY - wrapperTopPos) - offsetYRef.current,
       (innerHeight - omniBarHeight - boxHeight.current)
     )
 
     newBTransformY = Math.max(newBTransformY, 0)
 
-    // if((newBTransformY + boxWidth.current) > (innerHeight - omniBarHeight) {
-    //   newBTransformY = Math.min(
-    //     (e.pageY - wrapperTopPos) - offsetY,
-    //     (innerHeight - omniBarHeight - boxWidth.current)
-    //   )
-    // }
-
     boxTransformX.current = newBTransformX
     boxTransformY.current = newBTransformY
-
 
     el.style.transform = `translate(${boxTransformX.current.toFixed(2)}px, ${boxTransformY.current.toFixed(2)}px)`
   }
@@ -151,21 +228,31 @@ const ZoomRegion = React.forwardRef(({
       return
     }
 
+    removeActiveListeners()
+    isDraggingRef.current = true
+
     let elRect = el.getBoundingClientRect()
 
-    offsetX = e.clientX - elRect.left
-    offsetY = e.clientY - elRect.top + omniBarHeight
+    offsetXRef.current = e.clientX - elRect.left
+    offsetYRef.current = e.clientY - elRect.top + omniBarHeight
 
-    window.document.addEventListener('mousemove', dragMove)
-    window.document.addEventListener('mouseup', dragRemove)
+    capturePointer(e)
+
+    activeListenersRef.current.move = dragMove
+    activeListenersRef.current.up = dragRemove
+
+    window.document.addEventListener('pointermove', dragMove)
+    window.document.addEventListener('pointerup', dragRemove)
   }
 
   function dragRemove(e) {
-    const el = ref.current
+    isDraggingRef.current = false
 
-    onChange()
-    window.document.removeEventListener('mousemove', dragMove)
-    window.document.removeEventListener('mouseup', dragRemove)
+    if (isMountedRef.current) {
+      onChange()
+    }
+
+    releasePointer(e)
   }
 
   function setElementStartingTopLeft(element) {
@@ -187,9 +274,11 @@ const ZoomRegion = React.forwardRef(({
       let newBoxWidth, newBoxHeight, offsetMarginX, offsetMarginY, offsetX, offsetY
 
       let el = ref.current
-      let transformArr = ref.current.style.transform.split('(')[1].split(',')
-      boxTransformX.current = parseFloat(transformArr[0].slice(0, -2))
-      boxTransformY.current = parseFloat(transformArr[1].slice(0, -3))
+      if (!el) {
+        return
+      }
+
+      readTransformIntoRefs(el)
 
       if (type === resizeTypes.bottomRight) {
 
@@ -214,6 +303,8 @@ const ZoomRegion = React.forwardRef(({
         offsetX = boxTransformX.current - offsetMarginX
         offsetY = boxTransformY.current
 
+        boxTransformX.current = offsetX
+        boxTransformY.current = offsetY
         el.style.transform = `translate(${offsetX}px, ${offsetY}px)`
 
       } else if (type === resizeTypes.topLeft) {
@@ -232,6 +323,8 @@ const ZoomRegion = React.forwardRef(({
         offsetX = boxTransformX.current - offsetMarginX
         offsetY = boxTransformY.current - offsetMarginY
 
+        boxTransformX.current = offsetX
+        boxTransformY.current = offsetY
         el.style.transform = `translate(${offsetX}px, ${offsetY}px)`
 
 
@@ -251,33 +344,52 @@ const ZoomRegion = React.forwardRef(({
         offsetX = boxTransformX.current
         offsetY = boxTransformY.current - offsetMarginY
 
+        boxTransformX.current = offsetX
+        boxTransformY.current = offsetY
         el.style.transform = `translate(${offsetX}px, ${offsetY}px)`
       }
 
 
-      ref.current.style.width = (boxWidth.current * scaleMultiplier) + 'px'
-      ref.current.style.height = (boxHeight.current * scaleMultiplier) + 'px'
+      // boxWidth/boxHeight are already in rendered px (measured off
+      // getBoundingClientRect), so scaleMultiplier must NOT be applied again --
+      // doing so compounds the error every pointermove and the box stops
+      // tracking the cursor whenever editorWidth !== innerWidth.
+      ref.current.style.width = boxWidth.current + 'px'
+      ref.current.style.height = boxHeight.current + 'px'
     }
   }
 
   function resizeAdd(type) {
 
     return function (e) {
+      e.preventDefault()
+      e.stopPropagation()
 
+      removeActiveListeners()
+      isDraggingRef.current = true
+
+      capturePointer(e)
 
       let resizeMoveFunction = resizeMove(type)
-      window.document.addEventListener('mousemove', resizeMoveFunction)
-      window.document.addEventListener('mouseup', resizeRemoveClosure(resizeMoveFunction))
+      const onRemove = resizeRemoveClosure(resizeMoveFunction)
+
+      activeListenersRef.current.move = resizeMoveFunction
+      activeListenersRef.current.up = onRemove
+
+      window.document.addEventListener('pointermove', resizeMoveFunction)
+      window.document.addEventListener('pointerup', onRemove)
     }
   }
 
   function resizeRemoveClosure(resizeMoveFunction) {
     return function onRemove(e) {
+      isDraggingRef.current = false
 
-      onChange()
+      if (isMountedRef.current) {
+        onChange()
+      }
 
-      window.document.removeEventListener('mousemove', resizeMoveFunction)
-      window.document.removeEventListener('mouseup', onRemove)
+      releasePointer(e)
     }
   }
 
@@ -289,12 +401,12 @@ const ZoomRegion = React.forwardRef(({
     <RL.RightLine/>
     <RL.BottomLine/>
     <RL.TopLine/>
-    <RL.LeftTopCorner onMouseDown={resizeAdd(resizeTypes.topLeft)}/>
-    <RL.LeftBottomCorner onMouseDown={resizeAdd(resizeTypes.bottomLeft)}/>
-    <RL.RightTopCorner onMouseDown={resizeAdd(resizeTypes.topRight)}></RL.RightTopCorner>
+    <RL.LeftTopCorner onPointerDown={resizeAdd(resizeTypes.topLeft)}/>
+    <RL.LeftBottomCorner onPointerDown={resizeAdd(resizeTypes.bottomLeft)}/>
+    <RL.RightTopCorner onPointerDown={resizeAdd(resizeTypes.topRight)}></RL.RightTopCorner>
     <RL.CloseButton
       title="Remove zoom"
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         e.preventDefault()
         e.stopPropagation()
       }}
@@ -305,9 +417,9 @@ const ZoomRegion = React.forwardRef(({
     >
       <CloseOutlined/>
     </RL.CloseButton>
-    <RL.RightBottomCorner onMouseDown={resizeAdd(resizeTypes.bottomRight)}></RL.RightBottomCorner>
+    <RL.RightBottomCorner onPointerDown={resizeAdd(resizeTypes.bottomRight)}></RL.RightBottomCorner>
     <RL.ButtonsWrapper
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         // keep clicks on controls from starting a region drag
         e.stopPropagation()
       }}
@@ -333,7 +445,7 @@ const ZoomRegion = React.forwardRef(({
         </RL.PreviewButton>
         <RL.MoveButton
           title="Drag to move zoom region"
-          onMouseDown={dragAdd}
+          onPointerDown={dragAdd}
         >
           <DragOutlined/>
           <RL.ButtonText>Move</RL.ButtonText>

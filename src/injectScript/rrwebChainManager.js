@@ -594,21 +594,29 @@ export function invalidateEventsCache() {
 }
 
 /**
- * After EditText persists JSON on the server, drop cached events and recreate
- * the active chain so the Replayer shows the new text.
+ * After EditText persists JSON, drop the events cache and refresh the in-memory
+ * list. Do not remount the Replayer — that rebuilds from t=0 and often lands
+ * on the wrong screen time (base / final) instead of this delta's toTimeMs.
+ * The live DOM already has the edit.
  */
 export async function reloadAfterTextEdit(screen, storyDemo, workspaceId, storyId) {
   if (!screen || !screen.recordingRole) {
     return null
   }
+  eventsCache.clear()
   const chainId = screen.recordingRole === 'base'
     ? String(screen._id)
     : String(screen.baseScreenId)
-  if (chains[chainId]) {
-    destroyReplayer(chains[chainId])
-    delete chains[chainId]
+  const chain = chains[chainId]
+  if (chain && chain.replayer) {
+    try {
+      chain.events = await eventsForFullChain(chainId, storyDemo, workspaceId, storyId)
+    } catch (e) {
+      // next navigation will refetch
+    }
+    window.__livedemoActiveReplayer = chain.replayer
+    return chain.replayer
   }
-  eventsCache.clear()
   return showScreen(screen, storyDemo, workspaceId, storyId)
 }
 

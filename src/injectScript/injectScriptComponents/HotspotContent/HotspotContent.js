@@ -71,7 +71,6 @@ function HotspotContent({
     themeTextColor,
     themeButtonBackgroundColor,
     themeButtonTextColor,
-    showHeader,
     showFooter,
     onClick,
     onSaveHotspot,
@@ -441,7 +440,7 @@ function HotspotContent({
     >
 
         <Tip
-            zIndex={3}
+            zIndex={1000}
             disabled={isMobile}
             // disabled={!showTippy}
             delay={200}
@@ -486,18 +485,18 @@ function HotspotContent({
                     index={currentStepIndexCount}
                     view={view}
                     size={size}
-                    onBack={onBack}
-                    onNext={onNext}
-                    onSkip={onSkip}
+                    onBack={isInEditor ? () => {} : onBack}
+                    onNext={isInEditor ? () => {} : onNext}
+                    onSkip={isInEditor ? () => {} : onSkip}
                     themeBackgroundColor={themeBackgroundColor}
                     themeTextColor={themeTextColor}
                     themeButtonBackgroundColor={themeButtonBackgroundColor}
                     themeButtonTextColor={themeButtonTextColor}
                     textFontSize={textFontSize}
-                    showHeader={showHeader}
                     showFooter={showFooter}
                     showStepNumbers={showStepNumbers}
-                    onClick={onClick}
+                    isInEditor={isInEditor}
+                    onClick={isInEditor ? () => {} : onClick}
                 />
 
             }
@@ -506,7 +505,7 @@ function HotspotContent({
                 color={themeBackgroundColor}
                 height={hotspotSize}
                 width={hotspotSize}
-                onClick={onClick}
+                onClick={isInEditor ? () => {} : onClick}
             />
         </Tip>
 
@@ -526,11 +525,13 @@ const HT = {
             max-width: 750px !important;
             border-radius: 6px;
             min-width: 220px;
+            overflow: visible;
         }
 
 
         && .tippy-content {
             padding: 0px !important;
+            overflow: visible;
         }
 
         && .tippy-arrow::before {
@@ -545,7 +546,7 @@ const HT = {
         color: ${({ themeTextColor }) => themeTextColor};
         height: 100%;
         font-weight: 550;
-        font-family: ${Colors.fontFamily};
+        font-family: var(--ld-demo-font, ${Colors.fontFamily});
         
 
         //max-width: 250px;

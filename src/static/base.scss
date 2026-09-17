@@ -9,6 +9,12 @@
 
 @import'./toast.scss';
 
+body {
+  // --ld-background is set on <html> in dark mode (see constants/mainColors.js)
+  background: var(--ld-background, #fff);
+  color: var(--ld-text, #1d1d1d);
+}
+
 .mention {
   background: #e8f5fb;
   padding: 0 2px 1px 2px;

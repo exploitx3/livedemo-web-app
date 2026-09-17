@@ -111,7 +111,7 @@ const AudioPlayer = (props) => {
               <g clip-path="url(#clip0_0_3)">
                 <path
                   d="M4.69159 2.94011C4.39202 2.74947 4 2.96466 4 3.31975V8.68025C4 9.03534 4.39202 9.25053 4.69159 9.05989L8.90341 6.37965C9.18128 6.20282 9.18129 5.79718 8.90341 5.62035L4.69159 2.94011Z"
-                  fill="black"/>
+                  fill="currentColor"/>
               </g>
               <defs>
                 <clipPath id="clip0_0_3">
@@ -219,8 +219,8 @@ const S = {
     top: 0px;
 
     //cursor: pointer;
-    border: 5px solid white;
-    background: #F1F3FE;
+    border: 5px solid var(--ld-surface, white);
+    background: var(--ld-border, #F1F3FE);
     border-radius: 12px;
 
     -webkit-user-select: none; /* Safari */
@@ -246,8 +246,8 @@ const S = {
     z-index: 3;
     height: 100%;
     width: 4px;
-    background: #111827;
-    box-shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px;
+    background: ${Colors.primaryColor};
+    box-shadow: rgba(0, 0, 0, 0.16) 0px 10px 36px 0px, var(--ld-border, rgba(0, 0, 0, 0.06)) 0px 0px 0px 1px;
   `,
   InnerTimeline: styled.span`
     flex-grow: 1;
@@ -334,7 +334,7 @@ const S = {
     user-select: none; /* Standard syntax */
 
     font-family: ${Colors.fontFamily};
-    color: ${Colors.baseColors.fifthColor};
+    color: var(--ld-text, ${Colors.baseColors.fifthColor});
 
     font-weight: 550;
     font-size: 15px;
@@ -345,11 +345,11 @@ const S = {
     }
 
     && svg g path {
-      fill: ${Colors.baseColors.sixthColor};
+      fill: currentColor;
     }
 
     &&:hover {
-      background: #F1F3FE;
+      background: var(--ld-border, #F1F3FE);
     }
   `,
   AddZoomButton: styled.div`
@@ -367,7 +367,7 @@ const S = {
     user-select: none; /* Standard syntax */
 
     font-family: ${Colors.fontFamily};
-    color: ${Colors.baseColors.fifthColor};
+    color: var(--ld-text, ${Colors.baseColors.fifthColor});
 
     font-weight: 550;
     font-size: 15px;
@@ -378,11 +378,11 @@ const S = {
     }
 
     && svg g path {
-      fill: ${Colors.baseColors.sixthColor};
+      fill: currentColor;
     }
 
     &&:hover {
-      background: #F1F3FE;
+      background: var(--ld-border, #F1F3FE);
     }
   `,
   PauseButton: styled(MdPause)`
@@ -400,7 +400,7 @@ const S = {
     user-select: none; /* Standard syntax */
 
     font-family: ${Colors.fontFamily};
-    color: ${Colors.baseColors.fifthColor};
+    color: var(--ld-text, ${Colors.baseColors.fifthColor});
 
     font-weight: 550;
     font-size: 15px;
@@ -410,25 +410,21 @@ const S = {
       height: 100%;
     }
 
-    && svg g path {
-      fill: ${Colors.baseColors.sixthColor};
-    }
-
     &&:hover {
-      background: #F1F3FE;
+      background: var(--ld-border, #F1F3FE);
     }
 `,
   Wrapper: styled.div`
     height: 41px;
     width: 100%;
-    background: white;
+    background: var(--ld-surface, white);
 `,
   VideoWrapper: styled.div`
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
-    box-shadow: rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px;
+    border: 1px solid var(--ld-border, rgba(27, 31, 35, 0.15));
     border-radius: 8px;
     padding: 4px;
 

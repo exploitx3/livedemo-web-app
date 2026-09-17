@@ -102,7 +102,7 @@ const CreateLink = ({link, onCancel, onSave, storyId, workspaceId, liveDemo, aut
 
           textStyles={{
             fontSize: '0.9em',
-            color: '#111',
+            color: 'var(--ld-text, #111)',
           }}
           buttonStyles={{
 
@@ -164,7 +164,7 @@ const EL = {
   LabelText: styled.h1`
     display: inline;
     margin-right: 15px !important;
-    color: #111;
+    color: var(--ld-text, #111);
     font-size: 1.2em;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -172,7 +172,7 @@ const EL = {
   `,
   LabelDesc: styled.p`
     display: inline;
-    color: #999;
+    color: var(--ld-text-muted, #999);
     font-size: 1.0em;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -207,8 +207,8 @@ const EL = {
       padding: 10px 12px;
       font-size: 14px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #333;
-      background-color: #fff;
+      color: var(--ld-text-muted, #333);
+      background-color: var(--ld-surface, #fff);
       border: 1px solid #d1d5db;
       border-radius: 6px;
       outline: none;
@@ -228,7 +228,7 @@ const EL = {
 
     /* Disabled state */
     &&:disabled {
-      background-color: #f3f4f6;
+      background-color: var(--ld-surface, #f3f4f6);
       color: #9ca3af;
       cursor: not-allowed;
     }

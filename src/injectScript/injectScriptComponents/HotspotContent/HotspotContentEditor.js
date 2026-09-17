@@ -72,7 +72,6 @@ function HotspotContentEditor({
                              themeTextColor,
                              themeButtonBackgroundColor,
                              themeButtonTextColor,
-                              showHeader,
                               showFooter,
                              onClick,
                              onSaveHotspot,
@@ -364,7 +363,7 @@ function HotspotContentEditor({
   >
 
     <Tip
-      zIndex={3}
+      zIndex={1000}
       disabled={false}
       // disabled={!showTippy}
       delay={200}
@@ -399,17 +398,17 @@ function HotspotContentEditor({
           index={currentStepIndex.current}
           view={view}
           size={size}
-          onBack={onBack}
-          onNext={onNext}
-          onSkip={onSkip}
+          onBack={isInEditor ? () => {} : onBack}
+          onNext={isInEditor ? () => {} : onNext}
+          onSkip={isInEditor ? () => {} : onSkip}
           themeBackgroundColor={themeBackgroundColor}
           themeTextColor={themeTextColor}
           themeButtonBackgroundColor={themeButtonBackgroundColor}
           themeButtonTextColor={themeButtonTextColor}
           textFontSize={textFontSize}
-          showHeader={showHeader}
           showFooter={showFooter}
-          onClick={onClick}
+          isInEditor={isInEditor}
+          onClick={isInEditor ? () => {} : onClick}
         />
 
       }
@@ -418,7 +417,7 @@ function HotspotContentEditor({
         color={themeBackgroundColor}
         height={hotspotSize}
         width={hotspotSize}
-        onClick={onClick}
+        onClick={isInEditor ? () => {} : onClick}
       />
     </Tip>
 
@@ -436,7 +435,7 @@ const HT = {
       max-width: 750px !important;
       border-radius: 6px;
       min-width: 220px;
-
+      overflow: visible;
     }
 
     //&& .tippy-content {
@@ -455,7 +454,7 @@ const HT = {
     color: ${({themeTextColor}) => themeTextColor};
     height: 100%;
     font-weight: 550;
-    font-family: ${Colors.fontFamily};
+    font-family: var(--ld-demo-font, ${Colors.fontFamily});
 
     //max-width: 250px;
     max-width: 29vw;

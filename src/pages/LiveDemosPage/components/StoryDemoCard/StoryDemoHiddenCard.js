@@ -102,7 +102,7 @@ const S = {}
 S.Card = styled.div`
   position: relative;
   border-radius: 12px;
-  background: #ffffff;
+  background: ${mainColors.surfaceColor};
   user-select: none;
   cursor: not-allowed;
   display: flex;

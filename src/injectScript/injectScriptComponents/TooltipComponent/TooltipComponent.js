@@ -71,7 +71,6 @@ function TooltipComponent(props) {
 
 
 
-  let customHeader = (storyDemo.custom && storyDemo.custom.header) || {}
   let hideFooter = step.hideFooter
   let nextButtonText = step.view && step.view.nextButtonText
   let showStepNumbers = step.view && step.view.showStepNumbers === undefined ? true : !!(step.view && step.view.showStepNumbers)
@@ -587,7 +586,6 @@ function TooltipComponent(props) {
 
         <TC.HeaderWrapper
           isMovable={scalePercentage === 1}
-          isActive={customHeader.isActive}
           onMouseOver={() => {
             // if (dragDisabled && step.view.viewType !== 'Pointer') {
             if (dragDisabled) {
@@ -599,14 +597,6 @@ function TooltipComponent(props) {
             setDragDisabled(true)
           }}
         >
-          {!customHeader.isActive ? '' : (
-            <React.Fragment>
-              <TC.ProfileImage src={customHeader.imageUrl === '' ? NoProfileImage : customHeader.imageUrl}/>
-              <TC.ProfileText><TC.ProfileName
-                themeColor={themeColor}>{customHeader.personName}</TC.ProfileName>{customHeader.text}
-              </TC.ProfileText>
-            </React.Fragment>
-          )}
           <TC.CloseIcon onClick={() => {
             setShowTooltip(false)
             setShowStartButton(true)

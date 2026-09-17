@@ -7,6 +7,8 @@ import Colors from '../../../constants/mainColors.js'
 import { arrow, autoPlacement, computePosition, offset } from '@floating-ui/dom'
 import '@fontsource/lexend/latin.css'
 import TooltipContent from '../TooltipContent/TooltipContentEditor.js'
+import { topPostMessage } from '../../helpers.js'
+import POINTER_TARGET_MODES from '../../../constants/pointerTargetModes.js'
 
 const HOTSPOT_SIZE = 90
 
@@ -25,24 +27,43 @@ function PointerTransition(props) {
     themeTextColor,
     themeButtonBackgroundColor,
     themeButtonTextColor,
+    showTooltipArrow = true,
     iframeSize,
     forceUpdateVar,
     widthDimensionPercentage,
     changeStep,
     wrapperWidth,
     wrapperHeight,
-    isInEditor
+    isInEditor,
+    isOmniBarDisabled,
+    navWrapperRef,
+    liveDemoRef,
+    screenId,
   } = props
 
 
   let [isVisible, setIsVisible] = useState(false)
 
-  let showHeader = transition && transition.showHeader
   let showFooter = transition && transition.showFooter
 
 
   let innerWidth = wrapperWidth ? wrapperWidth : window.innerWidth
   let innerHeight = wrapperHeight ? wrapperHeight : window.innerHeight
+
+  let omniBarHeight = isOmniBarDisabled ? 0 : 40
+  let tabInfoWidth = (liveDemo && liveDemo.windowMeasures && liveDemo.windowMeasures.innerWidth)
+    ? liveDemo.windowMeasures.innerWidth
+    : (liveDemo && liveDemo.tabInfo ? liveDemo.tabInfo.width : 1366)
+  let tabInfoHeight = (liveDemo && liveDemo.windowMeasures && liveDemo.windowMeasures.innerHeight)
+    ? liveDemo.windowMeasures.innerHeight
+    : (liveDemo && liveDemo.tabInfo ? liveDemo.tabInfo.height : 664)
+
+  let xPercentage = innerWidth / tabInfoWidth
+  let yPercentage = (innerHeight - omniBarHeight) / tabInfoHeight
+  let reverseX = 1 + ((tabInfoWidth - innerWidth) / innerWidth)
+  let reverseY = 1 + (((tabInfoHeight) - (innerHeight - omniBarHeight)) / (innerHeight - omniBarHeight))
+
+  let isNoneMode = transition.pointer?.targetMode === POINTER_TARGET_MODES.NONE
 
   let [hasSetupDragging, setHasSetupDragging] = useState(false)
 
@@ -66,7 +87,6 @@ function PointerTransition(props) {
 
 
 
-  let customHeader = (liveDemo.custom && liveDemo.custom.header) || {}
   let hideFooter = transition.hideFooter
   let nextButtonText = transition.nextButtonText
   let showStepNumbers = transition.showStepNumbers === undefined ? true : !!transition.showStepNumbers
@@ -113,6 +133,126 @@ function PointerTransition(props) {
 
 
   useEffect(() => {
+    if (!isNoneMode) {
+      return
+    }
+
+    setIsArrowShown(false)
+    setTooltipX((transition.pointer.tooltipX ?? 200) * xPercentage)
+    setTooltipY((transition.pointer.tooltipY ?? 200) * yPercentage + omniBarHeight)
+    setIsVisible(true)
+  }, [transition, isNoneMode, innerWidth, innerHeight, forceUpdateVar])
+
+
+  useEffect(() => {
+    if (!isNoneMode || !isInEditor || !navWrapperRef?.current || !wrapperRef.current) {
+      return
+    }
+
+    let container = navWrapperRef.current
+    let dragElem = wrapperRef.current
+    let isDragging = false
+    let dragOffsetX = 0
+    let dragOffsetY = 0
+
+    function drag(e) {
+      if (!isDragging) {
+        return
+      }
+      e.preventDefault()
+
+      let clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX
+      let clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY
+
+      setTooltipX(clientX - dragOffsetX)
+      setTooltipY(clientY - dragOffsetY)
+    }
+
+    function dragStart(e) {
+      if (!dragElem.contains(e.target)) {
+        return
+      }
+
+      isDragging = true
+      setIsMoving(true)
+
+      let clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX
+      let clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY
+      let rect = dragElem.getBoundingClientRect()
+      dragOffsetX = clientX - rect.left
+      dragOffsetY = clientY - rect.top
+    }
+
+    function dragEnd() {
+      if (!isDragging) {
+        return
+      }
+      isDragging = false
+      setIsMoving(false)
+
+      let rect = dragElem.getBoundingClientRect()
+      let saveX = rect.left * reverseX
+      let saveY = (rect.top - omniBarHeight) * reverseY
+
+      topPostMessage({
+        type: 'pointer_tooltip_set',
+        transitionId: transition._id,
+        screenId: screenId,
+        tooltipX: saveX,
+        tooltipY: saveY,
+      })
+
+      if (liveDemoRef?.current) {
+        let liveDemoInternal = liveDemoRef.current
+        let newStoryDemo = {...liveDemoInternal}
+        newStoryDemo.screens = newStoryDemo.screens.map((scr) => {
+          if (scr._id !== screenId) {
+            return scr
+          }
+          return {
+            ...scr,
+            customTransitions: scr.customTransitions.map((tr) => {
+              if (tr._id !== transition._id) {
+                return tr
+              }
+              return {
+                ...tr,
+                pointer: {
+                  ...(tr.pointer || {}),
+                  tooltipX: saveX,
+                  tooltipY: saveY,
+                },
+              }
+            }),
+          }
+        })
+        liveDemoRef.current = newStoryDemo
+      }
+    }
+
+    container.addEventListener('mousedown', dragStart, false)
+    container.addEventListener('mouseup', dragEnd, false)
+    container.addEventListener('mousemove', drag, false)
+    container.addEventListener('touchstart', dragStart, false)
+    container.addEventListener('touchend', dragEnd, false)
+    container.addEventListener('touchmove', drag, false)
+
+    return () => {
+      container.removeEventListener('mousedown', dragStart, false)
+      container.removeEventListener('mouseup', dragEnd, false)
+      container.removeEventListener('mousemove', drag, false)
+      container.removeEventListener('touchstart', dragStart, false)
+      container.removeEventListener('touchend', dragEnd, false)
+      container.removeEventListener('touchmove', drag, false)
+    }
+  }, [isNoneMode, isInEditor, transition._id, screenId, innerWidth, innerHeight])
+
+
+  useEffect(() => {
+    if (isNoneMode) {
+      return
+    }
+
     if(pointerInfo && pointerInfo.enabled && wrapperRef.current && arrowRef.current) {
 
 
@@ -134,12 +274,13 @@ function PointerTransition(props) {
           middleware.push(autoPlacement())
         }
 
-        middleware = middleware.concat([
-          offset(10),
-          arrow({
+        middleware = middleware.concat([offset(10)])
+
+        if (showTooltipArrow) {
+          middleware.push(arrow({
             element: arrowRef.current,
-          })
-        ])
+          }))
+        }
 
 
 
@@ -168,7 +309,7 @@ function PointerTransition(props) {
             }[side]
 
 
-            if (middlewareData.arrow) {
+            if (showTooltipArrow && middlewareData.arrow) {
               const { x, y } = middlewareData.arrow;
 
               wrapperRef.current.setAttribute('data-popper-placement', staticSide)
@@ -188,7 +329,7 @@ function PointerTransition(props) {
 
 
             setIsVisible(true)
-            setIsArrowShown(true)
+            setIsArrowShown(!!(showTooltipArrow && middlewareData.arrow))
 
           }))
 
@@ -198,7 +339,7 @@ function PointerTransition(props) {
     }
 
 
-  }, [pointerInfo, pointerInfo.targetElement, wrapperRef.current, arrowRef.current])
+  }, [pointerInfo, pointerInfo.targetElement, wrapperRef.current, arrowRef.current, showTooltipArrow])
 
   let [isLoading, setIsLoading] = useState(false)
 
@@ -213,6 +354,7 @@ function PointerTransition(props) {
     tooltipY={tooltipY}
     arrowColor={themeBackgroundColor}
     visible={isVisible}
+    $isDraggable={isNoneMode && isInEditor}
   >
     <TooltipContent
       liveDemo={liveDemo}
@@ -221,17 +363,20 @@ function PointerTransition(props) {
       view={transition}
       size={size}
       onBack={onBack}
-      onNext={onNext}
+      onNext={isInEditor ? () => {} : onNext}
+      isInEditor={isInEditor}
       onSkip={onSkip}
       themeBackgroundColor={themeBackgroundColor}
       themeTextColor={themeTextColor}
       themeButtonBackgroundColor={themeButtonBackgroundColor}
       themeButtonTextColor={themeButtonTextColor}
       textFontSize={textFontSize}
-      showHeader={showHeader}
       showFooter={showFooter}
-      headerOnMouseDown={() => {}}
+      showStepNumbers={showStepNumbers}
       onClick={() => {
+        if (isInEditor) {
+          return
+        }
 
         let newIndex = index + 1
         changeStep(newIndex)
@@ -354,6 +499,7 @@ const TC = {
     position: absolute;
     transform-origin: top left;
     transform: translateX(${({tooltipX}) => tooltipX}px) translateY(${({tooltipY}) => tooltipY}px);
+    cursor: ${({ $isDraggable }) => $isDraggable ? 'move' : 'auto'};
 
     font-size: 1.5vw;
     font-family: ${Colors.fontFamilyApple};

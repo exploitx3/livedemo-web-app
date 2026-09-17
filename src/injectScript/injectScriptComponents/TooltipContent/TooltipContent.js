@@ -1,9 +1,11 @@
 import axios from 'axios'
 import ENV from '../../config.json'
 import React, {useRef, useState} from 'react'
-import NoProfileImage from '../../assets/noProfilePicture2.svg'
 import Spinner from '../../injectScriptComponents/Spinner/Spinner.js'
-import styled from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
+import { getStoryTheme } from '../../helpers.js'
+import { isHoverGlowEnabled } from '../../themeHoverGlow.js'
+import FooterButtons, { getFooterButtons } from '../../../constants/FooterButtons.js'
 import ReCAPTCHA from 'react-google-recaptcha'
 import {Button} from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
@@ -33,16 +35,14 @@ function TooltipContent(props) {
         iframeSize,
         addTooltipAnchor,
         forceUpdateVar,
-        showHeader,
         showFooter,
         showStepNumbers,
-        headerOnMouseDown,
         scale,
-        onClick
+        onClick,
+        isInEditor
     } = props
 
 
-    let customHeader = (liveDemo.custom && liveDemo.custom.header) || {}
     let hideFooter = true //step && step.hideFooter
     let nextButtonText = (view && view.nextButtonText) || 'Next'
 
@@ -85,6 +85,7 @@ function TooltipContent(props) {
     let recaptchaRef = useRef(null)
 
     let onNextHandlerClosure = (fieldsObj, recaptchaRef) => function (...args) {
+        if (isInEditor) return
 
 
         let promise = Promise.resolve()
@@ -124,8 +125,14 @@ function TooltipContent(props) {
         return promise
     }
 
+    let theme = getStoryTheme(liveDemo)
+    let hoverGlow = isHoverGlowEnabled(theme)
+    let useNextArrow = getFooterButtons(theme) === FooterButtons.nextArrow
+
 debugger
     return <TC.WrapperInner
+        $hoverGlow={hoverGlow}
+        $showFooter={showFooter}
         onClick={
             !showFooter &&
             view &&
@@ -134,28 +141,12 @@ debugger
             ) ? onClick : () => {
             }}
     >
+        {hoverGlow ? (
+            <TC.HoverGlow data-hover-glow aria-hidden="true" $color={themeBackgroundColor} />
+        ) : null}
 
-        {showHeader && customHeader.isActive ? (
-            <TC.HeaderWrapper
-                isActive={customHeader.isActive}
-                onMouseDown={headerOnMouseDown}
-            >
-                <React.Fragment>
-                    <TC.ProfileImage src={customHeader.imageUrl === '' ? NoProfileImage : customHeader.imageUrl}/>
-                    <TC.ProfileText><TC.ProfileName
-                        themeBackgroundColor={themeBackgroundColor}
-                        themeTextColor={themeTextColor}
-                    >{customHeader.personName}</TC.ProfileName>{customHeader.text}
-                    </TC.ProfileText>
-                </React.Fragment>
-                {/*<TC.CloseIcon onClick={() => {*/}
-                {/*  setShowTooltip(false)*/}
-                {/*  setShowStartButton(true)*/}
-                {/*}} type="close"/>*/}
-            </TC.HeaderWrapper>) : (
-            <TC.EmptyHeader addPadding={showForm}>
-            </TC.EmptyHeader>
-        )}
+        <TC.EmptyHeader addPadding={showForm}>
+        </TC.EmptyHeader>
 
 
         <TC.ContentWrapper scrollbarColor={themeOverlayBackgroundColor}>
@@ -198,6 +189,30 @@ debugger
         </TC.ContentWrapper>
 
         {showFooter ? (
+            useNextArrow ? (
+                <TC.TooltipFooter $nextArrow>
+                    {continuous && (
+                        <TC.NextArrow
+                            type="button"
+                            aria-label="Next step"
+                            onClick={onNextHandlerClosure(fieldsObj, recaptchaRef)}
+                        >
+                            <TC.NextArrowTrack>
+                                <TC.NextArrowSlide>
+                                    <svg viewBox="0 0 24 24" fill="none" width="1.125em" height="1.125em">
+                                        <path d="M19 12H5M14 17l5-5M14 7l5 5" stroke="currentColor" strokeWidth="0.125rem" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </TC.NextArrowSlide>
+                                <TC.NextArrowSlide $hidden aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em">
+                                        <path d="M4.5 4.566c0-1.562 1.71-2.52 3.043-1.706l12.164 7.433c1.277.78 1.277 2.634 0 3.414L7.543 21.14c-1.333.815-3.043-.144-3.043-1.706V4.566Z" />
+                                    </svg>
+                                </TC.NextArrowSlide>
+                            </TC.NextArrowTrack>
+                        </TC.NextArrow>
+                    )}
+                </TC.TooltipFooter>
+            ) : (
             <TC.TooltipFooter>
 
                 <React.Fragment>
@@ -211,7 +226,7 @@ debugger
 
                     </TC.LeftButtonsWrapper>
                     <TC.RightButtonsWrapper>
-                        {index > 0 && (
+                        {index > 0 && !view.hideBackButton && (
                             <TC.BackButton
                                 className={'TooltipContent__Button'}
                                 themeBackgroundColor={themeBackgroundColor}
@@ -241,8 +256,9 @@ debugger
 
 
             </TC.TooltipFooter>
+            )
         ) : (
-            <TC.EmptyFooter addPadding={showHeader && customHeader.isActive || showForm}>
+            <TC.EmptyFooter addPadding={showForm}>
             </TC.EmptyFooter>
         )}
     </TC.WrapperInner>
@@ -253,6 +269,16 @@ debugger
 function getBoxShadow(themeColor) {
     return `${themeColor}66 -5px 5px, ${themeColor}4D  -10px 10px, ${themeColor}33 -15px 15px, ${themeColor}1A -20px 20px, ${themeColor}0D -25px 25px;`
 }
+
+const pulseHover = keyframes`
+    from { box-shadow: 0 0 0 0 currentColor; }
+    to { box-shadow: 0 0 0 10px currentColor; }
+`
+
+const animScale = keyframes`
+    from { width: 2.25em; }
+    to { width: 3em; }
+`
 
 const TC = {
     Arrow: styled.div`
@@ -328,8 +354,27 @@ const TC = {
 
 
     `,
+    HoverGlow: styled.div`
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.3;
+        background: ${({ $color }) => $color};
+        color: ${({ $color }) => $color};
+    `,
     WrapperInner: styled.div`
-        // transform: ${({scale}) => `scale(${scale})`};
+        position: relative;
+        overflow: visible;
+        z-index: 0;
+        cursor: ${({ $showFooter }) => $showFooter ? 'default' : 'pointer'};
+        border-radius: 5px;
+        ${({ $hoverGlow }) => $hoverGlow && css`
+            &:hover > [data-hover-glow] {
+                animation: ${pulseHover} 0.3s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+            }
+        `}
     `,
     Wrapper: styled.div`
         transition: 0.5s all ease-out;
@@ -337,7 +382,7 @@ const TC = {
         transform-origin: top left;
 
         font-size: 1.5vw;
-        font-family: ${Colors.fontFamilyApple};
+        font-family: var(--ld-demo-font, ${Colors.fontFamilyApple});
         //width: 29vw;
         width: 100%;
         height: auto;
@@ -412,18 +457,6 @@ const TC = {
 
 
     `,
-    HeaderWrapper: styled.div`
-        cursor: ${({isMovable}) => isMovable ? 'move' : 'auto'};
-
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        width: 100%;
-        height: ${(props) => props.isActive ? '85px' : '34px'};
-        padding: 20px;
-        position: relative;
-
-    `,
     EmptyHeader: styled.div`
         width: 100%;
         padding-top: ${({addPadding}) => addPadding ? 20 : 0}px;
@@ -449,77 +482,63 @@ const TC = {
             fill: #f9f9f9;
         }
     `,
-    ProfileImageWrapper: styled.span`
-        width: 48px;
-        height: 48px;
-        border: 1px solid ${({themeBackgroundColor}) => themeBackgroundColor};
-        border-radius: 50%;
-
-        position: relative;
-
-
-
-    `,
-    ProfileImage: styled.img`
-
-
-        width: 4.4vw;
-        height: 4.4vw;
-        //border: 1px solid #1070ff;
-        border-radius: 50%;
-
-        box-shadow: rgb(255 255 255) 0px 0px 0px 3px;
-        border: 3px solid #fff;
-        outline: 2px solid #1070ff;
-
-        @media (max-width: 1040px) {
-            width: 51px;
-            height: 51px;
-        }
-
-        @media (max-width: 540px) {
-            width: 51px;
-            height: 51px;
-        }
-
-
-        @media (min-width: 1040px) {
-            width: 58px;
-            height: 58px;
-        }
-    `,
-    ProfileName: styled.p`
-        color: ${({themeTextColor}) => themeTextColor};
-        display: inline-block;
-        margin: 0px;
-        font-family: monospace;
-        font-weight: 550;
-        font-size: 0.85rem;
-
-
-
-    `,
-    ProfileText: styled.p`
-        margin: 0px 0px 0px 16px;
-
-        font-family: monospace;
-        font-weight: 550;
-        font-size: 0.75rem;
-
-
-    `,
 
     LeftButtonsWrapper: styled.span`
 
     `,
     RightButtonsWrapper: styled.span`
-
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 5px;
+        flex-shrink: 0;
+        white-space: nowrap;
+    `,
+    NextArrow: styled.button`
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        width: 3em;
+        height: 2.25em;
+        padding: 0;
+        border: 0;
+        border-radius: 0.5em;
+        cursor: pointer;
+        flex-shrink: 0;
+        overflow: hidden;
+        background: #fff;
+        color: #18181b;
+        will-change: width;
+        animation: ${animScale} 1s cubic-bezier(0.6, 0.6, 0, 1) infinite alternate;
+    `,
+    NextArrowTrack: styled.div`
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        width: 100%;
+        height: 100%;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    `,
+    NextArrowSlide: styled.div`
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        flex-shrink: 0;
+        opacity: ${({ $hidden }) => ($hidden ? 0 : 1)};
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     `,
     TooltipFooter: styled.div`
         align-items: center;
         display: flex;
-        justify-content: space-between;
+        flex-wrap: nowrap;
+        justify-content: ${({ $nextArrow }) => $nextArrow ? 'flex-start' : 'flex-end'};
         margin-top: 5px;
+        width: max-content;
+        min-width: 100%;
+        box-sizing: border-box;
 
         padding: 5px 15px 15px 15px;
 
@@ -530,9 +549,10 @@ const TC = {
             line-height: 1;
             padding: 8px;
             appearance: none;
-            margin-left: auto;
-            margin-right: 5px;
+            margin: 0;
             font-weight: 600;
+            flex-shrink: 0;
+            white-space: nowrap;
 
 
         }
@@ -571,9 +591,10 @@ const TC = {
         line-height: 1;
         padding: 8px;
         appearance: none;
-        margin-left: auto;
-        margin-right: 5px;
+        margin: 0;
         font-weight: 600;
+        flex-shrink: 0;
+        white-space: nowrap;
 
 
     `,
@@ -595,6 +616,7 @@ const TC = {
         appearance: none;
         //margin-right: 15px;
         font-weight: 600;
+        font-family: var(--ld-demo-font, inherit);
 
     `,
     FormattedMessage: styled.p`
@@ -617,7 +639,7 @@ const TC = {
 
         && p {
             font-weight: 500;
-            font-family: ${Colors.fontFamilyRobotoMono};
+            font-family: var(--ld-demo-font, ${Colors.fontFamilyRobotoMono});
             overflow-wrap: break-word;
             margin: 0px;
             

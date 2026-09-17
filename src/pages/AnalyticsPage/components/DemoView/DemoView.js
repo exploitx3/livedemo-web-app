@@ -185,7 +185,7 @@ const S = {
     padding: 16px;
     height: 126px;
     border-radius: 16px;
-    background-color: white;
+    background-color: ${mainColors.surfaceColor};
     box-shadow: 0 0 0 1px rgba(63, 70, 75, 0.1), 0 1px 3px rgba(63, 70, 75, 0.1);
     transition: background-color 0.2s;
     position: relative;
@@ -195,14 +195,16 @@ const S = {
     justify-content: space-between;
 
     &:hover {
-      background-color: #fafafa;
+      /* --ld-border is the lightest neutral in the dark palettes, so it reads as
+         a lift above --ld-surface instead of a white flash. */
+      background-color: var(--ld-border, #fafafa);
     }
   `,
   InfoIcon: styled.div`
     position: absolute;
     top: 8px;
     right: 8px;
-    color: rgb(82, 82, 91);
+    color: var(--ld-text-muted, rgb(82, 82, 91));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -219,27 +221,27 @@ const S = {
     margin-bottom: 8px;
   `,
   IconWrapper: styled.div`
-    color: #3f3f46;
+    color: var(--ld-text-muted, #3f3f46);
     display: flex;
     align-items: center;
     justify-content: center;
 
     .metric-card:hover & {
-      color: #27272a;
+      color: var(--ld-text, #27272a);
     }
   `,
   MetricTitle: styled.div`
     flex: 1;
-    color: #52525b;
+    color: var(--ld-text-muted, #52525b);
     font-weight: 500;
     font-size: 14px;
 
     .metric-card:hover & {
-      color: #27272a;
+      color: var(--ld-text, #27272a);
     }
   `,
   MetricValue: styled.div`
-    color: #111827;
+    color: ${mainColors.primaryText};
     font-weight: 500;
     font-size: 24px;
     line-height: 32px;

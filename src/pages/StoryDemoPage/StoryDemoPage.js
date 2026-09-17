@@ -29,7 +29,7 @@ import {connect} from 'react-redux'
 import {updateCurrentSelectedWorkspace} from '../../actions/workspacesActions'
 import {refreshToken} from '../../actions/authActions'
 import {getWorkspaceEncryptionKey} from '../../actions/secureStorageActions'
-import {getStoryDemo, updateStoryDemo} from '../../actions/storyDemoActions'
+import {getStoryDemo, updateStoryDemo, undoStoryDemo, redoStoryDemo, getStoryHistoryStatus} from '../../actions/storyDemoActions'
 import * as ENV from '../../config'
 import Toolbar from './components/Toolbar/Toolbar'
 import Library from './components/Library/Library'
@@ -1533,6 +1533,37 @@ const StoryDemoPage = ({
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  // Version history: Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y = redo.
+  // History lives server-side; these just POST and the story reloads after.
+  useEffect(() => {
+
+    const onHistoryKeyDown = (e) => {
+      const key = (e.key || '').toLowerCase()
+      const mod = e.ctrlKey || e.metaKey // metaKey = macOS Cmd
+      const isUndo = mod && !e.shiftKey && key === 'z'
+      const isRedo = mod && ((e.shiftKey && key === 'z') || key === 'y')
+      if (!isUndo && !isRedo) return
+
+      // Native text undo belongs to text fields (rich-text step editor, name inputs)
+      const t = e.target
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+
+      e.preventDefault()
+      if (isUndo) {
+        actions.undoStoryDemo(workspaceIdFromURL, storyDemoIdFromUrl, authData.token)
+      } else {
+        actions.redoStoryDemo(workspaceIdFromURL, storyDemoIdFromUrl, authData.token)
+      }
+    }
+
+    window.addEventListener('keydown', onHistoryKeyDown)
+
+    // Initial counts so canUndo/canRedo are right before the first keypress
+    actions.getStoryHistoryStatus(workspaceIdFromURL, storyDemoIdFromUrl, authData.token)
+
+    return () => window.removeEventListener('keydown', onHistoryKeyDown)
+  }, [workspaceIdFromURL, storyDemoIdFromUrl, authData.token])
+
   const [isAIEnhanceOpen, setIsAIEnhanceOpen] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
 
@@ -1783,6 +1814,73 @@ const StoryDemoPage = ({
         }
 
 
+      }
+
+
+      if (event.data.type && event.data.type === 'pointer_tooltip_set') {
+
+        let isPatchTransition = event.data.transitionId ? true : false
+
+        if (isPatchTransition) {
+          patchTransition({
+              pointer: {
+                tooltipX: event.data.tooltipX,
+                tooltipY: event.data.tooltipY,
+              }
+            },
+            workspaceIdFromURL,
+            storyDemoIdFromUrl,
+            event.data.screenId,
+            event.data.transitionId,
+            authData.token
+          )
+            .then((res) => {
+              let newTransition = res.data
+              let newStoryDemo = JSON.parse(JSON.stringify(storyDemoRef.current))
+
+              let foundTransition = newStoryDemo.screens.find(scr => scr._id === event.data.screenId).customTransitions.find(
+                (transition) => transition._id === event.data.transitionId
+              )
+
+              if (foundTransition) {
+                foundTransition.pointer = foundTransition.pointer || {}
+                foundTransition.pointer.tooltipX = event.data.tooltipX
+                foundTransition.pointer.tooltipY = event.data.tooltipY
+                setStoryDemo(newStoryDemo)
+              }
+            })
+        } else {
+          patchStep({
+              view: {
+                pointer: {
+                  tooltipX: event.data.tooltipX,
+                  tooltipY: event.data.tooltipY,
+                }
+              }
+            },
+            workspaceIdFromURL,
+            storyDemoIdFromUrl,
+            event.data.screenId,
+            event.data.stepId,
+            authData.token
+          )
+            .then((res) => {
+              let newStep = res.data
+              let newStoryDemo = JSON.parse(JSON.stringify(storyDemoRef.current))
+
+              let foundStep = newStoryDemo.screens.find(scr => scr._id === event.data.screenId).steps.find(
+                (step) => step._id === event.data.stepId
+              )
+
+              if (foundStep) {
+                foundStep.view = foundStep.view || {}
+                foundStep.view.pointer = foundStep.view.pointer || {}
+                foundStep.view.pointer.tooltipX = event.data.tooltipX
+                foundStep.view.pointer.tooltipY = event.data.tooltipY
+                setStoryDemo(newStoryDemo)
+              }
+            })
+        }
       }
 
 
@@ -2138,7 +2236,7 @@ const StoryDemoPage = ({
           width: '100%',
           height: '100%',
           // padding: '0 24px 24px 24px',
-          background: '#fff'
+          background: Colors.App.sidebarColor
         }}>
           <Resizable
             enable={{
@@ -2170,7 +2268,7 @@ const StoryDemoPage = ({
                 width: '100%',
                 height: '100%',
                 // padding: '0 24px 24px 24px',
-                background: '#fff'
+                background: Colors.App.sidebarColor
               }}
             >
 
@@ -2302,7 +2400,7 @@ const StoryDemoPage = ({
               minWidth: '100%',
               position: 'relative',
               ...(outerBg.mode === 'wallpaper'
-                ? { background: 'transparent' }
+                ? { background: 'var(--ld-background, transparent)' }
                 : { background: outerBg.css })
             }} id={'info-column-right'} xs={18} lg={18}>
               {outerBg.mode === 'wallpaper' ? (() => {
@@ -2421,7 +2519,7 @@ const StoryDemoPage = ({
 
                             textStyles={{
                               fontSize: '1.1em',
-                              color: '#111',
+                              color: Colors.primaryText,
                             }}
                             buttonStyles={{
                               boxShadow: 'none',
@@ -2587,7 +2685,7 @@ const StoryDemoPage = ({
 const S = {
   Content: styled(Content)`
     && {
-      background: white;
+      background: ${Colors.App.sidebarColor};
 
       overflow: hidden;
       //overflow-x: hidden;
@@ -2613,12 +2711,12 @@ const S = {
     &&::-webkit-scrollbar-track {
       -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
       border-radius: 10px;
-      background-color: #fff;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar {
       width: 2px;
-      background-color: #fff;
+      background-color: var(--ld-background, #fff);
     }
 
     &&::-webkit-scrollbar-thumb {
@@ -2844,7 +2942,7 @@ const S = {
     line-height: 50px;
     margin: 0px 15px;
     font-size: 1.1em;
-    color: #111;
+    color: var(--ld-text, #111);
     padding: 0px 5px;
 
     display: flex;
@@ -2856,7 +2954,7 @@ const S = {
 
 
     &:hover {
-      background: #F3F4F6;
+      background: var(--ld-surface, #F3F4F6);
     }
   `,
   ToolbarIcon: styled.span`
@@ -2926,7 +3024,7 @@ const S = {
     font-family: ${Colors.fontFamily};
   `,
   Omnibox: styled.div`
-    background: white;
+    background: var(--ld-surface, white);
     width: 100%;
     height: 46px;
     justify-content: flex-start;
@@ -2974,8 +3072,8 @@ const S = {
   AdressBarWrapper: styled.div`
     flex-grow: 2;
     height: 30px;
-    background: white;
-    color: #111;
+    background: var(--ld-surface, white);
+    color: var(--ld-text, #111);
     border-radius: 25px;
     margin-left: 10px;
     text-overflow: ellipsis;
@@ -2988,7 +3086,7 @@ const S = {
     align-items: center;
 
     border: 3px solid #f9f9f9;
-    background: white;
+    background: var(--ld-surface, white);
 
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -3010,8 +3108,8 @@ const S = {
       line-height: 25px;
       font-size: 12px;
 
-      background: white;
-      color: #111;
+      background: var(--ld-surface, white);
+      color: var(--ld-text, #111);
 
       -webkit-user-select: none;
       -moz-user-select: none;
@@ -3022,7 +3120,7 @@ const S = {
       border-top: none;
       border-bottom: none;
       border-right: none;
-      background: white;
+      background: var(--ld-surface, white);
       border-bottom-left-radius: 0px;
       border-top-left-radius: 0px;
 
@@ -3163,7 +3261,10 @@ function mapDispatchToProps(dispatch) {
       getWorkspaceEncryptionKey,
       refreshToken,
       getStoryDemo,
-      updateStoryDemo
+      updateStoryDemo,
+      undoStoryDemo,
+      redoStoryDemo,
+      getStoryHistoryStatus
     }, dispatch)
   }
 }

@@ -44,6 +44,7 @@ import SessionsView from './components/SessionsView/SessionsView'
 import LeadsView from './components/LeadsView/LeadsView'
 import {CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
 import DemosView from "./components/DemosView/DemosView";
+import AgentsView from "./components/AgentsView/AgentsView";
 
 const {TabPane} = Tabs
 
@@ -82,6 +83,7 @@ const VIEW_TYPES_FORMAT = {
 const TAB_KEYS = {
   sessions: 'sessions',
   leads: 'leads',
+  agents: 'agents',
 }
 
 const AnalyticsPage = function ({currentSelectedWorkspace, authData}) {
@@ -422,7 +424,7 @@ debugger
         </S.Banner>
       )}
 
-        <div id={'dashboard-container'} style={{background: 'white'}}>
+        <div id={'dashboard-container'} style={{background: mainColors.App.sidebarColor}}>
           <S.WorkspacesCol xs={24} lg={24}>
             <S.ViewsRow>
               <S.ViewsTitle>Views</S.ViewsTitle>
@@ -462,6 +464,10 @@ debugger
                     }
                     key={TAB_KEYS.leads}
                     disabled={!advanceInsights}
+                  ></TabPane>
+                  <TabPane
+                    tab={'🤖 AI Agents'}
+                    key={TAB_KEYS.agents}
                   ></TabPane>
                 </S.Tabs>
               </S.TabsContainer>
@@ -573,6 +579,16 @@ debugger
                         leadsData={leadsData}
                         tableLeads={tableLeads}
                         leadsLines={leadsLines}
+                        currentViewType={currentViewType}
+                      />
+                    </TabPane>
+                    <TabPane
+                      tab={'AI Agents'}
+                      key={TAB_KEYS.agents}
+                    >
+                      <AgentsView
+                        workspaceId={currentSelectedWorkspace && currentSelectedWorkspace._id}
+                        authToken={authData.token}
                         currentViewType={currentViewType}
                       />
                     </TabPane>
@@ -755,20 +771,20 @@ const S = {
   `,
   ChartWrapper: styled.div`
     padding: 20px;
-    border: 2px solid #F3F4F6;
+    border: 2px solid var(--ld-surface, #F3F4F6);
     border-radius: 8px;
     margin-bottom: 20px;
 
   `,
   SessionsListWrapper: styled.div`
     padding: 20px;
-    border: 2px solid #F3F4F6;
+    border: 2px solid var(--ld-surface, #F3F4F6);
     border-radius: 8px;
   `,
   SessionsList__Title: styled.p`
     margin: 0px 0px 20px 0px;
     font-size: 1.3em;
-    color: #111;
+    color: ${mainColors.primaryText};
     font-family: ${mainColors.fontFamily};
   `,
   ViewsRow: styled.div`
@@ -782,13 +798,13 @@ const S = {
   ViewsTitle: styled.p`
     margin: 0px 15px 0px 0px;
     font-size: 1.3em;
-    color: #111;
+    color: ${mainColors.primaryText};
     font-family: ${mainColors.fontFamily};
 
   `,
   Content: styled(Content)`
     && {
-      background: white;
+      background: ${mainColors.App.sidebarColor};
       // padding: 16px;
       overflow: scroll;
       overflow-x: hidden;
@@ -815,7 +831,7 @@ const S = {
     display: block;
     height: 100%;
     width: 100%;
-    background: white;
+    background: ${mainColors.App.sidebarColor};
   `,
   TutorialButton: styled(Button)`
     && {

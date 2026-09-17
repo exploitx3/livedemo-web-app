@@ -11,6 +11,7 @@ import 'tippy.js/dist/tippy.css' // optional
 import 'tippy.js/animations/shift-away.css'
 import Tippy from '@tippyjs/react'
 import { getPopupButtonColors, getStoryTheme } from "../../../../../../injectScript/helpers.js";
+import ButtonEffects from "../../../../../../constants/ButtonEffects.js";
 
 const { Option } = Select
 
@@ -34,6 +35,11 @@ const PopupButton = ({ popupButton, setPopupButton, deleteButton, storyDemo }) =
 
   const [buttonTextColor, setButtonTextColor] = useState(initial.textColor)
   const [buttonBackgroundColor, setButtonBackgroundColor] = useState(initial.backgroundColor)
+  const [buttonEffect, setButtonEffect] = useState(
+    (popupButton && popupButton.buttonEffect && ButtonEffects[popupButton.buttonEffect])
+      ? popupButton.buttonEffect
+      : ButtonEffects.none
+  )
 
   let [isViewOpen, setIsViewOpen] = useState(false)
 
@@ -52,8 +58,9 @@ const PopupButton = ({ popupButton, setPopupButton, deleteButton, storyDemo }) =
       gotoWebsite: gotoWebsite,
       textColor: buttonTextColor,
       backgroundColor: buttonBackgroundColor,
+      buttonEffect,
     })
-  }, [text, currentSelectedScreen, gotoType, gotoWebsite, buttonTextColor, buttonBackgroundColor])
+  }, [text, currentSelectedScreen, gotoType, gotoWebsite, buttonTextColor, buttonBackgroundColor, buttonEffect])
 
   function getWebsiteInputComp() {
     return <S.WebsiteInput
@@ -287,6 +294,35 @@ const PopupButton = ({ popupButton, setPopupButton, deleteButton, storyDemo }) =
                 getWebsiteInputComp(gotoWebsite, setGotoWebsite)
               )}
           </S.SideComponent>
+          <S.SideComponent>
+            <S.Text>Effect</S.Text>
+            <S.Select
+              dropdownStyle={{
+                background: Colors.App.sidebarColor,
+                border: `1px solid ${Colors.primaryColor}`
+              }}
+              value={buttonEffect}
+              style={{
+                maxWidth: 115,
+                width: 115
+              }}
+              onChange={(newEffect) => {
+                setButtonEffect(newEffect)
+              }}>
+              {Object.keys(ButtonEffects).map((effect, index, array) => {
+                let isLast = index === array.length - 1
+                return <Option
+                  style={{
+                    background: 'none',
+                    color: Colors.primaryColor,
+                    borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
+                  }}
+                  key={effect}
+                  value={effect}>
+                  {effect}</Option>
+              })}
+            </S.Select>
+          </S.SideComponent>
         </span>
       )}
 
@@ -368,8 +404,8 @@ const S = {
 
   Tippy: styled(Tippy)`
 
-    background: #FFF !important;
-    color: #111;
+    background: var(--ld-surface, #FFF) !important;
+    color: var(--ld-text, #111);
     //font-size: 1rem;
     //padding: 5px 10px;
     max-width: 250px;

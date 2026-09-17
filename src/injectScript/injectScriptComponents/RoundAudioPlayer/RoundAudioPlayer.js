@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
-import Colors from '../../../constants/mainColors.js'
+import Colors, { primaryAlpha } from '../../../constants/mainColors.js'
 import ENV from '../../config.json'
 import { Circle } from 'rc-progress';
 import { PauseOutlined } from '@ant-design/icons'
@@ -9,10 +9,12 @@ const RoundAudioPlayer = (props) => {
     let {
         stepAudio,
         autoPlay,
+        isAudioEnabled,
         isAudioPlaying,
         setIsAudioPlaying,
         setAudioHasPlayed,
-        setAudioHasStarted
+        setAudioHasStarted,
+        onAudioProgress,
     } = props
 
     let [percent, setPercent] = useState(1)
@@ -22,21 +24,36 @@ const RoundAudioPlayer = (props) => {
 
     let _videoTimeChangeAttached = useRef(false)
 
+    function tryPlay() {
+        const audio = audioInternalRf.current
+        if (!audio) return
+
+        audio.play().then(() => {
+            setIsAudioPlaying(true)
+        }).catch((err) => {
+            if (err.name === 'AbortError') return
+            console.log(err)
+        })
+    }
+
     useEffect(() => {
         if (audioInternalRf.current) {
             attachAudioTimeChangeHandler(audioInternalRf.current)
 
             if (autoPlay) {
-                audioInternalRf.current.play().then(() => {
-                    setIsAudioPlaying(true)
-                }).catch((err) => {
-                    if (err.name === 'AbortError') return
-                    console.log(err)
-                })
+                tryPlay()
             }
 
         }
-    }, [audioInternalRf, audioInternalRf.current, stepAudio])
+    }, [audioInternalRf, audioInternalRf.current, stepAudio, autoPlay])
+
+    // Browser blocks play() until a gesture; first click sets isAudioEnabled
+    useEffect(() => {
+        if (!autoPlay || !isAudioEnabled) return
+        const audio = audioInternalRf.current
+        if (!audio || !audio.paused) return
+        tryPlay()
+    }, [autoPlay, isAudioEnabled])
 
     useEffect(() => {
 
@@ -57,6 +74,7 @@ const RoundAudioPlayer = (props) => {
             audio.addEventListener('ended', () => {
                 setIsAudioPlaying(false)
                 setAudioHasPlayed(true)
+                if (onAudioProgress) onAudioProgress(100)
 
                 setTimeout(() => {
                     setPercent(25)
@@ -82,6 +100,8 @@ const RoundAudioPlayer = (props) => {
         }
 
         let calculatedPercentage = (audioInternalRf.current.currentTime / event.currentTarget.duration) * 100
+
+        if (onAudioProgress) onAudioProgress(calculatedPercentage)
 
         if (calculatedPercentage !== 100) {
 
@@ -179,8 +199,13 @@ const S = {
     PlayButton: styled('svg')`
       width: 100%;
       height: 100%;
+      color: var(--ld-text, #111);
     `,
     PauseButton: styled(PauseOutlined)`
+      && {
+        color: var(--ld-text, #111);
+      }
+
       && svg {
         width: 100%;
         height: 100%;
@@ -205,20 +230,20 @@ const S = {
       top: 0;
 
       && .rc-progress-circle-path {
-        stroke: ${Colors.primaryColor}BB !important;
+        stroke: ${primaryAlpha(73)} !important;
       }
 
       && .rc-progress-circle-trail {
-        stroke: #f1f3fe !important;
+        stroke: var(--ld-border, #f1f3fe) !important;
         stroke-width: 6px;
       }
 
       //absolute inset-0 flex items-center justify-center p-0.5
     `,
     Container: styled.div`
-      background: white;
+      background: var(--ld-surface, white);
       border-radius: 50%;
-      box-shadow: rgba(0,0,0,0.16) 0px 1px 4px, rgb(255 255 255) 0px 0px 0px 6px;
+      box-shadow: rgba(0,0,0,0.16) 0px 1px 4px, var(--ld-surface, rgb(255 255 255)) 0px 0px 0px 6px;
       display: flex;
       justify-content: center;
       align-items: center;

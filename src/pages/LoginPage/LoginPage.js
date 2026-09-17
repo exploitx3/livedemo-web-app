@@ -563,7 +563,7 @@ const S = {
     align-items: center;
   `,
   MainWrapper: styled.div`
-    background: white;
+    background: ${Colors.App.sidebarColor};
     height: 100%;
     position: relative;
     overflow: hidden;
@@ -582,7 +582,7 @@ const S = {
     left: 0;
     height: 100%;
     width: 58%;
-    background: #fff;
+    background: ${Colors.App.sidebarColor};
     z-index: 1;
 
     @media (max-width: 1024px) {
@@ -603,7 +603,7 @@ const S = {
   Title: styled.div`
     font-size: 52px;
     line-height: 1.2;
-    color: #111;
+    color: ${Colors.primaryText};
     font-weight: 700;
     margin-top: 60px;
 
@@ -648,7 +648,7 @@ const S = {
   BenefitText: styled.div`
     font-size: 18px;
     line-height: 1.5;
-    color: #374151;
+    color: ${Colors.secondaryText};
     font-weight: 500;
   `,
   Splitter: styled.div`
@@ -725,7 +725,7 @@ const S = {
     vertical-align: middle;
     display: flex;
     flex-direction: column;
-    background: #fff;
+    background: ${Colors.surfaceColor};
     text-align: left;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
     border-radius: 16px;

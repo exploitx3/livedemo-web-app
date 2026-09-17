@@ -281,6 +281,9 @@ function WalkthroughComponent({
       let stickyIdx = stickyId ? newSteps.findIndex((s) => s && s._id === stickyId) : -1
       if (stickyIdx >= 0) {
         currentStepIndexRef.current = stickyIdx
+        if (stickyIdx !== currentStepIndexState) {
+          setCurrentStepIndexState(stickyIdx)
+        }
       }
 
       let currentStep = newSteps[currentStepIndexRef.current]
@@ -351,10 +354,13 @@ function WalkthroughComponent({
           } else {
             setStepAudio(null)
           }
-          stepsInternalRef.current[currentStepIndexState] = stepFromDemo
+          stepsInternalRef.current[currentStepIndexRef.current] = stepFromDemo
 
           setupStepRegions(stepFromDemo, screenFromDemo._id)
           setStepIsOverlayEnabled(stepFromDemo.view && stepFromDemo.view.popup && stepFromDemo.view.popup.showOverlay || false)
+          if (stepRef.current && stepRef.current._id === stepFromDemo._id) {
+            setStep(stepFromDemo)
+          }
         }
 
 
@@ -400,6 +406,8 @@ function WalkthroughComponent({
   const themeTextColor = (storyDemoInternalRef.current.custom && storyDemoInternalRef.current.custom.theme && storyDemoInternalRef.current.custom.theme.textColor) || '#FFFFFF'
   const themeButtonBackgroundColor = (storyDemoInternalRef.current.custom && storyDemoInternalRef.current.custom.theme && storyDemoInternalRef.current.custom.theme.buttonBackgroundColor) || Colors.primaryColor
   const themeButtonTextColor = (storyDemoInternalRef.current.custom && storyDemoInternalRef.current.custom.theme && storyDemoInternalRef.current.custom.theme.buttonTextColor) || '#FFFFFF'
+  const themeFontFamily = (storyDemoState.custom && storyDemoState.custom.theme && storyDemoState.custom.theme.fontFamily) || ''
+  const themeShowTooltipArrow = storyDemoState.custom?.theme?.showTooltipArrow !== false
   const themeWatermarkConfigIsActive = (storyDemoInternalRef.current.custom &&
     storyDemoInternalRef.current.custom.theme &&
     storyDemoInternalRef.current.custom.theme.watermarkConfig &&
@@ -416,6 +424,25 @@ function WalkthroughComponent({
     storyDemoInternalRef.current.custom.theme &&
     storyDemoInternalRef.current.custom.theme.watermarkConfig &&
     storyDemoInternalRef.current.custom.theme.watermarkConfig.url) || 'https://livedemo.ai'
+
+  useEffect(() => {
+    if (!/^[A-Za-z0-9 ]{1,50}$/.test(themeFontFamily)) {
+      document.documentElement.style.removeProperty('--ld-demo-font')
+
+      return
+    }
+
+    document.documentElement.style.setProperty('--ld-demo-font', `'${themeFontFamily}', sans-serif`)
+
+    const linkId = `ld-font-${themeFontFamily}`
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link')
+      link.id = linkId
+      link.rel = 'stylesheet'
+      link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(themeFontFamily).replace(/%20/g, '+')}:wght@400;500;600;700&display=swap`
+      document.head.appendChild(link)
+    }
+  }, [themeFontFamily])
 
   const confettiOnLastStep = (storyDemoInternalRef.current.custom && storyDemoInternalRef.current.custom.misc && storyDemoInternalRef.current.custom.misc.confettiOnLastStep) || false
   const isOmniBarDisabled = (storyDemoInternalRef.current.custom && storyDemoInternalRef.current.custom.misc && storyDemoInternalRef.current.custom.misc.isOmniBarDisabled) || false
@@ -661,6 +688,7 @@ function WalkthroughComponent({
     664
 
   let [editorShowRegions, setEditorShowRegions] = useState(true)
+  let [editorPickMode, setEditorPickMode] = useState(false)
 
   const shownImageId = useRef('')
 
@@ -712,6 +740,8 @@ function WalkthroughComponent({
 
   const [stepAudio, setStepAudio] = useState(null)
 
+  const [isStepScreenReady, setIsStepScreenReady] = useState(false)
+
   const audioHasPlayedRef = useRef(false)
   const [audioHasPlayed, _setAudioHasPlayed] = useState(false)
 
@@ -730,6 +760,11 @@ function WalkthroughComponent({
 
   const [isNarrativeAudioPlaying, setIsNarrativeAudioPlaying] = useState(false)
   const [isBackgroundMusicPlaying, setIsBackgroundMusicPlaying] = useState(false)
+  const [audioProgress, setAudioProgress] = useState(0)
+
+  useEffect(() => {
+    setAudioProgress(0)
+  }, [stepAudio && stepAudio._id])
 
   function playBgMusic() {
     if (!bgMusicRef.current) return
@@ -754,6 +789,25 @@ function WalkthroughComponent({
     bgMusicRef.current.pause()
     setIsBackgroundMusicPlaying(false)
   }
+
+  function unlockAudioOnFirstInteract() {
+    if (isInEditorRef.current || hasAutoStartedAudioRef.current) return
+    hasAutoStartedAudioRef.current = true
+    setIsAudioEnabled(true)
+    playBgMusic()
+  }
+
+  useEffect(() => {
+    if (isInEditor) return undefined
+
+    const onFirstInteract = () => unlockAudioOnFirstInteract()
+    document.addEventListener('pointerdown', onFirstInteract)
+    document.addEventListener('keydown', onFirstInteract)
+    return () => {
+      document.removeEventListener('pointerdown', onFirstInteract)
+      document.removeEventListener('keydown', onFirstInteract)
+    }
+  }, [isInEditor])
 
   useEffect(() => {
     if (!isAudioEnabled) {
@@ -1107,10 +1161,9 @@ function WalkthroughComponent({
     document.addEventListener('webkitfullscreenchange', exitHandler, false);
 
     function exitHandler() {
-      if (!document.fullscreenElement && !document.webkitIsFullScreen && !document.mozFullScreen && !document.msFullscreenElement) {
-        setIsFullScreen(false)
-        refreshScaleAfterLayoutChange()
-      }
+      const inFs = !!(document.fullscreenElement || document.webkitIsFullScreen || document.mozFullScreen || document.msFullscreenElement)
+      setIsFullScreen(inFs)
+      refreshScaleAfterLayoutChange()
     }
 
 
@@ -1269,6 +1322,29 @@ function WalkthroughComponent({
         changeStep(newChangeStepIndex, newSteps)
       }
 
+      if (event.data && event.data.type === 'reorder_steps') {
+        let newDemo = JSON.parse(JSON.stringify(storyDemoInternalRef.current))
+        let screen = newDemo.screens && newDemo.screens.find((scr) => scr._id === event.data.screenId)
+
+        if (screen) {
+          screen.steps = event.data.steps
+        }
+
+        storyDemoInternalRef.current = newDemo
+        let finalSteps = deriveRenderSteps(newDemo)
+        let currentId = stepRef.current && stepRef.current._id
+        let newIdx = currentId
+          ? finalSteps.findIndex((s) => s && s._id === currentId)
+          : currentStepIndexRef.current
+
+        if (newIdx < 0) {
+          newIdx = Math.min(currentStepIndexRef.current, finalSteps.length - 1)
+        }
+
+        setStepsInternal(finalSteps)
+        changeStep(newIdx, finalSteps)
+      }
+
 
       if (event.data && event.data.type === 'changeStep') {
 
@@ -1313,6 +1389,7 @@ function WalkthroughComponent({
       if (event.data && event.data.type === 'editor_show_regions') {
 
         setEditorShowRegions(event.data.editorShowRegions)
+        setEditorPickMode(!!event.data.editorPickMode)
 
 
       }
@@ -1563,6 +1640,10 @@ function WalkthroughComponent({
     } else {
       setStepAudio(null)
     }
+
+    // Voice-over must not start over a blank/loading screen — released once the
+    // screen for this step is shown (end of this function).
+    setIsStepScreenReady(false)
 
     const video = videoRef.current
     const isLastStep = currentStepIndex.current === steps.length - 1
@@ -1950,6 +2031,8 @@ function WalkthroughComponent({
       // setupPointerTransitions(window.config.TRANSITIONS[screen._id])
     }
 
+    setIsStepScreenReady(true)
+
     setCurrentStepIndexState(currentStepIndex.current)
     setStep(stepsInternalRef.current[currentStepIndex.current])
 
@@ -1958,6 +2041,9 @@ function WalkthroughComponent({
   }
 
   function setupPointerStep(step) {
+    if (isInEditorRef.current) {
+      return
+    }
 
     let clickElement = window.document.getElementById(step._id)
 
@@ -1973,6 +2059,10 @@ function WalkthroughComponent({
   }
 
   function setupPointerTransitions(screenTransitions = []) {
+    if (isInEditorRef.current) {
+      return
+    }
+
     let pointerTransitions = screenTransitions.filter(transition => transition.type === ScreenTransitionTypes.POINTER)
     if (!pointerTransitions) {
       return
@@ -2230,7 +2320,8 @@ function WalkthroughComponent({
   function getStepRegions(step, scalePercentageX, scalePercentageY, screenId) {
 
     let stepRegions = []
-    if (step && step.view && step.view.viewType === 'pointer' && step.view.pointer && step.view.pointer.selectorLocation) {
+    if (step && step.view && step.view.viewType === 'pointer' && step.view.pointer
+      && step.view.pointer.targetMode !== 'none' && step.view.pointer.selectorLocation) {
 
       stepRegions = [{
         x: (step.view.pointer.selectorLocation.positionX) * scalePercentageX,
@@ -2268,7 +2359,8 @@ function WalkthroughComponent({
     for (let i = 0; i < transitions.length; i++) {
       let transition = transitions[i]
 
-      if (transition && transition.type === 'pointer' && transition.pointer && transition.pointer.selectorLocation) {
+      if (transition && transition.type === 'pointer' && transition.pointer
+        && transition.pointer.targetMode !== 'none' && transition.pointer.selectorLocation) {
 
         transitionRegions.push({
           x: (transition.pointer.selectorLocation.positionX * scalePercentageX),
@@ -2378,6 +2470,13 @@ function WalkthroughComponent({
     let scalePercentageX = Math.min(tabInfoWidth, (innerWidth / tabInfoWidth))
     let scalePercentageY = Math.min(tabInfoHeight, ((innerHeight) / tabInfoHeight))
 
+    if (step.view.pointer?.targetMode === 'none') {
+      setStepRegions([])
+      clearTooltipAnchors(ANCHOR_TYPES.STEP)
+      setStepPointerInfo({ enabled: false })
+      return
+    }
+
     // console.log('scalePercentageX')
     // console.log(scalePercentageX)
     // console.log('scalePercentageY')
@@ -2426,9 +2525,11 @@ function WalkthroughComponent({
 
   function calculateShouldShowRegions(step, currentScreenRef) {
     let hasCustomTransitionPointers = currentScreenRef.current && currentScreenRef.current.customTransitions &&
-      currentScreenRef.current.customTransitions.some(transition => transition.type === ScreenTransitionTypes.POINTER)
+      currentScreenRef.current.customTransitions.some(transition =>
+        transition.type === ScreenTransitionTypes.POINTER && transition.pointer?.targetMode !== 'none')
 
-    let shouldShowRegions = (step && step.view && step.view.viewType === 'pointer') || hasCustomTransitionPointers
+    let shouldShowRegions = (step && step.view && step.view.viewType === 'pointer'
+      && step.view.pointer?.targetMode !== 'none') || hasCustomTransitionPointers
 
     return shouldShowRegions
   }
@@ -2767,6 +2868,7 @@ function WalkthroughComponent({
           themeTextColor={themeTextColor}
           themeButtonBackgroundColor={themeButtonBackgroundColor}
           themeButtonTextColor={themeButtonTextColor}
+          showTooltipArrow={themeShowTooltipArrow}
 
           pointerInfo={transitionPointerInfos[index] ? transitionPointerInfos[index] : {}}
           tooltipRef={transitionTooltipRefs.current[index]}
@@ -2848,6 +2950,8 @@ function WalkthroughComponent({
       let TooltipComponentConditional = isInEditor ? TooltipComponentEditor : TooltipComponent
 
       return <TooltipComponentConditional
+        key="pointer-tooltip"
+        prevStep={prevStep}
         tooltipRef={stepTooltipRef}
         isMobile={isMobile}
         tooltipX={stepTooltipX}
@@ -2879,6 +2983,7 @@ function WalkthroughComponent({
         themeTextColor={themeTextColor}
         themeButtonBackgroundColor={themeButtonBackgroundColor}
         themeButtonTextColor={themeButtonTextColor}
+        showTooltipArrow={themeShowTooltipArrow}
         tooltipWrapperRef={stepsWrapperRef}
         forceUpdateVar={updateStateVar}
 
@@ -2890,11 +2995,14 @@ function WalkthroughComponent({
         isInEditor={isInEditor}
         isScaled={isScaled}
         scaleValuesRef={scaleValuesRef}
+        isOmniBarDisabled={isOmniBarDisabled}
+        screenId={step.screenId}
       />
     } else if (step.view.viewType === STEP_VIEWS.POPUP) {
 
 
       return <PopupComponenet
+        key={step._id}
         wrapperWidth={innerWidth}
         wrapperHeight={innerHeight}
         isInEditor={isInEditor}
@@ -2921,6 +3029,7 @@ function WalkthroughComponent({
 
           changeStep(screenIndex, stepsInternalRef.current)
         }}
+        audioProgress={!isInEditor && stepAudio ? audioProgress : null}
       />
     } else {
 
@@ -2950,12 +3059,25 @@ function WalkthroughComponent({
     setTimeout(() => {
       if (mainRef.current) {
         mainRefRect.current = mainRef.current.getBoundingClientRect()
+        originalMainRefRect.current = mainRef.current.getBoundingClientRect()
       }
       if (wrapperRef.current) {
         wrapperRefRect.current = wrapperRef.current.getBoundingClientRect()
       }
       forceUpdate()
       scaleMain(1, 0, 0)
+
+      // Reposition pointer anchors after FS / layout size change
+      const currentStep = stepsInternalRef.current[currentStepIndexRef.current]
+      const screenId = currentScreenRef.current && currentScreenRef.current._id
+      if (currentStep && screenId) {
+        setupStepRegions(currentStep, screenId)
+        const transitions = (currentScreenRef.current && Array.isArray(currentScreenRef.current.customTransitions))
+          ? currentScreenRef.current.customTransitions
+          : []
+        setupTransitionRegions(transitions, screenId)
+        setupPointerTransitions(transitions)
+      }
     }, 250)
   }
 
@@ -2977,7 +3099,6 @@ function WalkthroughComponent({
       wrapperElemParent.msRequestFullscreen();
     }
 
-    setIsFullScreen(true)
     refreshScaleAfterLayoutChange()
   }
 
@@ -3204,11 +3325,7 @@ function WalkthroughComponent({
     width={width ? width + 'px' : '100%'}
     height={height ? height + 'px' : '100%'}
     onClick={() => {
-      if (!isInEditorRef.current && !hasAutoStartedAudioRef.current) {
-        hasAutoStartedAudioRef.current = true
-        setIsAudioEnabled(true)
-        playBgMusic()
-      }
+      unlockAudioOnFirstInteract()
     }}
     onMouseUp={() => {
       setIsTooltipDragging(false)
@@ -3288,7 +3405,9 @@ function WalkthroughComponent({
       }}
 
     >
-      <EditText screenId={iframeScreenId} iframeRef={iframeRef} />
+      {isInEditor ? (
+        <EditText screenId={iframeScreenId} iframeRef={iframeRef} isEditor={true} />
+      ) : null}
 
 
       {showSpinner && (
@@ -3378,8 +3497,10 @@ function WalkthroughComponent({
           isOverlayEnabled={stepIsOverlayEnabled}
           overlayBackgroundColor={(step && step.view && step.view.popup && step.view.popup.overlayBackgroundColor) || 'rgba(0,0,0,0.65)'}
           isPopup={step && step.view && step.view.viewType === STEP_VIEWS.POPUP}
+          $isPointer={step && step.view && step.view.viewType === STEP_VIEWS.POINTER}
+          $isHotspot={step && step.view && step.view.viewType === STEP_VIEWS.HOTSPOT}
           $isInEditor={isInEditor}
-          $pickMode={isInEditor && !editorShowRegions}
+          $pickMode={isInEditor && editorPickMode}
         >
 
           {getStepView(storyDemoState, step, prevStep, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled, stepIsOverlayEnabled, isInEditor)}
@@ -3392,7 +3513,7 @@ function WalkthroughComponent({
           ref={navWrapperRef}
           className={'nav-wrapper'}
           $showHotspot={true}
-          $pickMode={isInEditor && !editorShowRegions}>
+          $pickMode={isInEditor && editorPickMode}>
           {getTransitionsView(storyDemoState, hotspotTransitions, pointerTransitions, stepRef.current, memoizedInnerWidth, memoizedInnerHeight, scaleValuesRef, isScaled)}
 
         </WS.NavigationWrapper>
@@ -3426,7 +3547,7 @@ function WalkthroughComponent({
       ) : ''}
       {!isMobile ? watermarkElement : ''}
       {stepAudio ? (
-        <WS.AudioWrapper>
+        <WS.AudioWrapper $isInEditor={isInEditor}>
 
           {isInEditor ? (
             <RoundAudioPlayerEditor
@@ -3454,14 +3575,16 @@ function WalkthroughComponent({
               stepAudio={stepAudio}
               isAudioPlaying={isNarrativeAudioPlaying}
               setIsAudioPlaying={setIsNarrativeAudioPlaying}
-              autoPlay={true}
+              autoPlay={isStepScreenReady}
+              isAudioEnabled={isAudioEnabled}
               setAudioHasPlayed={setAudioHasPlayed}
               setAudioHasStarted={setAudioHasStarted}
+              onAudioProgress={setAudioProgress}
             />
           )
           }
         </WS.AudioWrapper>
-      ) : <WS.AudioWrapper>
+      ) : <WS.AudioWrapper $isInEditor={isInEditor}>
         {isInEditor ? <AddAudio
           workspaceId={workspaceId}
           storyDemoId={storyDemoInternalRef.current && storyDemoInternalRef.current._id}
@@ -3473,8 +3596,6 @@ function WalkthroughComponent({
 
       {isTabsEnabled && !isMobile ? (
         <WS.TabsWrapper
-          $isOverlayEnabled={stepIsOverlayEnabled}
-
           onClick={() => {
           }}>
           <WS.TabsInner>
@@ -3500,7 +3621,7 @@ function WalkthroughComponent({
       ) : ''}
 
       {isMobile ? (
-        <WS.MobileBottomWrapper $isOverlayEnabled={stepIsOverlayEnabled}>
+        <WS.MobileBottomWrapper>
           {watermarkElement}
           <WS.MobileTabsWrapper
             $backgroundColor={themeStepBackgroundColor}
@@ -3521,14 +3642,16 @@ function WalkthroughComponent({
               />
             </WS.MobileTabs__TextArea>
 
-            <WS.MobileTabs__NavBtn
-              onClick={onBack}
-              $dimmed={currentStepIndexRef.current === 0}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24">
-                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7.667-6.333L5 12m6.333 6.333L5 12" vectorEffect="non-scaling-stroke" />
-              </svg>
-            </WS.MobileTabs__NavBtn>
+            {!step?.view?.hideBackButton && (
+              <WS.MobileTabs__NavBtn
+                onClick={onBack}
+                $dimmed={currentStepIndexRef.current === 0}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24">
+                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7.667-6.333L5 12m6.333 6.333L5 12" vectorEffect="non-scaling-stroke" />
+                </svg>
+              </WS.MobileTabs__NavBtn>
+            )}
 
             <WS.MobileTabs__NavBtn onClick={onNext}>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="24" height="24">
@@ -3740,9 +3863,11 @@ const WS = {
       position: absolute;
       left: 0;
       top: 0;
-      z-index: 998;
-      /* Editor: pass clicks through empty area to ZoomSpans/Regions; children stay clickable */
-      pointer-events: ${({ $isInEditor }) => $isInEditor ? 'none' : 'auto'};
+      /* HotspotContent (ring + tooltip) must paint above TabsWrapper (999).
+         Popups stay at 998 so the tabs bar remains clickable over the overlay. */
+      z-index: ${({ $isHotspot }) => $isHotspot ? '1000' : '998'};
+      /* Editor / pointer: pass events through empty area; children stay clickable */
+      pointer-events: ${({ $isInEditor, $isPointer }) => ($isInEditor || $isPointer) ? 'none' : 'auto'};
     }
 
     && > * {
@@ -4370,7 +4495,7 @@ const WS = {
   TabsWrapper: styled.div`
     position: fixed;
     bottom: 0;
-    z-index: 3;
+    z-index: 999;
     width: 100%;
     height: 4vw;
 
@@ -4380,16 +4505,6 @@ const WS = {
 
     transition: 0.3s ease-in-out;
     opacity: 0.8;
-
-    ${({ $isOverlayEnabled }) => {
-      if ($isOverlayEnabled) {
-        return `
-          z-index: 4 !important;
-        `
-      } else {
-        return ''
-      }
-    }}
     &&:hover {
       height: 9vw;
       opacity: 1;
@@ -4491,7 +4606,9 @@ const WS = {
   `,
   AudioWrapper: styled.div`
     position: absolute;
-    z-index: 4;
+      /* In the editor the voiceover control must stay clickable on popup steps,
+         which render StepsWrapper (popup + overlay) at z-index 998. */
+    z-index: ${({ $isInEditor }) => $isInEditor ? '999' : '4'};
     top: 20px;
     right: 20px;
 
@@ -4505,7 +4622,7 @@ const WS = {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    z-index: ${({ $isOverlayEnabled }) => $isOverlayEnabled ? '4' : '3'};
+    z-index: 999;
   `,
   MobileTabsWrapper: styled.div`
     position: relative;
@@ -4520,7 +4637,7 @@ const WS = {
     user-select: none;
     transition: all 0.2s cubic-bezier(0.6, 0.6, 0, 1);
     -webkit-tap-highlight-color: transparent;
-    font-family: Inter, system-ui, sans-serif;
+    font-family: var(--ld-demo-font, Inter, system-ui, sans-serif);
     box-sizing: border-box;
   `,
   MobileTabs__StepCount: styled.div`

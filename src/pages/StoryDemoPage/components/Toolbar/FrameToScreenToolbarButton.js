@@ -88,7 +88,7 @@ const ToolbarButton = styled.div`
   line-height: 50px;
   margin: 0px 15px;
   font-size: 1.1em;
-  color: #111;
+  color: var(--ld-text, #111);
   padding: 0px 5px;
 
   display: flex;
@@ -100,13 +100,13 @@ const ToolbarButton = styled.div`
   cursor: ${({isDisabled}) => (isDisabled ? 'not-allowed' : 'pointer')};
 
   svg, span > i > svg {
-    fill: ${({isDisabled}) => (isDisabled ? '#ccc' : '#111')} !important;
+    fill: ${({isDisabled}) => (isDisabled ? '#ccc' : 'var(--ld-text, #111)')} !important;
   }
 
-  color: ${({isDisabled}) => (isDisabled ? '#ccc' : '#111')};
+  color: ${({isDisabled}) => (isDisabled ? '#ccc' : 'var(--ld-text, #111)')};
 
   &:hover {
-    background: ${({isDisabled}) => (isDisabled ? 'transparent' : '#F3F4F6')};
+    background: ${({isDisabled}) => (isDisabled ? 'transparent' : 'var(--ld-surface, #F3F4F6)')};
   }
 `
 

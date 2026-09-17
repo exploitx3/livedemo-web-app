@@ -105,7 +105,7 @@ function ZoomSpansEditor({
     }
 
 
-    if (currentStep && currentStep.screenType === ScreenTypes.SCREEN_SCREENSHOT) {
+    if (currentStep && currentStep.screenType !== ScreenTypes.SCREEN_VIDEO) {
 
       let delay = region.delay ?? 1
       let duration = region.duration ?? 1
@@ -140,7 +140,7 @@ function ZoomSpansEditor({
       return
     }
 
-    if (currentStep.screenType === ScreenTypes.SCREEN_SCREENSHOT) {
+    if (currentStep.screenType !== ScreenTypes.SCREEN_VIDEO) {
       storyDemoActions.deleteStepZoomSpan(
         liveDemo.workspaceId,
         liveDemo._id,
@@ -384,7 +384,7 @@ function ZoomSpansEditor({
             wrapperRef={wrapperRef}
             wrapperLeftPos={wrapperLeftPos}
             wrapperTopPos={wrapperTopPos}
-            isScreenshot={currentStep && currentStep.screenType === ScreenTypes.SCREEN_SCREENSHOT}
+            isScreenshot={currentStep && currentStep.screenType !== ScreenTypes.SCREEN_VIDEO}
 
           />
         })}

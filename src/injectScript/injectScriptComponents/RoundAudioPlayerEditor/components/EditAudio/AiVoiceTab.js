@@ -36,6 +36,20 @@ const EMPTY_VOICE = {
   preview_url: ''
 }
 
+/** Popups have no view.content — their spoken text defaults to the popup title. */
+function resolveDefaultText(stepAudio, step) {
+  if (stepAudio && stepAudio.text) {
+    return stepAudio.text
+  }
+
+  let view = step && step.view
+  if (view && view.viewType === 'popup' && view.popup && view.popup.title) {
+    return view.popup.title
+  }
+
+  return stepAudio && stepAudio.text
+}
+
 /** Prefer saved voice; otherwise second in list (fallback first). */
 function resolveDefaultVoice(stepAudio, voices) {
   let list = Array.isArray(voices) ? voices : []
@@ -44,7 +58,7 @@ function resolveDefaultVoice(stepAudio, voices) {
   }
 
   if (stepAudio && stepAudio.voiceType) {
-    let matched = list.find(voiceItem => voiceItem.voice_id === stepAudio.voiceType)
+    let matched = list.find(voiceItem => (voiceItem.voice_id || voiceItem.voiceId) === stepAudio.voiceType)
     if (matched) {
       return matched
     }
@@ -91,7 +105,7 @@ const AiVoiceTab = ({
   let [selectedAIVoice, setSelectedAIVoice] = useState(() => resolveDefaultVoice(stepAudio, voices))
   let [isLoading, setIsLoading] = useState(false)
 
-  let [text, setText] = useState(stepAudio.text)
+  let [text, setText] = useState(resolveDefaultText(stepAudio, step))
   // let [voiceId, setVoiceId] = useState(stepAudio.voiceType)
 
   let [shouldRegenerate, setShouldRegenerate] = useState(false)
@@ -100,7 +114,7 @@ const AiVoiceTab = ({
 
     if (
       text !== (internalStepAudio.text || '') ||
-      (selectedAIVoice && selectedAIVoice.voice_id) !== internalStepAudio.voiceType ||
+      (selectedAIVoice && (selectedAIVoice.voice_id || selectedAIVoice.voiceId)) !== internalStepAudio.voiceType ||
       !internalStepAudio.audioUrl
     ) {
       setShouldRegenerate(true)
@@ -111,11 +125,11 @@ const AiVoiceTab = ({
 
   useEffect(() => {
     setSelectedAIVoice(resolveDefaultVoice(stepAudio, voices))
-    setText(stepAudio.text)
+    setText(resolveDefaultText(stepAudio, step))
 
     setInternalStepAudio(getInternalStepAudio(stepAudio))
 
-  }, [stepAudio, voices]);
+  }, [stepAudio, voices, step]);
 
 
   function regenerateAIAudio(text, voiceId, workspaceId, storyDemoId, authToken) {
@@ -147,16 +161,16 @@ const AiVoiceTab = ({
   // New / stale voice: play sample. Matching generated audio: play that.
   let playbackUrl = (!shouldRegenerate && hasGeneratedAudio)
     ? internalStepAudio.audioUrl
-    : (selectedAIVoice && selectedAIVoice.preview_url) || internalStepAudio.audioUrl || ''
+    : (selectedAIVoice && (selectedAIVoice.preview_url || selectedAIVoice.previewUrl)) || internalStepAudio.audioUrl || ''
 
   function regenerateForPreview() {
-    return regenerateAIAudio(text, selectedAIVoice.voice_id, workspaceId, storyDemoId, authData.token)
+    return regenerateAIAudio(text, selectedAIVoice.voice_id || selectedAIVoice.voiceId, workspaceId, storyDemoId, authData.token)
       .then((audioDoc) => {
         let newAudio = {
           ...internalStepAudio,
           ...audioDoc,
           text,
-          voiceType: selectedAIVoice.voice_id,
+          voiceType: selectedAIVoice.voice_id || selectedAIVoice.voiceId,
           audioType: 'ai',
         }
 
@@ -210,24 +224,26 @@ const AiVoiceTab = ({
 
                 // boxShadow: `0 0 0 2px ${Colors.primaryColor}`
               }}
-              value={selectedAIVoice.voice_id || undefined}
+              value={(selectedAIVoice && selectedAIVoice.voice_id) || undefined}
               style={{
                 width: '100%'
               }}
               onChange={(voiceId) => {
-
-                setSelectedAIVoice(voices.find(voiceItem => voiceItem.voice_id === voiceId))
+                setSelectedAIVoice(
+                  (voices || []).find(v => (v.voice_id || v.voiceId) === voiceId) || EMPTY_VOICE
+                )
               }}>
               {(voices || []).map((voice, index, array) => {
                 let isLast = index === array.length - 1
+                let id = voice.voice_id || voice.voiceId
                 return <Option style={{
                   background: 'none',
                   color: Colors.primaryColor,
                   borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
                   textTransform: 'capitalize',
                 }}
-                               key={voice.voice_id}
-                               value={voice.voice_id}
+                               key={id}
+                               value={id}
                                title={voice.description}
                 >{voice.name}</Option>
               })

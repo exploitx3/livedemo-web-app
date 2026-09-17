@@ -289,7 +289,7 @@ const HotspotTransition = function ({
 
 
           }}>
-            {viewType === TRANSITION_TYPES.POINTER ? <img src={PointerIcon}/> : <img src={PostIcon}/>}
+            {viewType === TRANSITION_TYPES.POINTER ? <img src={PointerIcon} style={{ filter: Colors.iconInvertFilter }}/> : <img src={PostIcon} style={{ filter: Colors.iconInvertFilter }}/>}
             <NAV.OpenArrow type={'down'}/>
             <NAV.ViewTitle>{TRANSITION_TYPES[viewType.toUpperCase()]}</NAV.ViewTitle>
           </NAV.HeaderMain>
@@ -450,7 +450,7 @@ const NAV = {
     height: 35px;
 
     width: 100%;
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-radius: 6px;
     padding: 0px 5px;
 
@@ -589,7 +589,7 @@ const NAV = {
 
     width: 100%;
 
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
     border-top: none;
@@ -597,7 +597,7 @@ const NAV = {
   `,
   ViewTitle: styled.h2`
     font-size: 1em;
-    color: #111;
+    color: var(--ld-text, #111);
     text-align: center;
     text-transform: capitalize;
     margin-bottom: 0px;

@@ -877,7 +877,7 @@ const U = {
     text-overflow: ellipsis;
   `,
   NameText: styled.p`
-    color: #111111;
+    color: ${Colors.primaryText};
     font-size: 16px;
     margin: 0px;
     
@@ -896,7 +896,7 @@ const U = {
   PriceLine: styled.span`
     font-size: 16px;
     line-height: 50px;
-    color: #111111;
+    color: ${Colors.primaryText};
   `,
   Action: styled.span`
     width: 17%;
@@ -920,8 +920,8 @@ const U = {
     padding: 0;
     border: 1px solid #dae3f2;
     border-radius: 6px;
-    background: #fff;
-    color: #111111;
+    background: var(--ld-surface, #fff);
+    color: ${Colors.primaryText};
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
@@ -932,7 +932,7 @@ const U = {
     &:disabled {
       color: #c4cacd;
       cursor: not-allowed;
-      background: #f5f7fa;
+      background: var(--ld-background, #f5f7fa);
     }
 
     &:not(:disabled):hover {
@@ -945,11 +945,11 @@ const U = {
     text-align: center;
     font-size: 14px;
     font-weight: 600;
-    color: #111111;
+    color: ${Colors.primaryText};
     line-height: 1;
   `,
   ActionPurchase: styled.button`
-    color: #111111;
+    color: ${Colors.primaryText};
     margin: 0px;
     line-height: 50px;
     white-space: nowrap;
@@ -1074,7 +1074,7 @@ const U = {
     line-height: 1;
   `,
   BillingToggleLabel: styled.span`
-    color: ${({ active }) => (active ? '#111111' : '#c4cacd')};
+    color: ${({ active }) => (active ? Colors.primaryText : '#c4cacd')};
     font-weight: ${({ active }) => (active ? 600 : 400)};
     transition: color 0.2s, font-weight 0.2s;
     user-select: none;
@@ -1119,7 +1119,7 @@ const U = {
     visibility: hidden;
   `,
   MainSection: styled.section`
-    background: #fafbfe;
+    background: var(--ld-surface, #fafbfe);
     flex-grow: 1;
     overflow-y: scroll;
     
@@ -1128,12 +1128,12 @@ const U = {
      &&::-webkit-scrollbar-track {
       -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
       border-radius: 10px;
-      background-color: #FFF;
+      background-color: ${Colors.App.sidebarColor};
     }
 
     &&::-webkit-scrollbar {
       width: 1px;
-      background-color: #FFF;
+      background-color: ${Colors.App.sidebarColor};
     }
 
     &&::-webkit-scrollbar-thumb {
@@ -1149,7 +1149,7 @@ const U = {
 const S = {
   Content: styled(Content)`
     && {
-      background: white;
+      background: ${Colors.App.sidebarColor};
       padding: 36px;
       overflow: scroll;
       overflow-x: hidden;

@@ -5,16 +5,14 @@ import Checkbox from 'antd/es/checkbox'
 import Icon from '../../../../../../components/Icon/Icon'
 import Input from 'antd/es/input'
 import Modal from 'antd/es/modal'
-import Select from 'antd/es/select'
 import Colors from '../../../../../../constants/mainColors'
 import React, {useState, useEffect} from 'react'
 import styled from 'styled-components'
-import { MdAdsClick, MdArrowRightAlt, MdAspectRatio } from 'react-icons/md'
+import { MdAdsClick, MdArrowRightAlt, MdAspectRatio, MdOpenWith } from 'react-icons/md'
 
-import 'antd/es/select/style'
 import CommonOptions from '../CommonOptions/CommonOptions'
-
-const { Option } = Select
+import POINTER_TARGET_MODES from '../../../../../../constants/pointerTargetModes.js'
+import PlacementSelector from '../../../PlacementSelector/PlacementSelector'
 
 
 const VIEW_TYPE_NAMES = {
@@ -43,35 +41,7 @@ const OPEN_VIEWS = {
   OPTIONS_VIEW: 'OPTIONS_VIEW',
 }
 
-/*
-  top, top-start, top-end
-  bottom, bottom-start, bottom-end
-  left, left-start, left-end
-  right, right-start, right-end
-  auto (it will choose the best position)
-  center (set the target to body)
- */
-const PLACEMENT_TYPES = {
-  TOP: 'top',
-  TOP_START: 'top-start',
-  TOP_END: 'top-end',
-  LEFT: 'left',
-  LEFT_START: 'left-start',
-  LEFT_END: 'left-end',
-  BOTTOM: 'bottom',
-  BOTTOM_START: 'bottom-start',
-  BOTTOM_END: 'bottom-end',
-  RIGHT: 'right',
-  RIGHT_START: 'right-start',
-  RIGHT_END: 'right-end',
-  AUTO: 'auto',
-  CENTER: 'center'
-}
-
-const POINTER_SELECT_TYPES = {
-  PICK: 'pick',
-  SELECT: 'select',
-}
+const POINTER_SELECT_TYPES = POINTER_TARGET_MODES
 
 
 const { confirm } = Modal
@@ -84,17 +54,49 @@ const PointerOptionsView = ({
                               setPointerPlacement,
                               pointerPlacement,
                               iframeRef,
-                              disablePointerPickButton
+                              disablePointerPickButton,
+                              screenId,
                             }) => {
-  let [pointerSelectType, setPointerSelectType] = useState(POINTER_SELECT_TYPES.SELECT)
+  let [pointerSelectType, setPointerSelectType] = useState(
+    internalStep?.view?.pointer?.targetMode || POINTER_SELECT_TYPES.SELECT
+  )
   let [isPickingElement, setIsPickingElement] = useState(false)
+
+  useEffect(() => {
+    const mode = internalStep?.view?.pointer?.targetMode || POINTER_SELECT_TYPES.SELECT
+    setPointerSelectType(mode)
+  }, [internalStep?.view?.pointer?.targetMode])
+
+  function updatePointerTargetMode(mode) {
+    setPointerSelectType(mode)
+    const updated = {
+      ...internalStep,
+      view: {
+        ...internalStep.view,
+        pointer: {
+          ...(internalStep.view?.pointer || {}),
+          targetMode: mode,
+          tooltipX: internalStep.view?.pointer?.tooltipX ?? 200,
+          tooltipY: internalStep.view?.pointer?.tooltipY ?? 200,
+        },
+      },
+    }
+    setInternalStep(updated)
+    if (screenId) {
+      window.postMessage({
+        type: 'update_step',
+        stepData: { ...updated, screenId },
+      }, '*')
+    }
+  }
 
 
   useEffect(() => {
 
     window.postMessage({
       type: 'editor_show_regions',
-      editorShowRegions: pointerSelectType === POINTER_SELECT_TYPES.SELECT
+      editorShowRegions: pointerSelectType === POINTER_SELECT_TYPES.SELECT,
+      editorPickMode: pointerSelectType === POINTER_SELECT_TYPES.PICK,
     }, '*')
 
 
@@ -107,7 +109,7 @@ const PointerOptionsView = ({
         <ST.ActionSelectorLine style={{ justifyContent: 'center', gap: '10px', margin: '15px 0px 30px 0px' }}>
 
           {!disablePointerPickButton ? (<ST.PickSelectorButton isSelected={pointerSelectType === POINTER_SELECT_TYPES.PICK} onClick={() => {
-            setPointerSelectType(POINTER_SELECT_TYPES.PICK)
+            updatePointerTargetMode(POINTER_SELECT_TYPES.PICK)
 
             let newIsPickingElementValue = !isPickingElement
             setIsPickingElement(newIsPickingElementValue)
@@ -117,16 +119,16 @@ const PointerOptionsView = ({
                 .then(() => {
                   // Show regions again sized to the picked element
                   setIsPickingElement(false)
-                  setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+                  updatePointerTargetMode(POINTER_SELECT_TYPES.SELECT)
                 })
                 .catch(() => {
                   setIsPickingElement(false)
-                  setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+                  updatePointerTargetMode(POINTER_SELECT_TYPES.SELECT)
                 })
             } else {
               cancelSelector()
               setIsPickingElement(false)
-              setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+              updatePointerTargetMode(POINTER_SELECT_TYPES.SELECT)
             }
 
           }}>
@@ -134,8 +136,16 @@ const PointerOptionsView = ({
             <ST.PickClickIcon/>
           </ST.PickSelectorButton>
           ) : ''}
+          <ST.PickSelectorButton isSelected={pointerSelectType === POINTER_SELECT_TYPES.NONE} onClick={() => {
+            updatePointerTargetMode(POINTER_SELECT_TYPES.NONE)
+            cancelSelector()
+            setIsPickingElement(false)
+          }}>
+            <ST.PickSelectorText>None</ST.PickSelectorText>
+            <ST.NoneClickIcon/>
+          </ST.PickSelectorButton>
           <ST.PickSelectorButton isSelected={pointerSelectType === POINTER_SELECT_TYPES.SELECT} onClick={() => {
-            setPointerSelectType(POINTER_SELECT_TYPES.SELECT)
+            updatePointerTargetMode(POINTER_SELECT_TYPES.SELECT)
             cancelSelector()
             setIsPickingElement(false)
 
@@ -145,34 +155,12 @@ const PointerOptionsView = ({
           </ST.PickSelectorButton>
         </ST.ActionSelectorLine>
 
-        <ST.ActionSelectorLine>
+        {pointerSelectType !== POINTER_SELECT_TYPES.NONE ? (
+        <ST.ActionSelectorLine style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
           <ST.ActionSelectorText>Placement:</ST.ActionSelectorText>
-
-          <ST.Select
-            dropdownStyle={{
-              background: Colors.App.sidebarColor,
-              border: `1px solid ${Colors.primaryColor}`
-              // boxShadow: `0 0 0 2px ${Colors.primaryColor}`
-            }}
-            value={pointerPlacement}
-            style={{
-              width: 120
-            }}
-            onChange={(placementKey) => {
-
-              setPointerPlacement(PLACEMENT_TYPES[placementKey])
-            }}>
-            {Object.entries(PLACEMENT_TYPES).map(([key, value], index, array) => {
-              let isLast = index === array.length - 1
-              return <Option style={{
-                background: 'none',
-                color: Colors.primaryColor,
-                borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
-              }} key={key} value={key}>{value}</Option>
-            })
-            }
-          </ST.Select>
+          <PlacementSelector value={pointerPlacement} onChange={setPointerPlacement} />
         </ST.ActionSelectorLine>
+        ) : ''}
 
       </React.Fragment>
       <CommonOptions
@@ -236,7 +224,7 @@ const ST = {
     justify-content: center;
     width: 100%;
 
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
     border-top: none;
@@ -280,7 +268,7 @@ const ST = {
     height: 35px;
 
     width: 100%;
-    border: 1px solid black;
+    border: 1px solid var(--ld-border, black);
     border-radius: 6px;
     padding: 0px 5px;
     &&:hover .Step__DeleteButton,
@@ -412,7 +400,7 @@ const ST = {
   `,
   ViewTitle: styled.h2`
     font-size: 1em;
-    color: #111;
+    color: var(--ld-text, #111);
     text-align: center;
 
     margin-bottom: 0px;
@@ -480,11 +468,11 @@ const ST = {
     padding: 5px 10px;
     color: ${({isSelected}) => isSelected ? '#f9f9f9' : Colors.primaryColor};
     justify-content: center;
-    border: 1px solid ${({isSelected}) => isSelected ? Colors.primaryColor : '#f9f9f9'};
+    border: 1px solid ${({isSelected}) => isSelected ? Colors.primaryColor : 'var(--ld-surface, #f9f9f9)'};
     cursor: pointer;
 
     border-radius: 8px;
-    background: ${({isSelected}) => isSelected ? Colors.primaryColor : '#f9f9f9'};
+    background: ${({isSelected}) => isSelected ? Colors.primaryColor : 'var(--ld-surface, #f9f9f9)'};
     &:hover {
       border-color: ${Colors.primaryColor};
     }
@@ -510,36 +498,13 @@ const ST = {
     }
 
   `,
-  Select: styled(Select)`
-    flex-grow: 1;
-
-    && .ant-select-content-value {
-      background: none;
-      color: ${Colors.primaryColor};
-      border: none !important;
-      box-shadow: none;
-    }
-
-    && .ant-select-selection {
-      background: none;
-      color: ${Colors.primaryColor};
-      border: 1px solid #d9d9d9;
-      box-shadow: none;
-    }
-
-    && .ant-select-selection:hover {
-      border: 1px solid ${Colors.primaryColor};
-    }
-
-    && .ant-select-arrow {
-      color: ${Colors.primaryColor};
-    }
-
-    && .ant-select-selection-selected-value {
-      width: 90%;
-    }
-`,
   SelectClickIcon: styled(MdAspectRatio)`
+    height: 25px;
+    width: 45px;
+
+    transition: all 0.3s;
+  `,
+  NoneClickIcon: styled(MdOpenWith)`
     height: 25px;
     width: 45px;
 

@@ -63,24 +63,24 @@ const AIVoiceTab = ({voices, enhanceWithAIVoice, setShowConfetti, reloadStoryDem
 
                       // boxShadow: `0 0 0 2px ${Colors.primaryColor}`
                     }}
-                    value={selectedVoice.voice_id}
+                    value={selectedVoice.voice_id || selectedVoice.voiceId}
                     style={{
                       width: '100%'
                     }}
                     onChange={(voiceId) => {
-
-                      setSelectedVoice(voices.find(vItem => vItem.voice_id === voiceId))
+                      setSelectedVoice((voices || []).find(v => (v.voice_id || v.voiceId) === voiceId))
                     }}>
-                    {voices.map((voice, index, array) => {
+                    {(voices || []).map((voice, index, array) => {
                       let isLast = index === array.length - 1
+                      let id = voice.voice_id || voice.voiceId
                       return <Option style={{
                         background: 'none',
                         color: Colors.primaryColor,
                         borderBottom: isLast ? 'none' : '1px solid #d9d9d9',
                         textTransform: 'capitalize'
                       }}
-                                     key={voice.voice_id}
-                                     value={voice.voice_id}
+                                     key={id}
+                                     value={id}
                                      title={voice.description}
                       >{voice.name}</Option>
                     })
@@ -89,7 +89,7 @@ const AIVoiceTab = ({voices, enhanceWithAIVoice, setShowConfetti, reloadStoryDem
                 </T.ActionSelectorLine>
                 <T.ActionSelectorLine>
                   <T.ActionSelectorText>Sample:</T.ActionSelectorText>
-                  <AudioPlayer audioUrl={selectedVoice.preview_url}/>
+                  <AudioPlayer audioUrl={selectedVoice.preview_url || selectedVoice.previewUrl}/>
                 </T.ActionSelectorLine>
               </T.Main>
               <T.Footer>
@@ -114,7 +114,7 @@ const AIVoiceTab = ({voices, enhanceWithAIVoice, setShowConfetti, reloadStoryDem
 
                       setIsLoading(true)
 
-                      enhanceWithAIVoice(selectedVoice.voice_id)
+                      enhanceWithAIVoice(selectedVoice.voice_id || selectedVoice.voiceId)
                           .then(() => {
                             return reloadStoryDemo()
                           })
@@ -201,8 +201,8 @@ const T = {
     line-height: 50px;
     margin: 0px 5px;
     font-size: 1.1em;
-    color: #111;
-    border: 1px solid #111;
+    color: var(--ld-text, #111);
+    border: 1px solid var(--ld-border, #111);
 
     display: flex;
     justify-content: center;
@@ -212,7 +212,7 @@ const T = {
 
     cursor: pointer;
 
-    background: #fff;
+    background: var(--ld-surface, #fff);
 
   `,
   ToolbarButton: styled.div`
@@ -293,7 +293,7 @@ const T = {
     font-size: 20px;
     font-weight: 550;
     font-family: ${Colors.fontFamily};
-    color: #111;
+    color: var(--ld-text, #111);
   `,
   HeaderDescription: styled.p`
     margin: 0px;

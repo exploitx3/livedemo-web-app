@@ -29,6 +29,14 @@ export default {
     currentStoryDemo: {
       screens: []
     },
-    renderSteps: []
+    renderSteps: [],
+    // Version history lives server-side (StoryRevision collection); the browser
+    // only ever holds these counts, never the revision payloads.
+    historyStatus: {
+      canUndo: false,
+      canRedo: false,
+      undoCount: 0,
+      redoCount: 0
+    }
   }
 }

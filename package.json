@@ -46,7 +46,9 @@
     "open:cover": "npm run test:cover && opn ./coverage/lcov-report/index.html",
     "analyze-bundle": "npx babel-node ./tools/analyzeBundle.js",
     "bundle-inject": "npx webpack-dev-server --config webpack.inject.config.js --progress --mode=development",
-    "bundle": "node configEnv.js && npx webpack --progress --mode=production --config webpack.inject.prod.config.js"
+    "bundle": "node configEnv.js && npx webpack --progress --mode=production --config webpack.inject.prod.config.js",
+    "bundle-agent-inject": "npx webpack-dev-server --config webpack.agent.inject.config.js --progress --mode=development",
+    "bundle-agent": "node configEnv.js && npx webpack --progress --mode=production --config webpack.agent.inject.prod.config.js"
   },
   "dependencies": {
     "@babel/plugin-proposal-class-properties": "7.18.6",
