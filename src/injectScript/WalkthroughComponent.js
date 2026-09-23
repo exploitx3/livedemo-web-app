@@ -451,8 +451,14 @@ function WalkthroughComponent({
 
   const urlParams = new URLSearchParams(window.location.search);
   const autoPlayParam = urlParams.get('autoplay');
-  const disableAudio = urlParams.get('disableAudio') === 'true' ? true : false;
   const autoPlayDelayParam = urlParams.get('autoplayDelay');
+  const [disableAudio] = useState(urlParams.get('disableAudio') === 'true')
+
+  function pushStepUrl(stepNumber) {
+    const params = new URLSearchParams(window.location.search)
+    params.set('step', String(stepNumber))
+    window.history.pushState({ stepNumber }, '', `?${params}`)
+  }
   const [isAutoPlayActive, _setIsAutoPlayActive] = useState(autoPlayParam === 'true')
   const isAutoPlayActiveRef = useRef(autoPlayParam === 'true')
   const currentAutoPlayTimerRef = useRef(null)
@@ -1428,38 +1434,12 @@ function WalkthroughComponent({
       if (event.data && event.data.type === 'changeStep') {
 
         let stepNumber = event.data.stepNumber
-
         let stepIndex = stepNumber - 1
-        let promiseChain = Promise.resolve()
-
-
-        let { step, screen } = getStepAndScreenByStepIndex(stepIndex, storyDemoInternalRef.current)
+        let { step } = getStepAndScreenByStepIndex(stepIndex, storyDemoInternalRef.current)
         if (step) {
-
-          if (!isInEditor) {
-            window.history.pushState({ stepNumber }, '', `?step=${stepNumber}`)
-          }
-
-          let currentScreenId = getIframeLoadedScreenId(iframeRef)
-
-          // if (screen._id !== currentScreenId) {
-          //
-          //   promiseChain = changeIframeScreen(window.config.workspaceId, window.config.storyId, screen._id, getIframeLoadedScreenId)
-          // }
-
-          promiseChain.then(() => {
-
-
-            // let isReverse = currentStepIndex.current - stepNumber === 0 ? false : !(currentStepIndex.current - stepNumber)
-            // currentStepIndex.current = stepNumber
-            // processStep(stepNumber, videoRef, storyDemoInternal.current, steps, isReverse)
-            changeStep(stepIndex, stepsInternalRef.current)
-
-
-          })
-        } else {
-
-
+          // External jump (agent). Don't stall on a required form on the current step.
+          formStepClearedRef.current = true
+          changeStep(stepIndex, stepsInternalRef.current)
         }
 
 
@@ -2826,7 +2806,7 @@ function WalkthroughComponent({
     let stepNumber = newStepIndex + 1
 
     if (!isInEditor) {
-      window.history.pushState({ stepNumber }, '', `?step=${stepNumber}`)
+      pushStepUrl(stepNumber)
     }
 
 
@@ -2844,10 +2824,15 @@ function WalkthroughComponent({
     }
 
 
-    topWindow.postMessage({
+    const stepMessage = {
       type: 'step_index_changed',
       state: { stepNumber: stepNumber }
-    }, '*')
+    }
+    topWindow.postMessage(stepMessage, '*')
+    // Agent player frames this player and may itself be framed (SPA preview, customer embed)
+    if (window.parent && window.parent !== window && window.parent !== topWindow) {
+      window.parent.postMessage(stepMessage, '*')
+    }
 
     return processStep(currentStepIndexRef, videoRef, storyDemoInternalRef, steps)
   }

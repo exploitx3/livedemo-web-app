@@ -16,10 +16,10 @@ export function createAiDemoController(iframeRef) {
         iframeRef.current.src = storyEmbedSrc(workspaceId, storyId, stepNumber)
       }
     },
-    navigateToStep(workspaceId, storyId, stepNumber) {
-      // Reload at ?step=N. postMessage changeStep is a no-op when the landing
-      // overlay / a required form popup blocks Walkthrough.changeStep.
-      this.openDemo(workspaceId, storyId, stepNumber)
+    navigateToStep(_workspaceId, _storyId, stepNumber) {
+      const win = iframeRef.current && iframeRef.current.contentWindow
+      if (!win) return
+      win.postMessage({ type: 'changeStep', stepNumber }, '*')
     },
   }
 }

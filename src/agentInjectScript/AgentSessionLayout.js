@@ -9,9 +9,9 @@ import { createAiDemoController } from './aiDemoController'
 import { ShareAltOutlined, FullscreenOutlined } from '@ant-design/icons'
 import { toast } from 'react-hot-toast'
 
-// One layout, two parents (editor right pane + public page). Chat | player |
-// voice bar. The player is an iframe of the existing Story preview URL — the
-// agent app never mounts WalkthroughComponent.
+// One layout, two parents (editor right pane + public page). Chat (+ voice
+// bar) | player. The player is an iframe of the existing Story preview URL —
+// the agent app never mounts WalkthroughComponent.
 function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speakWelcome = true }) {
   const isEditor = mode === 'editor'
   const iframeRef = useRef(null)
@@ -132,6 +132,19 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
     openDefault()
   }, [agent?.defaultDemoId, agent?.workspaceId])
 
+  // Visitor clicking through the player moves the step without a content_card
+  useEffect(() => {
+    function onMessage(event) {
+      if (event.source !== iframeRef.current?.contentWindow) return
+      if (event.data?.type !== 'step_index_changed') return
+      const stepNumber = Number(event.data.state?.stepNumber)
+      if (!Number.isInteger(stepNumber) || stepNumber < 1) return
+      setCurrentDemo(prev => (prev ? { ...prev, stepNumber } : prev))
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+
   useEffect(() => {
     if (!sessionId || !agent?.defaultDemoId) return
     if (openedDefaultRef.current !== String(agent.defaultDemoId)) return
@@ -151,12 +164,28 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
         ttsUrl={ttsUrl}
         authToken={authToken}
         sessionId={sessionId}
+        currentDemo={currentDemo}
         onContentCard={handleContentCard}
         collapsible
         muted={!soundOn || isEditor}
         speakWelcome={speakWelcome && !isEditor}
         onCaptionChange={setCaptionText}
-      />
+      >
+        <AgentVoiceBar
+          voiceEnabled={agent.voiceEnabled}
+          soundOn={soundOn}
+          onToggleSound={() => setSoundOn(v => !v)}
+          ccOn={captionsOn}
+          onToggleCaptions={() => setCaptionsOn(v => !v)}
+          onHangUp={handleHangUp}
+          getSession={getScribeSession}
+          onTranscript={handleTranscript}
+          onPartial={setCaptionText}
+          onTalkStart={() => chatRef.current && chatRef.current.stopSpeaking()}
+          onTalkEnd={() => chatRef.current && chatRef.current.allowSpeaking()}
+          disabled={!sessionId}
+        />
+      </AgentChatPanel>
 
       <S.Player ref={containerRef}>
         <S.PlayerChrome>
@@ -188,6 +217,7 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
             title="Demo player"
             frameBorder="0"
             allow="fullscreen"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
             style={{ visibility: currentDemo ? 'visible' : 'hidden' }}
           />
         </S.Frame>
@@ -195,21 +225,6 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
         {captionsOn && captionText ? (
           <S.Caption aria-live="polite">{captionText}</S.Caption>
         ) : null}
-
-        <AgentVoiceBar
-          voiceEnabled={agent.voiceEnabled}
-          soundOn={soundOn}
-          onToggleSound={() => setSoundOn(v => !v)}
-          ccOn={captionsOn}
-          onToggleCaptions={() => setCaptionsOn(v => !v)}
-          onHangUp={handleHangUp}
-          getSession={getScribeSession}
-          onTranscript={handleTranscript}
-          onPartial={setCaptionText}
-          onTalkStart={() => chatRef.current && chatRef.current.stopSpeaking()}
-          onTalkEnd={() => chatRef.current && chatRef.current.allowSpeaking()}
-          disabled={!sessionId}
-        />
       </S.Player>
     </S.Stage>
   )
@@ -289,7 +304,7 @@ const S = {
   Caption: styled.div`
     position: absolute;
     left: 50%;
-    bottom: 88px;
+    bottom: 24px;
     transform: translateX(-50%);
     max-width: min(640px, 90%);
     padding: 10px 16px;

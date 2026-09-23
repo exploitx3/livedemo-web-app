@@ -84,29 +84,29 @@ function AgentVoiceBar({
 
 const S = {
   Bar: styled.div`
-    position: absolute;
-    left: 50%;
-    bottom: 24px;
-    transform: translateX(-50%);
+    flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
     background: #ffffff;
-    border-radius: 999px;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-    padding: 8px 12px;
-    z-index: 5;
+    border-top: 1px solid #f3f4f6;
+    padding: 10px 12px;
   `,
   PushToTalk: styled.button`
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
     border: 1px solid ${p => (p.$listening ? mainColors.primaryColor : '#e5e7eb')};
     background: ${p => (p.$listening ? '#eef2ff' : '#f9fafb')};
     color: ${p => (p.$listening ? mainColors.primaryColor : '#111827')};
     border-radius: 999px;
-    padding: 8px 16px;
-    font-size: 14px;
+    padding: 8px 12px;
+    font-size: 13px;
     cursor: ${p => (p.disabled ? 'not-allowed' : 'pointer')};
     touch-action: none;
     user-select: none;
@@ -117,6 +117,7 @@ const S = {
     }
   `,
   RoundButton: styled.button`
+    flex-shrink: 0;
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -129,6 +130,7 @@ const S = {
     cursor: pointer;
   `,
   HangUp: styled.button`
+    flex-shrink: 0;
     width: 36px;
     height: 36px;
     border-radius: 50%;

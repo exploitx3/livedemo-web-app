@@ -80,13 +80,14 @@ function playBase64Audio(audioRef, { audioBase64, mimeType }, muted, skipTtsRef)
 }
 
 function AgentChatPanel({
-  agent, chatUrl, ttsUrl, authToken, sessionId, onContentCard, collapsible, muted, speakWelcome,
-  onCaptionChange,
+  agent, chatUrl, ttsUrl, authToken, sessionId, currentDemo, onContentCard, collapsible, muted, speakWelcome,
+  onCaptionChange, children,
 }, ref) {
   const [messages, setMessages] = useState([])
   const [chips, setChips] = useState(agent.starterQuestions || [])
   const [input, setInput] = useState('')
   const [inFlight, setInFlight] = useState(false)
+  const [status, setStatus] = useState('')
   const [collapsed, setCollapsed] = useState(false)
   const scrollRef = useRef(null)
   const audioRef = useRef(null)
@@ -133,9 +134,18 @@ function AgentChatPanel({
 
     streamSse(chatUrl, {
       headers,
-      body: { sessionId, message, source },
+      body: {
+        sessionId,
+        message,
+        source,
+        demoId: currentDemo?.entityId || null,
+        stepNumber: currentDemo?.stepNumber || null,
+      },
       onEvent: (event, data) => {
-        if (event === 'text') {
+        if (event === 'status') {
+          setStatus(data.text || '')
+        } else if (event === 'text') {
+          setStatus('')
           setMessages(prev => [...prev, { role: 'assistant', content: data.text }])
           onCaptionChange && onCaptionChange(data.text)
         } else if (event === 'voice_audio') {
@@ -153,10 +163,13 @@ function AgentChatPanel({
         console.log(err)
         setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
       })
-      .then(() => setInFlight(false))
+      .then(() => {
+        setStatus('')
+        setInFlight(false)
+      })
 
     return true
-  }, [authToken, chatUrl, inFlight, onCaptionChange, onContentCard, sessionId])
+  }, [authToken, chatUrl, currentDemo, inFlight, onCaptionChange, onContentCard, sessionId])
 
   const stopSpeaking = useCallback(() => {
     skipTtsRef.current = true
@@ -205,7 +218,7 @@ function AgentChatPanel({
             : <S.AssistantBlock key={i}>{message.content}</S.AssistantBlock>
         ))}
 
-        {inFlight && <S.Typing>…</S.Typing>}
+        {inFlight && <S.Typing aria-live="polite">{status || '…'}</S.Typing>}
 
         {!inFlight && chips.length > 0 && (
           <S.Chips>
@@ -234,6 +247,8 @@ function AgentChatPanel({
           <SendOutlined />
         </S.SendButton>
       </S.Composer>
+
+      {children}
     </S.Panel>
   )
 }
