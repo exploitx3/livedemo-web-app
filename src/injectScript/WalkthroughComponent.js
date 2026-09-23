@@ -451,6 +451,7 @@ function WalkthroughComponent({
 
   const urlParams = new URLSearchParams(window.location.search);
   const autoPlayParam = urlParams.get('autoplay');
+  const disableAudio = urlParams.get('disableAudio') === 'true' ? true : false;
   const autoPlayDelayParam = urlParams.get('autoplayDelay');
   const [isAutoPlayActive, _setIsAutoPlayActive] = useState(autoPlayParam === 'true')
   const isAutoPlayActiveRef = useRef(autoPlayParam === 'true')
@@ -601,6 +602,9 @@ function WalkthroughComponent({
   // and reset `video.currentTime` back to the step's startTime, even though nothing about the
   // actual video (screen/asset/start/end) changed - only zoomSpans did.
   let lastVideoLoadKeyForZoomSpanUpdatesRef = useRef(null)
+  // Set while the next step's video is buffering on the hidden player.
+  // Cleared once that step is shown, or when the player is torn down.
+  let preloadedVideoKeyRef = useRef(null)
 
   // Bumped whenever we leave a video step (or start a new video bind). Stale
   // video.onloadeddata from a previous step must not call makeVisible(VIDEO) after
@@ -610,6 +614,7 @@ function WalkthroughComponent({
   function detachVideoViewHandlers(videoEl) {
     videoViewGenerationRef.current += 1
     lastVideoLoadKeyForZoomSpanUpdatesRef.current = null
+    preloadedVideoKeyRef.current = null
     if (hlsRef.current) {
       try {
         hlsRef.current.destroy()
@@ -630,6 +635,80 @@ function WalkthroughComponent({
     } catch (e) {
       // ignore
     }
+  }
+
+  function videoStepMedia(step, screen) {
+    const asset = step && step.asset
+    const playbackId = asset && asset.playback_ids && asset.playback_ids[0] && asset.playback_ids[0].id
+    if (!playbackId || !screen) {
+      return null
+    }
+    const startTime = step.startTime > 0 ? step.startTime : (isInEditorRef.current ? 0 : 0.1)
+    const endTime = step.endTime ? step.endTime : asset.duration
+    return {
+      asset,
+      startTime,
+      endTime,
+      key: `${screen._id}:${playbackId}:${startTime}:${endTime}`,
+      streamUrl: `https://stream.mux.com/${playbackId}.m3u8#t=${startTime}`,
+      streamUrlMp4: `https://stream.mux.com/${playbackId}/high.mp4#t=${startTime}`,
+      posterUrl: `https://image.mux.com/${playbackId}/thumbnail.png?time=${startTime > 0 ? startTime : 0.1}`,
+    }
+  }
+
+  function attachStepHls(video, spec) {
+    if (hlsRef.current) {
+      try {
+        hlsRef.current.destroy()
+      } catch (e) {
+        // ignore
+      }
+      hlsRef.current = null
+    }
+    const hls = new Hls({
+      maxBufferLength: 5,
+      enableWorker: true,
+      lowLatencyMode: true,
+      backBufferLength: 90,
+      startLevel: 4,
+      autoStartLoad: false,
+    })
+    hlsRef.current = hls
+    lastVideoLoadKeyForZoomSpanUpdatesRef.current = spec.key
+    hls.attachMedia(video)
+    hls.loadSource(spec.streamUrl)
+    video.setAttribute('data-video-mp4', spec.streamUrlMp4)
+    if (videoSourceRef.current) {
+      videoSourceRef.current.src = spec.streamUrlMp4
+    }
+    video.playsInline = true
+    video.poster = spec.posterUrl
+    try {
+      video.currentTime = spec.startTime || 0
+    } catch (e) {
+      // metadata not in yet; startLoad applies the seek
+    }
+    hls.startLoad(spec.startTime || 0)
+  }
+
+  // One element, so this only runs while the current step is not itself a video.
+  function preloadNextVideo(steps, index) {
+    const next = steps[index + 1]
+    if (!next || next.screenType !== 'Screen_Video') {
+      return
+    }
+    const video = videoRef.current
+    const storyDoc = storyDemoInternalRef.current
+    const screen = storyDoc && storyDoc.screens && storyDoc.screens.find((scr) => scr._id === next.screenId)
+    const videoObj = video && videoStepMedia(next, screen)
+    if (!videoObj || (preloadedVideoKeyRef.current === videoObj.key && hlsRef.current)) {
+      return
+    }
+    const poster = new Image()
+    poster.src = videoObj.posterUrl
+    attachStepHls(video, videoObj)
+    video.pause()
+    preloadedVideoKeyRef.current = videoObj.key
   }
 
   const currentStepIndexRef = useRef(storyConfig.currentStepIndex || 0)
@@ -767,7 +846,7 @@ function WalkthroughComponent({
   }, [stepAudio && stepAudio._id])
 
   function playBgMusic() {
-    if (!bgMusicRef.current) return
+    if (disableAudio || !bgMusicRef.current) return
 
     const audio = bgMusicRef.current
     const rawVolume = storyDemo?.custom?.backgroundMusic?.backgroundMusicVolume
@@ -791,7 +870,7 @@ function WalkthroughComponent({
   }
 
   function unlockAudioOnFirstInteract() {
-    if (isInEditorRef.current || hasAutoStartedAudioRef.current) return
+    if (disableAudio || isInEditorRef.current || hasAutoStartedAudioRef.current) return
     hasAutoStartedAudioRef.current = true
     setIsAudioEnabled(true)
     playBgMusic()
@@ -1579,15 +1658,14 @@ function WalkthroughComponent({
     // let innerWidth = isEmbed ? mainWrapperRect.width : window.innerWidth
     // let innerHeight = isEmbed ? mainWrapperRect.height : window.innerHeight
 
-    let innerWidth = mainWrapperRect.width
-    let innerHeight = mainWrapperRect.height
+    // Ceil so the scaled video covers #main in whole pixels. A 1px shrink
+    // (or a fractional scale like 2560 * 0.393531 = 1007.44) leaves a seam
+    // the GPU antialiases into a 1px gap / black pillarbox.
+    let targetWidth = Math.ceil(mainWrapperRect.width)
+    let targetHeight = Math.ceil(mainWrapperRect.height)
 
-    innerWidth = innerWidth - 1
-    innerHeight = innerHeight - 1
-
-    let scaleX = innerWidth / maxWidth
-    let scaleY = (innerHeight) / maxHeight
-    // let scaleY = (innerHeight - omniBarHeight) / maxHeight
+    let scaleX = targetWidth / maxWidth
+    let scaleY = targetHeight / maxHeight
 
     // console.log('scaleX')
     // console.log(scaleX)
@@ -1737,18 +1815,13 @@ function WalkthroughComponent({
       //   video.preload = 'auto'
       // }
 
-      let videoMuxAsset = currentStep.asset
-      if (!videoMuxAsset || !videoMuxAsset.playback_ids || !videoMuxAsset.playback_ids[0]) {
+      const spec = videoStepMedia(currentStep, screen)
+      if (!spec) {
         console.error('Screen_Video missing Mux playback_ids', screen && screen._id)
         return
       }
 
-      let startTime = currentStep.startTime && currentStep.startTime > 0 ? currentStep.startTime : (isInEditor ? 0 : 0.1)
-      let endTime = currentStep.endTime ? currentStep.endTime : videoMuxAsset.duration
-      // Handle safari blinking adding #t=0.1 to video url
-      let streamUrl = `https://stream.mux.com/${videoMuxAsset.playback_ids[0].id}.m3u8#t=${startTime}`
-      let streamUrlMp4 = `https://stream.mux.com/${videoMuxAsset.playback_ids[0].id}/high.mp4#t=${startTime}`
-      // https://stream.mux.com/{PLAYBACK_ID}/{high, medium, or low}.mp4
+      const { asset: videoMuxAsset, startTime, endTime, key: videoLoadKey, posterUrl } = spec
 
       let ratioArr = (videoMuxAsset.aspect_ratio || '16:9').split(':')
 
@@ -1758,15 +1831,19 @@ function WalkthroughComponent({
 
       scaleVideo(isEmbed, videoMuxAsset, videoRef)
 
-      // Wait for Mux poster before revealing the video layer (prevents white flash).
-      const posterTime = startTime > 0 ? startTime : 0.1
-      const posterUrl = `https://image.mux.com/${videoMuxAsset.playback_ids[0].id}/thumbnail.png?time=${posterTime}`
+      // Buffering started on the previous step — keep that HLS instance.
+      const preloaded =
+        preloadedVideoKeyRef.current === videoLoadKey &&
+        !!hlsRef.current
+      if (preloaded) {
+        preloadedVideoKeyRef.current = null
+      }
 
-      let videoLoadKey = `${screen._id}:${videoMuxAsset.playback_ids[0].id}:${startTime}:${endTime}`
       // Parent often passes a fresh `steps` array every render → processStep re-enters.
       // If HLS is already bound for this key, do not bump generation (that cancels the
       // in-flight bind) and do not re-attach HLS (that resets currentTime).
       let alreadyBound =
+        !preloaded &&
         lastVideoLoadKeyForZoomSpanUpdatesRef.current === videoLoadKey &&
         !!hlsRef.current
 
@@ -1778,7 +1855,10 @@ function WalkthroughComponent({
       } else {
       const videoBindGeneration = ++videoViewGenerationRef.current
 
-      await waitForPosterImage(posterUrl)
+      // Poster is already decoded when the clip was preloaded and the first frame is buffered.
+      if (!(preloaded && video.readyState >= 2)) {
+        await waitForPosterImage(posterUrl)
+      }
 
       if (videoBindGeneration !== videoViewGenerationRef.current) {
         // Navigated away while poster was loading
@@ -1795,40 +1875,10 @@ function WalkthroughComponent({
       if (
         videoBindGeneration === videoViewGenerationRef.current
       ) {
-        if (hlsRef.current) {
-          try {
-            hlsRef.current.destroy()
-          } catch (e) {
-            // ignore
-          }
-          hlsRef.current = null
+        if (!preloaded) {
+          attachStepHls(video, spec)
+          console.log('videoRef.current.currentTime = ' + (spec.startTime || 0) + ' updated because of processStep')
         }
-
-        let hls = new Hls({
-          maxBufferLength: 5,
-          enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 90,
-          startLevel: 4,
-          autoStartLoad: false,
-        })
-        hlsRef.current = hls
-        lastVideoLoadKeyForZoomSpanUpdatesRef.current = videoLoadKey
-
-        hls.attachMedia(video)
-        hls.loadSource(streamUrl)
-
-        video.setAttribute('data-video-mp4', streamUrlMp4)
-        videoSourceRef.current.src = streamUrlMp4
-
-
-        let startPosition = startTime ? startTime : 0
-        video.playsInline = true
-        video.currentTime = startPosition
-        console.log('videoRef.current.currentTime = ' + startPosition + ' updated because of processStep')
-
-        hls.startLoad(startPosition)
-
 
         video.onloadeddata = function (e) {
           // Stale callback after navigating away from this video step.
@@ -1847,6 +1897,11 @@ function WalkthroughComponent({
           video.playbackRate = currentStep.playbackRate ? currentStep.playbackRate : 1.2
 
           makeVisible(MAIN_VIEWS.VIDEO, {})
+        }
+
+        // Preload can finish before this step is shown, so loadeddata will not fire again.
+        if (preloaded && video.readyState >= 2) {
+          video.onloadeddata()
         }
 
 
@@ -2035,6 +2090,14 @@ function WalkthroughComponent({
 
     setCurrentStepIndexState(currentStepIndex.current)
     setStep(stepsInternalRef.current[currentStepIndex.current])
+
+    if (currentStep.screenType !== 'Screen_Video') {
+      try {
+        preloadNextVideo(steps, currentStepIndex.current)
+      } catch (e) {
+        // preload is an optimization; a failure must not block the step
+      }
+    }
 
     // After change step
     await afterChangeStep(previousStepIndexRef.current, currentStep, steps, screen, prevScreen)
@@ -2666,7 +2729,7 @@ function WalkthroughComponent({
     } else if (step.autoPlayConfig.type === StepAutoPlayTypes.auto) {
       // Wait until audio playing finishes
       try {
-        if (step.stepAudioId) {
+        if (step.stepAudioId && !disableAudio) {
           await checkAudioHasPlayed(currentAutoPlayTimerRef)
         } else {
           // TODO: autoPlay with type Auto, when there is no audio should calculate delay based on amount of text
@@ -3352,7 +3415,8 @@ function WalkthroughComponent({
 
     {ENABLE_DEBUG_CURSOR ? <DebugCursor /> : null}
 
-    {storyDemoInternalRef.current?.custom?.backgroundMusic?.isActive &&
+    {!disableAudio &&
+      storyDemoInternalRef.current?.custom?.backgroundMusic?.isActive &&
       storyDemoInternalRef.current?.custom?.backgroundMusic?.backgroundMusicUrl ? (
       <audio
         key={storyDemoInternalRef.current?.custom?.backgroundMusic?.backgroundMusicUrl}
@@ -3378,7 +3442,7 @@ function WalkthroughComponent({
             playBgMusic()
           }
         }}
-        shouldShowAudio={storyDemoInternalRef.current?.custom?.backgroundMusic?.isActive || stepAudio}
+        shouldShowAudio={!disableAudio && (storyDemoInternalRef.current?.custom?.backgroundMusic?.isActive || stepAudio)}
         onExitFullScreen={() => {
           document.exitFullscreen()
           setIsFullScreen(false)
@@ -3546,7 +3610,7 @@ function WalkthroughComponent({
         />
       ) : ''}
       {!isMobile ? watermarkElement : ''}
-      {stepAudio ? (
+      {stepAudio && (!disableAudio || isInEditor) ? (
         <WS.AudioWrapper $isInEditor={isInEditor}>
 
           {isInEditor ? (
@@ -3977,24 +4041,19 @@ const WS = {
   Video: styled.video`
     width: 100%;
     height: 100%;
-    //transform-origin: top;
     position: absolute;
     left: 0px;
     top: 0px;
 
-
-    //object-fit: fill;
-
-    max-width: 100%;
-
-    //min-width: 100%;
-    //min-height: 100%;
+    object-fit: cover;
+    object-position: center;
+    /* 0.2% overscale hides the encoded 1px black edge and subpixel seams */
+    transform: scale(1.002);
+    transform-origin: center center;
 
     &&::-webkit-media-controls-panel {
       display: none;
     }
-
-      //transform: scaleX(${({ ratioPercentageX }) => ratioPercentageX}) scaleY(${({ ratioPercentageY }) => ratioPercentageY});
   `,
   VideoWrapper: styled.div`
     width: 100%;
@@ -4005,6 +4064,10 @@ const WS = {
     flex-direction: row;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform-style: preserve-3d;
 
 
       // padding-bottom: ${({ innerWidth, innerHeight }) => ((innerHeight / innerWidth) * 100)}%;

@@ -6,7 +6,7 @@ import ENV from '../config.json'
 export function storyEmbedSrc(workspaceId, storyId, stepNumber = 1) {
   const ws = String(workspaceId?._id || workspaceId || '')
   const story = String(storyId?._id || storyId || '')
-  return `${ENV.STORIES_API}/workspaces/${ws}/stories/${story}/preview?step=${stepNumber}&embed`
+  return `${ENV.STORIES_API}/workspaces/${ws}/stories/${story}/preview?step=${stepNumber}&embed&disableAudio=true`
 }
 
 export function createAiDemoController(iframeRef) {
