@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import axios from 'axios'
 import mainColors from '../../../constants/mainColors'
 import { SendOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
+import { isPcmAudio, playPcm } from '../../anamAvatar'
 
 // Chat column of the split session (§7.4). Welcome message, starter chips,
 // stacked message blocks, composer. Streams the turn over SSE and forwards
@@ -63,6 +64,17 @@ function stopAudio(audioRef) {
   audioRef.current = null
 }
 
+// PCM = avatar agent: the face plays it (and mutes its own <video>). Without a
+// live face (e.g. avatar just switched on) play it raw so the visitor still hears it.
+function playVoice(audioRef, payload, muted, skipTtsRef, onVoiceAudio) {
+  if (!isPcmAudio(payload)) return playBase64Audio(audioRef, payload, muted, skipTtsRef)
+  if (skipTtsRef?.current || !payload.audioBase64) return
+  if (onVoiceAudio) return onVoiceAudio(payload)
+  if (muted) return
+  stopAudio(audioRef)
+  audioRef.current = playPcm(payload)
+}
+
 function playBase64Audio(audioRef, { audioBase64, mimeType }, muted, skipTtsRef) {
   if (muted || skipTtsRef?.current || !audioBase64) return
   stopAudio(audioRef)
@@ -81,7 +93,7 @@ function playBase64Audio(audioRef, { audioBase64, mimeType }, muted, skipTtsRef)
 
 function AgentChatPanel({
   agent, chatUrl, ttsUrl, authToken, sessionId, currentDemo, onContentCard, collapsible, muted, speakWelcome,
-  onCaptionChange, children,
+  onCaptionChange, onVoiceAudio, onSpeakText, avatar, children,
 }, ref) {
   const [messages, setMessages] = useState([])
   const [chips, setChips] = useState(agent.starterQuestions || [])
@@ -94,10 +106,25 @@ function AgentChatPanel({
   const skipTtsRef = useRef(false)
   const welcomeSpokenRef = useRef(false)
   const mutedRef = useRef(muted)
+  const onVoiceAudioRef = useRef(onVoiceAudio)
+  const onSpeakTextRef = useRef(onSpeakText)
 
   useEffect(() => {
     mutedRef.current = muted
   }, [muted])
+
+  useEffect(() => {
+    onVoiceAudioRef.current = onVoiceAudio
+  }, [onVoiceAudio])
+
+  useEffect(() => {
+    onSpeakTextRef.current = onSpeakText
+  }, [onSpeakText])
+
+  // Anam voice: the avatar reads the text itself, no /tts or voice_audio
+  const speakText = (text) => {
+    if (onSpeakTextRef.current && !skipTtsRef.current) onSpeakTextRef.current(text)
+  }
 
   useEffect(() => {
     if (!speakWelcome) return
@@ -109,9 +136,10 @@ function AgentChatPanel({
     if (!agent.voiceEnabled || !ttsUrl || welcomeSpokenRef.current) return
 
     welcomeSpokenRef.current = true
+    if (onSpeakTextRef.current) return speakText(welcome)
     const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {}
     axios.post(ttsUrl, { text: welcome }, { headers })
-      .then((res) => playBase64Audio(audioRef, res.data, mutedRef.current, skipTtsRef))
+      .then((res) => playVoice(audioRef, res.data, mutedRef.current, skipTtsRef, onVoiceAudioRef.current))
       .catch(err => console.log('welcome TTS failed', err))
   }, [speakWelcome, agent.voiceEnabled, agent.welcomeMessage, ttsUrl, authToken, onCaptionChange])
 
@@ -148,8 +176,9 @@ function AgentChatPanel({
           setStatus('')
           setMessages(prev => [...prev, { role: 'assistant', content: data.text }])
           onCaptionChange && onCaptionChange(data.text)
+          speakText(data.text)
         } else if (event === 'voice_audio') {
-          playBase64Audio(audioRef, data, mutedRef.current, skipTtsRef)
+          playVoice(audioRef, data, mutedRef.current, skipTtsRef, onVoiceAudioRef.current)
         } else if (event === 'content_card') {
           onContentCard && onContentCard(data)
         } else if (event === 'suggestions') {
@@ -208,6 +237,8 @@ function AgentChatPanel({
           </S.IconButton>
         )}
       </S.PanelHeader>
+
+      {avatar && <S.AvatarSlot>{avatar}</S.AvatarSlot>}
 
       <S.Messages ref={scrollRef}>
         <S.Welcome>{agent.welcomeMessage}</S.Welcome>
@@ -300,6 +331,10 @@ const S = {
     color: #6b7280;
     cursor: pointer;
     font-size: 15px;
+  `,
+  AvatarSlot: styled.div`
+    flex-shrink: 0;
+    padding: 12px 16px 0;
   `,
   Messages: styled.div`
     flex: 1;

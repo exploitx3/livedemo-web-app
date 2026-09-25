@@ -20,7 +20,8 @@ import ENV from '../../../../config'
 import { flattenSessionEvents } from '../../../../injectScript/sessionRecordingFlatten.js'
 
 
-const ViewSession = function ({ session, storyId, workspaceId, sessionId, sessionIndex, authData }) {
+// eventsUrl: agent sessions load from .../agents/:id/sessions/:id/recording
+const ViewSession = function ({ session, storyId, workspaceId, sessionId, sessionIndex, eventsUrl, authData }) {
   let playerRef = useRef(null)
   let playerInstanceRef = useRef(null)
   let [playerEvents, setPlayerEvents] = useState([])
@@ -28,7 +29,7 @@ const ViewSession = function ({ session, storyId, workspaceId, sessionId, sessio
 
 
   function getPlayerEvents(workspaceId, storyId, sessionId, authToken) {
-    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyId}/sessions/${sessionId}/events`, {
+    return axios.get(eventsUrl || `${ENV.STORIES_API}/workspaces/${workspaceId}/stories/${storyId}/sessions/${sessionId}/events`, {
         headers: {
           Authorization: 'Bearer ' + authToken
         }
@@ -112,6 +113,8 @@ const ViewSession = function ({ session, storyId, workspaceId, sessionId, sessio
             '#story_rrweb_root, #story_rrweb_root.hidden { visibility: visible !important; }',
             '#story_rrweb_root .livedemo-flat-doc, [data-livedemo-flat-iframe] { visibility: visible !important; opacity: 1 !important; }',
             '#story_iframe.hidden { visibility: hidden !important; }',
+            // Script-less replay iframe forces native controls over the avatar poster
+            'video::-webkit-media-controls { display: none !important; }',
           ],
         }
       })

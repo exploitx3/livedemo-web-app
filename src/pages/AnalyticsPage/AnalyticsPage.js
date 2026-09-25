@@ -587,6 +587,7 @@ debugger
                       key={TAB_KEYS.agents}
                     >
                       <AgentsView
+                        advanceInsights={advanceInsights}
                         workspaceId={currentSelectedWorkspace && currentSelectedWorkspace._id}
                         authToken={authData.token}
                         currentViewType={currentViewType}

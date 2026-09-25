@@ -51,18 +51,22 @@ function DemosTab({
               onChange={(e) => toggle(story._id, e.target.checked)}
             />
             {thumb ? <S.Thumb src={thumb} alt="" /> : <S.ThumbPlaceholder />}
-            <S.Name>{story.name || 'Untitled demo'}</S.Name>
-            {!story.isPublished && <Tag>draft</Tag>}
-            <S.DefaultButton
-              type="button"
-              $active={isDefault}
-              onClick={() => onDefaultChange(isDefault ? null : story._id)}
-            >
-              {isDefault ? 'Default' : 'Set default'}
-            </S.DefaultButton>
-            <S.EditLink to={`/workspace/${workspaceId}/storydemo/${story._id}`}>
-              Open in editor
-            </S.EditLink>
+            <S.Body>
+              <S.Name title={story.name}>{story.name || 'Untitled demo'}</S.Name>
+              <S.Meta>
+                {!story.isPublished && <Tag style={{ margin: 0 }}>draft</Tag>}
+                <S.DefaultButton
+                  type="button"
+                  $active={isDefault}
+                  onClick={() => onDefaultChange(isDefault ? null : story._id)}
+                >
+                  {isDefault ? 'Default' : 'Set default'}
+                </S.DefaultButton>
+                <S.EditLink to={`/workspace/${workspaceId}/storydemo/${story._id}`}>
+                  Open in editor
+                </S.EditLink>
+              </S.Meta>
+            </S.Body>
           </S.Row>
         )
       })}
@@ -90,28 +94,48 @@ const S = {
   Row: styled.div`
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     border: 1px solid ${p => (p.$isDefault ? mainColors.primaryColor : '#e5e7eb')};
     border-radius: 10px;
-    padding: 8px 10px;
+    padding: 12px 14px;
     background: ${p => (p.$isDefault ? '#f5f3ff' : '#ffffff')};
+    transition: border-color 0.15s;
+
+    &:hover {
+      border-color: ${p => (p.$isDefault ? mainColors.primaryColor : '#d1d5db')};
+    }
   `,
   Thumb: styled.img`
-    width: 48px;
-    height: 30px;
+    flex-shrink: 0;
+    width: 72px;
+    height: 45px;
     object-fit: cover;
-    border-radius: 4px;
+    border-radius: 6px;
     background: #f3f4f6;
   `,
   ThumbPlaceholder: styled.div`
-    width: 48px;
-    height: 30px;
-    border-radius: 4px;
+    flex-shrink: 0;
+    width: 72px;
+    height: 45px;
+    border-radius: 6px;
     background: #f3f4f6;
   `,
-  Name: styled.div`
+  Body: styled.div`
     flex: 1;
-    font-size: 13px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  `,
+  Meta: styled.div`
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  `,
+  Name: styled.div`
+    font-size: 13.5px;
+    font-weight: 500;
     color: #111827;
     white-space: nowrap;
     overflow: hidden;

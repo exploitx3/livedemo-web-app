@@ -9,7 +9,7 @@ import 'antd/es/button/style'
 import 'antd/es/card/style'
 import 'antd/es/modal/style'
 import 'antd/es/switch/style'
-import { PlusOutlined, DeleteOutlined, RobotOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import mainColors from '../../../../constants/mainColors'
 import Spinner from '../../../../components/Spinner/Spinner'
 
@@ -38,7 +38,7 @@ function AIAgentsView({ agents, workspaceId, onCreate, onDelete, onSetPublished 
           cover={
             agent.avatarUrl
               ? <S.Avatar src={agent.avatarUrl} alt="" />
-              : <S.AvatarPlaceholder><RobotOutlined /></S.AvatarPlaceholder>
+              : <S.AvatarPlaceholder>{(agent.name || 'A')[0].toUpperCase()}</S.AvatarPlaceholder>
           }
         >
           <S.CardName>{agent.name || 'Untitled agent'}</S.CardName>
@@ -102,6 +102,7 @@ const S = {
     && {
       border-radius: 12px;
       overflow: hidden;
+
     }
 
     && .ant-card-body {
@@ -114,12 +115,14 @@ const S = {
   `,
   AvatarPlaceholder: styled.div`
     height: 120px;
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
-    background: #eef4ff;
-    color: ${mainColors.primaryColor};
-    font-size: 34px;
+    background: linear-gradient(135deg, ${mainColors.primaryColor} 0%, ${mainColors.primaryColorDarker} 100%);
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
   `,
   CardName: styled.div`
     font-size: 14px;

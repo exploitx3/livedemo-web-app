@@ -602,6 +602,12 @@ function WalkthroughComponent({
   let videoRef = useRef(null)
   window.videoRef = videoRef
 
+  // React-owned visibility for #story_video_wrapper. makeVisible also toggles classList for
+  // immediate paint, but VideoWrapper's innerWidth/innerHeight props change on bind and
+  // styled-components rewrites className from the JSX prop — a static 'hidden' would wipe
+  // the imperative reveal (preload path has no later loadeddata to recover).
+  const [videoLayerVisible, setVideoLayerVisible] = useState(false)
+
   // Guards the HLS reload in processStep(): `steps` is rebuilt fresh (new array) on every redux
   // dispatch with no memoization, so an unrelated edit (e.g. dragging a zoom span) still re-runs
   // processStep() for the currently-shown step. Without this, that re-run always re-attached HLS
@@ -1222,7 +1228,9 @@ function WalkthroughComponent({
         })
     }
 
-    if (isEmbed && !isInEditorRef.current && navigator.doNotTrack !== '1') {
+    // Inside an AI agent the agent page records the whole visit (demo included)
+    const isInAgent = urlParams.get('inAgent') === 'true'
+    if (isEmbed && !isInEditorRef.current && !isInAgent && navigator.doNotTrack !== '1') {
       setupSessionRecording(eventsRef, currentStepIndexRef)
       console.log('setupSessionRecording setup')
     }
@@ -1703,7 +1711,8 @@ function WalkthroughComponent({
     // screen for this step is shown (end of this function).
     setIsStepScreenReady(false)
 
-    const video = videoRef.current
+    // Do not capture video here — waitForElement assigns videoRef async, and
+    // beforeChangeStep awaits. Stale null here cancels a real bind via generation bump.
     const isLastStep = currentStepIndex.current === steps.length - 1
 
     const stepFirstTransition = currentStep && currentStep.customTransitions && currentStep.customTransitions[0]
@@ -1719,6 +1728,11 @@ function WalkthroughComponent({
 
     // Middle operations based on screen type
     console.log('middlePromise')
+
+    const video = videoRef.current || document.getElementById('story_video')
+    if (video && !videoRef.current) {
+      videoRef.current = video
+    }
 
     if (currentStep.screenType === 'Screen_Page') {
       // Cancel any in-flight video onloadeddata from the previous step.
@@ -1772,7 +1786,9 @@ function WalkthroughComponent({
       console.timeEnd('p')
 
     }
-    if (currentStep.screenType === 'Screen_Video' && videoSourceRef.current) {
+    // Need the <video> node — videoSourceRef alone is not enough (set before
+    // videoRef on first paint; a null `video` used to throw mid-bind / bump gen).
+    if (currentStep.screenType === 'Screen_Video' && video) {
 
       let shouldShowRegions = calculateShouldShowRegions(step, currentScreenRef)
       setShowRegions(shouldShowRegions)
@@ -1835,10 +1851,12 @@ function WalkthroughComponent({
       } else {
       const videoBindGeneration = ++videoViewGenerationRef.current
 
-      // Poster is already decoded when the clip was preloaded and the first frame is buffered.
-      if (!(preloaded && video.readyState >= 2)) {
-        await waitForPosterImage(posterUrl)
-      }
+      // Always await here — even when the poster is already cached from preload.
+      // setVideoRatioWidth/Height above schedule a React re-render of VideoWrapper
+      // (className={'hidden'}). That commit must land BEFORE makeVisible removes
+      // `hidden` via classList; otherwise React re-applies `hidden` and the
+      // preload path's synthetic onloadeddata never fires again → invisible video.
+      await waitForPosterImage(posterUrl)
 
       if (videoBindGeneration !== videoViewGenerationRef.current) {
         // Navigated away while poster was loading
@@ -1879,8 +1897,8 @@ function WalkthroughComponent({
           makeVisible(MAIN_VIEWS.VIDEO, {})
         }
 
-        // Preload can finish before this step is shown, so loadeddata will not fire again.
-        if (preloaded && video.readyState >= 2) {
+        // loadeddata may already have fired (preload, or MSE cache on cold start).
+        if (video.readyState >= 2) {
           video.onloadeddata()
         }
 
@@ -2272,6 +2290,8 @@ function WalkthroughComponent({
     if (!iframeElem || !videoElem || !imagesElem) {
       return
     }
+
+    setVideoLayerVisible(view === MAIN_VIEWS.VIDEO)
 
     if (view === MAIN_VIEWS.IFRAME) {
       iframeElem.classList.add('zIndex2')
@@ -3468,7 +3488,7 @@ function WalkthroughComponent({
 
       <WS.VideoWrapper
         id={'story_video_wrapper'}
-        className={'hidden'}
+        className={videoLayerVisible ? 'zIndex2' : 'hidden'}
         innerWidth={videoRatioWidth}
         innerHeight={videoRatioHeight}
       >

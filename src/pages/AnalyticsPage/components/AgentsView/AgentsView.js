@@ -11,11 +11,12 @@ import 'antd/es/tag/style'
 
 import ENV from '../../../../config'
 import Spinner from '../../../../components/Spinner/Spinner'
+import ViewSession from '../ViewSession/ViewSession'
 
-// AI Agents analytics tab: agents metrics table + sessions table + transcript
-// drill-in (§9.2). The drill-in is the chat transcript and event timeline —
-// agent sessions have no rrweb.
-function AgentsView({ workspaceId, authToken, currentViewType }) {
+// AI Agents analytics tab: agents metrics table + sessions table + drill-in
+// (§9.2): rrweb replay of the agent page (Session type 'agent'), chat
+// transcript and event timeline.
+function AgentsView({ workspaceId, authToken, currentViewType, advanceInsights }) {
   const [loading, setLoading] = useState(true)
   const [agentDocs, setAgentDocs] = useState([])
   const [sessions, setSessions] = useState([])
@@ -122,12 +123,28 @@ function AgentsView({ workspaceId, authToken, currentViewType }) {
 
       <Modal
         open={!!drillIn}
-        title="Session transcript"
+        title="Session"
         footer={null}
-        width={640}
+        width={drillIn && drillIn.hasRecording ? 1100 : 640}
+        destroyOnHidden
         onCancel={() => setDrillIn(null)}
       >
         {drillInLoading && <S.SpinnerWrapper><Spinner /></S.SpinnerWrapper>}
+        {!drillInLoading && drillIn && drillIn.hasRecording && (
+          <S.Replay>
+            {advanceInsights ? (
+              <ViewSession
+                key={drillIn.session._id}
+                workspaceId={workspaceId}
+                sessionId={drillIn.session._id}
+                sessionIndex={0}
+                eventsUrl={`${ENV.STORIES_API}/workspaces/${workspaceId}/agents/${drillIn.session.agentId}/sessions/${drillIn.session._id}/recording`}
+              />
+            ) : (
+              <S.Muted>Upgrade to unlock Session Recordings.</S.Muted>
+            )}
+          </S.Replay>
+        )}
         {!drillInLoading && drillIn && (
           <S.Transcript>
             {(drillIn.messages || []).map((message) => (
@@ -173,6 +190,10 @@ const S = {
     display: flex;
     justify-content: center;
     padding: 40px;
+  `,
+  Replay: styled.div`
+    margin-bottom: 16px;
+    overflow-x: auto;
   `,
   Transcript: styled.div`
     display: flex;

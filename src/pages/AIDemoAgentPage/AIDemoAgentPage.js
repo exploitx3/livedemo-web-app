@@ -38,6 +38,8 @@ function AIDemoAgentPage({ authData }) {
   const [sources, setSources] = useState([])
   const [stories, setStories] = useState([])
   const [voices, setVoices] = useState([])
+  const [avatars, setAvatars] = useState(null)
+  const [anamVoices, setAnamVoices] = useState(null)
   const [history, setHistory] = useState({ revisions: [], canUndo: false, canRedo: false })
   const [sessionId, setSessionId] = useState(null)
   const [name, setName] = useState('')
@@ -72,6 +74,12 @@ function AIDemoAgentPage({ authData }) {
       axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/voices`, authHeaders)
         .then((res) => setVoices(res.data.voices || res.data || []))
         .catch(() => setVoices([])),
+      axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/anam-avatars`, authHeaders)
+        .then((res) => setAvatars(res.data.avatars || []))
+        .catch(() => setAvatars([])),
+      axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/anam-voices`, authHeaders)
+        .then((res) => setAnamVoices(res.data.voices || []))
+        .catch(() => setAnamVoices([])),
       axios.post(`${base}/session`, {}, authHeaders)
         .then((res) => setSessionId(res.data._id)),
     ]).catch(showErrorsForResponse)
@@ -208,6 +216,8 @@ function AIDemoAgentPage({ authData }) {
         <PersonaTab
           agent={agent}
           voices={voices}
+          avatars={avatars}
+          anamVoices={anamVoices}
           onSave={(updates) => patchAgent(updates).then(() => toast.success('Persona saved'))}
         />
       ),

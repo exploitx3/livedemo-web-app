@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import axios from 'axios'
 import ENV from '../config.json'
 import mainColors from '../constants/mainColors'
 import AgentChatPanel from './components/AgentChatPanel/AgentChatPanel'
 import AgentVoiceBar from './components/AgentVoiceBar/AgentVoiceBar'
 import { createAiDemoController } from './aiDemoController'
+import { createAnamAvatar } from './anamAvatar'
+import { startAgentRecording } from './agentRecording'
 import { ShareAltOutlined, FullscreenOutlined } from '@ant-design/icons'
 import { toast } from 'react-hot-toast'
 
@@ -25,9 +27,61 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
   const [captionsOn, setCaptionsOn] = useState(false)
   const [captionText, setCaptionText] = useState('')
 
+  const avatarRef = useRef(null)
+  const pendingSpeechRef = useRef([])
+  const avatarVideoIdRef = useRef(`ld-anam-${Math.random().toString(36).slice(2)}`)
+
   if (!controllerRef.current) {
     controllerRef.current = createAiDemoController(iframeRef)
   }
+
+  const avatarOn = !!(agent.avatarsEnabled && agent.anamAvatarId)
+  // Editor pane: still image only — no billed Anam session, and it is silent anyway.
+  // speakWelcome is false while onboarding overlays are up; don't stream behind them.
+  const avatarLive = avatarOn && agent.voiceEnabled && !isEditor && speakWelcome
+  const anamVoice = avatarLive && agent.avatarVoice === 'anam'
+
+  useEffect(() => {
+    if (!avatarLive) return
+    const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {}
+    const avatar = createAnamAvatar({
+      videoId: avatarVideoIdRef.current,
+      mode: anamVoice ? 'talk' : 'passthrough',
+      getSessionToken: () => axios.post(`${ENV.STORIES_API}/agents/${agent._id}/anam-session`, {}, { headers })
+        .then(res => res.data.sessionToken),
+    })
+    avatarRef.current = avatar
+    pendingSpeechRef.current.splice(0).forEach(text => avatar.say(text))
+    avatar.start()
+    return () => {
+      avatar.stop()
+      avatarRef.current = null
+    }
+  }, [avatarLive, anamVoice, agent._id, authToken])
+
+  // Session replay (Session type 'agent'). Editor pane sessions are not analytics.
+  useEffect(() => {
+    if (isEditor || !sessionId || navigator.doNotTrack === '1') return
+    return startAgentRecording(
+      `${ENV.STORIES_API}/agents/${agent._id}/sessions/${sessionId}/recording-events`,
+      authToken ? { Authorization: `Bearer ${authToken}` } : {},
+    )
+  }, [isEditor, sessionId, agent._id, authToken])
+
+  useEffect(() => {
+    if (avatarRef.current) avatarRef.current.setMuted(!soundOn)
+  }, [soundOn, avatarLive])
+
+  const handleVoiceAudio = useCallback((payload) => {
+    if (avatarRef.current) avatarRef.current.pushPcm(payload)
+  }, [])
+
+  // The panel's welcome effect runs before this component's effect creates the
+  // avatar (child effects fire first), so hold early text until it exists.
+  const handleSpeakText = useCallback((text) => {
+    if (avatarRef.current) avatarRef.current.say(text)
+    else pendingSpeechRef.current.push(text)
+  }, [])
 
   const chatUrl = mode === 'editor'
     ? `${ENV.STORIES_API}/workspaces/${agent.workspaceId}/agents/${agent._id}/chat`
@@ -170,6 +224,20 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
         muted={!soundOn || isEditor}
         speakWelcome={speakWelcome && !isEditor}
         onCaptionChange={setCaptionText}
+        onVoiceAudio={avatarLive && !anamVoice ? handleVoiceAudio : undefined}
+        onSpeakText={anamVoice ? handleSpeakText : undefined}
+        avatar={avatarLive ? (
+          // Chat collapse/expand remounts this element; reattach keeps the live stream
+          <S.AvatarVideo
+            id={avatarVideoIdRef.current}
+            ref={(el) => { if (el && avatarRef.current) avatarRef.current.reattach(el) }}
+            autoPlay
+            playsInline
+            style={agent.avatarUrl ? { backgroundImage: `url(${agent.avatarUrl})` } : undefined}
+          />
+        ) : avatarOn && agent.avatarUrl ? (
+          <S.AvatarImage src={agent.avatarUrl} alt="" />
+        ) : null}
       >
         <AgentVoiceBar
           voiceEnabled={agent.voiceEnabled}
@@ -181,7 +249,10 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
           getSession={getScribeSession}
           onTranscript={handleTranscript}
           onPartial={setCaptionText}
-          onTalkStart={() => chatRef.current && chatRef.current.stopSpeaking()}
+          onTalkStart={() => {
+            if (avatarRef.current) avatarRef.current.interrupt()
+            chatRef.current && chatRef.current.stopSpeaking()
+          }}
           onTalkEnd={() => chatRef.current && chatRef.current.allowSpeaking()}
           disabled={!sessionId}
         />
@@ -229,6 +300,14 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
     </S.Stage>
   )
 }
+
+const avatarBoxCss = css`
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 12px;
+`
 
 const S = {
   Stage: styled.div`
@@ -294,6 +373,13 @@ const S = {
     justify-content: center;
     color: #9ca3af;
     font-size: 14px;
+  `,
+  AvatarVideo: styled.video`
+    ${avatarBoxCss}
+    background: #111318 center / cover no-repeat;
+  `,
+  AvatarImage: styled.img`
+    ${avatarBoxCss}
   `,
   IFrame: styled.iframe`
     width: 100%;
