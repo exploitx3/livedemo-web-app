@@ -1,9 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 import styled from 'styled-components'
 import Checkbox from 'antd/es/checkbox'
+import Input from 'antd/es/input'
 import Tag from 'antd/es/tag'
 import 'antd/es/checkbox/style'
+import 'antd/es/input/style'
 import 'antd/es/tag/style'
+import { SearchOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import mainColors from '../../../../constants/mainColors'
 
@@ -18,8 +21,11 @@ function DemosTab({
   onChange,
   onDefaultChange,
 }) {
+  const [query, setQuery] = useState('')
   const selected = (allowedDemoIds || []).map(String)
   const defaultId = defaultDemoId ? String(defaultDemoId) : ''
+  const needle = query.trim().toLowerCase()
+  const visible = (stories || []).filter(s => !needle || String(s.name || 'Untitled demo').toLowerCase().includes(needle))
 
   function toggle(storyId, checked) {
     const idStr = String(storyId)
@@ -36,7 +42,18 @@ function DemosTab({
         Click <strong>Set default</strong> on any demo to load it automatically when a session starts.
       </S.Hint>
 
-      {(stories || []).map((story) => {
+      {stories && stories.length > 0 && (
+        <Input
+          allowClear
+          prefix={<SearchOutlined />}
+          placeholder="Search demos"
+          aria-label="Search demos"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      )}
+
+      {visible.map((story) => {
         const idStr = String(story._id)
         const isSelected = selected.includes(idStr)
         const isDefault = defaultId === idStr
@@ -70,6 +87,10 @@ function DemosTab({
           </S.Row>
         )
       })}
+
+      {stories && stories.length > 0 && visible.length === 0 && (
+        <S.Hint>No demos match "{query.trim()}".</S.Hint>
+      )}
 
       {(!stories || stories.length === 0) && (
         <S.Hint>No demos in this workspace yet. Record one first.</S.Hint>

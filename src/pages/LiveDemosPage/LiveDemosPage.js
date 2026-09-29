@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import StoryDemosView from './components/StoryDemosView/StoryDemosView'
 import AIRecordingsView from './components/AIRecordingsView/AIRecordingsView'
@@ -32,8 +32,8 @@ import axios from '../../utils/axiosInstance'
 import * as ENV from '../../config.json'
 import TippyPremium from '../../components/TippyPremium/TippyPremium'
 
-import {chromeAppAuthenticate, showErrorsForResponse} from '../../utils/helperFunctions'
-import {updateCurrentSelectedWorkspace} from "../../actions/workspacesActions";
+import { chromeAppAuthenticate, showErrorsForResponse } from '../../utils/helperFunctions'
+import { updateCurrentSelectedWorkspace } from "../../actions/workspacesActions";
 
 const { confirm } = Modal
 
@@ -45,7 +45,7 @@ var chrome = chrome
 
 var chromeRuntimeExists = false
 
-if(chrome) {
+if (chrome) {
   chromeRuntimeExists = true
 }
 
@@ -59,13 +59,18 @@ function LiveDemosPage(props) {
   const navigate = useNavigate()
   let [liveDemos, setLiveDemos] = useState([])
   let [storyDemos, setStoryDemos] = useState(null)
+  let [storyPage, setStoryPage] = useState({ page: 1, total: 0, pageSize: 50 })
   let [autoRecordings, setAutoRecordings] = useState(null)
   let [aiAgents, setAiAgents] = useState(null)
   let [activeTab, setActiveTab] = useState(TABS.LIVE_DEMOS)
+  const loadMoreSentinelRef = useRef(null)
+  const loadingMoreRef = useRef(false)
+  const workspaceIdRef = useRef(null)
+  workspaceIdRef.current = props.currentSelectedWorkspace?._id
   const allowAIAgents = props.authData?.featureFlags?.allowAIAgents === true
 
   function getLiveDemos(workspaceId, authToken) {
-    return axios.get(`/workspaces/${workspaceId}/livedemos`,{
+    return axios.get(`/workspaces/${workspaceId}/livedemos`, {
       headers: {
         Authorization: `Bearer ${authToken}`
       }
@@ -73,17 +78,22 @@ function LiveDemosPage(props) {
       .then((res) => res.data)
   }
 
-  function getStoryDemos(workspaceId, authToken) {
-    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories`,{
+  function getStoryDemos(workspaceId, authToken, page = 1) {
+    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/stories`, {
+      params: { page },
       headers: {
         Authorization: `Bearer ${authToken}`
       }
     })
-      .then((res) => res.data)
+      .then((res) => {
+        const { stories, ...pageInfo } = res.data
+        setStoryPage(pageInfo)
+        return stories
+      })
   }
 
   function getAutoRecordings(workspaceId, authToken) {
-    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/auto-recordings`,{
+    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/auto-recordings`, {
       headers: {
         Authorization: `Bearer ${authToken}`
       }
@@ -92,7 +102,7 @@ function LiveDemosPage(props) {
   }
 
   function getAiAgents(workspaceId, authToken) {
-    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/agents`,{
+    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/agents`, {
       headers: {
         Authorization: `Bearer ${authToken}`
       }
@@ -137,7 +147,7 @@ function LiveDemosPage(props) {
               setAiAgents(agentsArray)
             }),
         ] : []),
-        ])
+      ])
     }
 
 
@@ -158,6 +168,38 @@ function LiveDemosPage(props) {
         setStoryDemos(storyDemosArray)
       })
   }, [props.currentSelectedWorkspace, props.authData.token])
+
+  const hasMoreStoryDemos = storyDemos !== null && storyDemos.length < storyPage.total
+
+  const loadMoreStoryDemos = useCallback(function loadMoreStoryDemos() {
+    const workspaceId = props.currentSelectedWorkspace?._id
+    if (!workspaceId || !hasMoreStoryDemos || loadingMoreRef.current) return
+
+    loadingMoreRef.current = true
+    getStoryDemos(workspaceId, props.authData.token, storyPage.page + 1)
+      .then((nextStories) => {
+        if (workspaceIdRef.current !== workspaceId) return
+        setStoryDemos((prev) => {
+          const seen = new Set(prev.map((s) => s._id))
+          return [...prev, ...nextStories.filter((s) => !seen.has(s._id))]
+        })
+      })
+      .catch((err) => showErrorsForResponse(err))
+      .finally(() => { loadingMoreRef.current = false })
+  }, [props.currentSelectedWorkspace, props.authData.token, storyPage.page, hasMoreStoryDemos])
+
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current
+    if (!sentinel || !hasMoreStoryDemos) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        loadMoreStoryDemos()
+      }
+    }, { rootMargin: '300px' })
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [loadMoreStoryDemos, hasMoreStoryDemos, activeTab])
 
   const refreshAiAgents = useCallback(function refreshAiAgents() {
     if (!props.currentSelectedWorkspace?._id) return Promise.resolve()
@@ -243,7 +285,7 @@ function LiveDemosPage(props) {
   return (
     <React.Fragment>
 
-      <Header title={'Demos'}/>
+      <Header title={'Demos'} />
       <S.Content>
 
         <S.DashboardContainer id={'dashboard-container'}>
@@ -285,6 +327,9 @@ function LiveDemosPage(props) {
                   isChromeAppAuthorized={props.isChromeAppAuthorized}
                   noDemoLimit={props.authData?.featureFlags?.noDemoLimit === true}
                 />
+              )}
+              {activeTab === TABS.LIVE_DEMOS && hasMoreStoryDemos && (
+                <div ref={loadMoreSentinelRef} style={{ height: 1 }} />
               )}
               {activeTab === TABS.AI_RECORDINGS && (
                 <AIRecordingsView

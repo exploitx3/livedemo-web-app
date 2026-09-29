@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { toast } from 'react-hot-toast'
 import styled from 'styled-components'
 import Button from 'antd/es/button'
 import Input from 'antd/es/input'
@@ -10,7 +11,10 @@ import 'antd/es/input/style'
 import 'antd/es/radio/style'
 import 'antd/es/select/style'
 import 'antd/es/switch/style'
-import { PlusOutlined, DeleteOutlined, SoundOutlined, CaretRightFilled } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, SoundOutlined, CaretRightFilled, UploadOutlined } from '@ant-design/icons'
+
+const AVATAR_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const AVATAR_IMAGE_MAX_BYTES = 8 * 1024 * 1024
 
 const { TextArea } = Input
 
@@ -89,9 +93,13 @@ const anamOption = (v) => voiceOption({
 })
 
 // Persona tab (§5.5): plain form, PATCH the agent on Save.
-function PersonaTab({ agent, voices, avatars, anamVoices, onSave }) {
+function PersonaTab({
+  agent, voices, avatars, lemonsliceAvatars, anamVoices, onSave, onCreateLemonsliceAvatar, onDeleteLemonsliceAvatar,
+}) {
   const [form, setForm] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [creatingAvatar, setCreatingAvatar] = useState(false)
+  const avatarFileRef = useRef(null)
 
   useEffect(() => {
     setForm({
@@ -102,6 +110,8 @@ function PersonaTab({ agent, voices, avatars, anamVoices, onSave }) {
       voiceId: agent.voiceId || '',
       avatarsEnabled: !!agent.avatarsEnabled,
       anamAvatarId: agent.anamAvatarId || '',
+      avatarProvider: agent.avatarProvider || 'anam',
+      lemonsliceAvatarId: agent.lemonsliceAvatarId || '',
       avatarVoice: agent.avatarVoice || 'elevenlabs',
       anamVoiceId: agent.anamVoiceId || '',
       visitorCapture: {
@@ -119,9 +129,39 @@ function PersonaTab({ agent, voices, avatars, anamVoices, onSave }) {
   if (!form) return null
 
   const set = (patch) => setForm(prev => ({ ...prev, ...patch }))
-  const selectedAvatar = (avatars || []).find(a => a.id === form.anamAvatarId)
+  const lemonSlice = form.avatarProvider === 'lemonslice'
+  const avatarList = lemonSlice ? lemonsliceAvatars : avatars
+  const avatarField = lemonSlice ? 'lemonsliceAvatarId' : 'anamAvatarId'
+  const selectedAvatar = (avatarList || []).find(a => a.id === form[avatarField])
   const selectedVoice = (voices || []).find(v => (v.voice_id || v.voiceId || v._id) === form.voiceId)
   const selectedAnamVoice = (anamVoices || []).find(v => v.id === form.anamVoiceId)
+
+  function handleAvatarFile(e) {
+    const file = e.target.files && e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    if (!AVATAR_IMAGE_TYPES.includes(file.type)) {
+      toast.error('Upload a JPG, PNG or WebP image')
+      return
+    }
+    if (file.size > AVATAR_IMAGE_MAX_BYTES) {
+      toast.error('Image must be under 8 MB')
+      return
+    }
+    setCreatingAvatar(true)
+    onCreateLemonsliceAvatar(file, file.name.replace(/\.[^.]+$/, ''))
+      .then((avatar) => {
+        set({ lemonsliceAvatarId: avatar.id })
+        toast.success('Avatar created. Save persona to use it')
+      })
+      .catch(() => {})
+      .then(() => setCreatingAvatar(false))
+  }
+
+  function handleDeleteAvatar() {
+    if (!window.confirm(`Delete "${selectedAvatar.displayName}"? Agents in this workspace using it lose their avatar.`)) return
+    onDeleteLemonsliceAvatar(selectedAvatar.id)
+  }
 
   function handleSave() {
     setSaving(true)
@@ -184,7 +224,7 @@ function PersonaTab({ agent, voices, avatars, anamVoices, onSave }) {
       {form.voiceEnabled && (
         <S.QuestionRow>
           <Select
-            style={{ flex: 1 }}
+            style={{ flex: 1, minWidth: 0 }}
             placeholder="Pick a voice"
             showSearch
             optionFilterProp="search"
@@ -204,37 +244,73 @@ function PersonaTab({ agent, voices, avatars, anamVoices, onSave }) {
       </S.SwitchRow>
       {form.avatarsEnabled && (
         <S.Field>
+          <S.Label>Avatar provider</S.Label>
+          <Radio.Group value={form.avatarProvider} onChange={(e) => set({ avatarProvider: e.target.value })}>
+            <Radio value="anam">Anam</Radio>
+            <Radio value="lemonslice">LemonSlice</Radio>
+          </Radio.Group>
           <Select
+            key={form.avatarProvider}
             style={{ width: '100%' }}
-            placeholder={avatars === null ? 'Loading avatars…' : 'Pick an avatar'}
-            loading={avatars === null}
+            placeholder={avatarList === null ? 'Loading avatars…' : 'Pick an avatar'}
+            loading={avatarList === null}
             allowClear
             showSearch
             optionFilterProp="title"
-            value={form.anamAvatarId || undefined}
-            onChange={(v) => set({ anamAvatarId: v || '' })}
-            options={(avatars || []).map(a => ({
+            value={form[avatarField] || undefined}
+            onChange={(v) => set({ [avatarField]: v || '' })}
+            options={(avatarList || []).map(a => ({
               value: a.id,
               title: [a.displayName, a.variantName].filter(Boolean).join(' '),
               label: (
                 <S.AvatarOption>
                   <img src={a.imageUrl} alt="" />
                   {[a.displayName, a.variantName].filter(Boolean).join(' · ')}
+                  {a.custom && <S.VoiceBadge>Custom</S.VoiceBadge>}
                 </S.AvatarOption>
               ),
             }))}
           />
+          {lemonSlice && (
+            <>
+              <S.QuestionRow>
+                <input
+                  ref={avatarFileRef}
+                  type="file"
+                  accept={AVATAR_IMAGE_TYPES.join(',')}
+                  hidden
+                  onChange={handleAvatarFile}
+                />
+                <Button icon={<UploadOutlined />} loading={creatingAvatar} onClick={() => avatarFileRef.current.click()}>
+                  {creatingAvatar ? 'Creating avatar…' : 'Create from photo'}
+                </Button>
+                {selectedAvatar?.custom && (
+                  <Button danger icon={<DeleteOutlined />} onClick={handleDeleteAvatar}>Delete</Button>
+                )}
+              </S.QuestionRow>
+              <S.Hint>
+                {creatingAvatar
+                  ? 'LemonSlice is framing the photo, about 10 seconds.'
+                  : 'Front-facing photo, head and shoulders, good light. Shared with every agent in this workspace.'}
+              </S.Hint>
+            </>
+          )}
           {selectedAvatar && <S.AvatarPreview src={selectedAvatar.imageUrl} alt="" />}
 
-          <S.Label>Avatar voice</S.Label>
-          <Radio.Group value={form.avatarVoice} onChange={(e) => set({ avatarVoice: e.target.value })}>
-            <Radio value="elevenlabs">ElevenLabs voice (selected above)</Radio>
-            <Radio value="anam">Anam voice</Radio>
-          </Radio.Group>
-          {form.avatarVoice === 'anam' && (
+          {!lemonSlice && (
+            <>
+              <S.Label>Avatar voice</S.Label>
+              <Radio.Group value={form.avatarVoice} onChange={(e) => set({ avatarVoice: e.target.value })}>
+                <Radio value="elevenlabs">ElevenLabs voice (selected above)</Radio>
+                <Radio value="anam">Anam voice</Radio>
+              </Radio.Group>
+            </>
+          )}
+          {lemonSlice && <S.Hint>LemonSlice lip-syncs the ElevenLabs voice selected above.</S.Hint>}
+          {!lemonSlice && form.avatarVoice === 'anam' && (
             <S.QuestionRow>
               <Select
-                style={{ flex: 1 }}
+                style={{ flex: 1, minWidth: 0 }}
                 placeholder={anamVoices === null ? 'Loading voices…' : 'Pick an Anam voice'}
                 loading={anamVoices === null}
                 showSearch
@@ -251,7 +327,7 @@ function PersonaTab({ agent, voices, avatars, anamVoices, onSave }) {
           {!form.voiceEnabled && (
             <S.Hint>Turn on Voice — the avatar only speaks when voice is on.</S.Hint>
           )}
-          {form.voiceEnabled && form.avatarVoice === 'anam' && !form.anamVoiceId && (
+          {!lemonSlice && form.voiceEnabled && form.avatarVoice === 'anam' && !form.anamVoiceId && (
             <S.Hint>Pick an Anam voice, otherwise the ElevenLabs voice is used.</S.Hint>
           )}
         </S.Field>
@@ -427,6 +503,7 @@ const S = {
     width: 100%;
     aspect-ratio: 3 / 2;
     object-fit: cover;
+    object-position: 50% 25%;
     border-radius: 8px;
   `,
   Hint: styled.span`

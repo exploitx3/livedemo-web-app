@@ -1683,7 +1683,7 @@ const StoryDemoPage = ({
 
     let demo = JSON.parse(JSON.stringify(currentStoryDemo))
 
-    let stepsInternal = demo.screens.reduce((accum, screen) => {
+    let stepsInternal = demo.screens.sort((a, b) => a.index - b.index).reduce((accum, screen) => {
       if (screen.steps) {
         screen.steps = screen.steps.map(step => {
 
@@ -1805,6 +1805,8 @@ const StoryDemoPage = ({
                 foundStep = {...foundStep, ...newStep}
                 foundStep.view.hotspot.frameX = event.data.frameX
                 foundStep.view.hotspot.frameY = event.data.frameY
+                // A manual drag wins over the AI node anchor
+                foundStep.view.hotspot.rrwebNodeId = null
 
                 setStoryDemo(newStoryDemo)
               }
@@ -2045,7 +2047,7 @@ const StoryDemoPage = ({
 
         // setIsPublished(storyDemoData.isPublished)
 
-        let stepsInternal = storyDemoData.screens.reduce((accum, screen) => {
+        let stepsInternal = [...storyDemoData.screens].sort((a, b) => a.index - b.index).reduce((accum, screen) => {
           if (screen.steps) {
             screen.steps = screen.steps.map(step => {
               step.screenId = screen._id

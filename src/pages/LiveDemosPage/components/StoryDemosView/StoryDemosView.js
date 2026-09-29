@@ -187,7 +187,7 @@ function generateStoryDemoCards(storyDemos, props) {
 
       return <S.WorkspacesContainer>
         {storyDemos.map((storyDemo, index) => {
-          const isHidden = !noDemoLimit && index < storyDemos.length - FREE_DEMO_LIMIT
+          const isHidden = !noDemoLimit && index >= FREE_DEMO_LIMIT
           return (
             <StoryDemoCardSwitch
               key={storyDemo._id}

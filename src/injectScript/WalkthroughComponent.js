@@ -576,11 +576,11 @@ function WalkthroughComponent({
   const [updateStateVar, updateState] = React.useState();
   const forceUpdate = React.useCallback(() => updateState({}), []);
 
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 600)
 
   useEffect(() => {
     function handleResize() {
-      setIsMobile(window.innerWidth <= 768)
+      setIsMobile(window.innerWidth <= 600)
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
@@ -622,6 +622,10 @@ function WalkthroughComponent({
   // video.onloadeddata from a previous step must not call makeVisible(VIDEO) after
   // the user has already switched to Screenshot/Page — that hides the new layer.
   let videoViewGenerationRef = useRef(0)
+  // Bumped on every processStep. A run that resumes after an await with a stale
+  // generation must not paint — a slower older page load would overwrite the newer step.
+  let stepGenerationRef = useRef(0)
+  let cancelIframeWaitRef = useRef(null)
 
   function detachVideoViewHandlers(videoEl) {
     videoViewGenerationRef.current += 1
@@ -1260,8 +1264,13 @@ function WalkthroughComponent({
     }
 
 
+    let isUnmounted = false
+
     waitForElementInTop('#story_video', 300, 20)
       .then((flixVideoElement) => {
+        if (isUnmounted) {
+          return
+        }
 
         videoRef.current = flixVideoElement
 
@@ -1270,7 +1279,9 @@ function WalkthroughComponent({
         return processStep(currentStepIndexRef, videoRef, storyDemoInternalRef, stepsInternalRef.current)
       })
       .then(() => {
-
+        if (isUnmounted) {
+          return []
+        }
 
         let stepsWithUniqueScreens = []
         stepsInternalRef.current.forEach(step => {
@@ -1317,7 +1328,7 @@ function WalkthroughComponent({
 
 
     // event listeners
-    window.addEventListener('popstate', function (event) {
+    function onPopState(event) {
 
 
       if (event.state && event.state.stepNumber) {
@@ -1353,9 +1364,10 @@ function WalkthroughComponent({
 
       }
 
-    })
+    }
+    window.addEventListener('popstate', onPopState)
 
-    window.addEventListener('message', function (event) {
+    function onMessage(event) {
 
       if (event.data && event.data.type === 'initEditor') {
         // console.log('initEditor set')
@@ -1509,7 +1521,8 @@ function WalkthroughComponent({
         setStoryDemoInternal(newStoryDemo)
       }
 
-    })
+    }
+    window.addEventListener('message', onMessage)
 
     // Initial setup
     setupTransitionRegions(storyConfig.TRANSITIONS[iframeScreenId], iframeScreenId)
@@ -1525,6 +1538,13 @@ function WalkthroughComponent({
       document.removeEventListener('mozfullscreenchange', exitHandler, false);
       document.removeEventListener('MSFullscreenChange', exitHandler, false);
       document.removeEventListener('webkitfullscreenchange', exitHandler, false);
+      window.removeEventListener('popstate', onPopState)
+      window.removeEventListener('message', onMessage)
+      isUnmounted = true
+      stepGenerationRef.current += 1
+      if (cancelIframeWaitRef.current) {
+        cancelIframeWaitRef.current()
+      }
       chainManager.destroyAllChains()
     }
   }, [])
@@ -1541,6 +1561,9 @@ function WalkthroughComponent({
   }, [storyDemo])
 
   function addTooltipAnchor(anchorId, type, selectorLocation) {
+    if (!tooltipElemAnchorsWrapperRef.current) {
+      return null
+    }
 
     console.log('addTooltipAnchor')
     console.log(anchorId)
@@ -1683,7 +1706,8 @@ function WalkthroughComponent({
   }
 
   async function processStep(currentStepIndex, videoRef, storyDocRef, steps, isReverse) {
-
+    const generation = ++stepGenerationRef.current
+    const isStale = () => generation !== stepGenerationRef.current
 
     let storyDoc = storyDocRef.current
 
@@ -1725,6 +1749,9 @@ function WalkthroughComponent({
     console.time('p')
     console.timeLog('p')
     await beforeChangeStep(currentStepIndex.current, currentStep, steps, screen, prevScreen)
+    if (isStale()) {
+      return
+    }
 
     // Middle operations based on screen type
     console.log('middlePromise')
@@ -1761,6 +1788,9 @@ function WalkthroughComponent({
         // backward truncates events between steps, then pause(toTimeMs).
         // Size update after showScreen — resizing #story_rrweb_root mid-swap causes a blink.
         await chainManager.showScreen(screen, storyDoc, workspaceId, storyId)
+        if (isStale()) {
+          return
+        }
         if (screen.width) {
           setIframeSize({
             width: screen.width,
@@ -1777,6 +1807,9 @@ function WalkthroughComponent({
           await changeIframeScreen(workspaceId, storyId, currentStep.screenId, getIframeLoadedScreenId)
         } else if (!stepBlobs[currentStep.screenId]) {
           await changeIframeScreen(workspaceId, storyId, currentStep.screenId, getIframeLoadedScreenId)
+        }
+        if (isStale()) {
+          return
         }
 
         makeVisible(MAIN_VIEWS.IFRAME, {})
@@ -2058,6 +2091,10 @@ function WalkthroughComponent({
     }
 
 
+    if (isStale()) {
+      return
+    }
+
     // Final state updates - React 18 automatically batches all state updates
     setStepIsOverlayEnabled(currentStep && currentStep.view && currentStep.view.popup && currentStep.view.popup.showOverlay)
 
@@ -2177,6 +2214,10 @@ function WalkthroughComponent({
   function changeIframeScreen(workspaceId, storyId, screenId, getIframeLoadedScreenId) {
 
     // console.log('changeIframeScreen ' + screenId)
+    const generation = stepGenerationRef.current
+    if (cancelIframeWaitRef.current) {
+      cancelIframeWaitRef.current()
+    }
     setIframeScreenId(screenId)
 
     let blobUrl = storyConfig.stepBlobs[screenId]
@@ -2188,6 +2229,7 @@ function WalkthroughComponent({
 
         let timeoutInterval = setTimeout(() => {
           clearInterval(timer)
+          cancelIframeWaitRef.current = null
 
           reject('Timeout expired waiting to load iframe')
         }, 60000)
@@ -2200,11 +2242,20 @@ function WalkthroughComponent({
 
             clearInterval(timeoutInterval)
             clearInterval(timer)
+            cancelIframeWaitRef.current = null
 
             resolve()
           }
 
         }, 500)
+
+        // Resolves (not rejects) so the superseded processStep bails via its stale check.
+        cancelIframeWaitRef.current = () => {
+          clearTimeout(timeoutInterval)
+          clearInterval(timer)
+          cancelIframeWaitRef.current = null
+          resolve()
+        }
       })
 
     } else {
@@ -2228,7 +2279,6 @@ function WalkthroughComponent({
           const blobContent = new Blob([screenData.content], { type: 'text/html' })
 
           let blobUrl = URL.createObjectURL(blobContent)
-          setIframeSrc(blobUrl)
 
           let newStepBlobs = storyConfig.stepBlobs ? { ...storyConfig.stepBlobs } : { ...stepBlobs }
           newStepBlobs[screenData.screenDoc._id] = blobUrl
@@ -2236,11 +2286,17 @@ function WalkthroughComponent({
 
           setStepBlobs(newStepBlobs)
 
+          if (generation !== stepGenerationRef.current) {
+            return
+          }
+
+          setIframeSrc(blobUrl)
 
           return new Promise((resolve, reject) => {
 
             let timeoutInterval = setTimeout(() => {
               clearInterval(timer)
+              cancelIframeWaitRef.current = null
 
               setShowSpinner(false)
 
@@ -2261,6 +2317,7 @@ function WalkthroughComponent({
 
                 clearInterval(timeoutInterval)
                 clearInterval(timer)
+                cancelIframeWaitRef.current = null
 
                 setShowSpinner(false)
                 resolve(res.data)
@@ -2268,6 +2325,12 @@ function WalkthroughComponent({
 
             }, 1000)
 
+            cancelIframeWaitRef.current = () => {
+              clearTimeout(timeoutInterval)
+              clearInterval(timer)
+              cancelIframeWaitRef.current = null
+              resolve()
+            }
 
           })
 

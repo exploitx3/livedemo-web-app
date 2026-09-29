@@ -32,6 +32,16 @@ function setDocumentDomain() {
 }
 
 
+// Same breakpoint as WalkthroughComponent's isMobile: no side padding on phones
+const outerPadding = ({ $paddingPx }) => `
+    padding: ${$paddingPx != null && Number.isFinite($paddingPx) ? `${$paddingPx}px` : '24px'};
+
+    @media (max-width: 768px) {
+        padding-left: 0;
+        padding-right: 0;
+    }
+`
+
 function setupReact() {
 
     // setupSessionRecording()
@@ -68,12 +78,12 @@ function setupReact() {
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: ${({ $paddingPx }) =>
-                $paddingPx != null && Number.isFinite($paddingPx) ? `${$paddingPx}px` : '24px'};
+            ${outerPadding}
             box-sizing: border-box;
         `,
         TopWrapper: styled.div`
             background: ${({ background }) => `${background}`};
+            ${outerPadding}
 
             &&&&:fullscreen {
                 background: none;
@@ -192,12 +202,9 @@ function setupReact() {
                     flexDirection: 'column',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    padding:
-                        outerBg.padding != null && Number.isFinite(outerBg.padding)
-                            ? `${outerBg.padding}px`
-                            : '24px',
                     boxSizing: 'border-box'
                 }}
+                $paddingPx={outerBg.padding}
                 background={outerBg.css}
             >
                 {walkthrough}

@@ -327,14 +327,14 @@ const S = {
     width: 100%;
     flex: 1;
     min-height: 480px;
-    border-radius: 6px;
+    border-radius: 14px;
     overflow: hidden;
     box-shadow: 0 0 0 1px rgb(17 24 39 / 16%);
   `,
   Title: styled.h2`
     align-self: flex-start;
     margin: 20px 0 30px;
-    overflow-x: hidden;
+    overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
     text-transform: capitalize;

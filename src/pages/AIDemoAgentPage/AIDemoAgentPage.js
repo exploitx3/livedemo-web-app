@@ -39,6 +39,7 @@ function AIDemoAgentPage({ authData }) {
   const [stories, setStories] = useState([])
   const [voices, setVoices] = useState([])
   const [avatars, setAvatars] = useState(null)
+  const [lemonsliceAvatars, setLemonsliceAvatars] = useState(null)
   const [anamVoices, setAnamVoices] = useState(null)
   const [history, setHistory] = useState({ revisions: [], canUndo: false, canRedo: false })
   const [sessionId, setSessionId] = useState(null)
@@ -56,6 +57,12 @@ function AIDemoAgentPage({ authData }) {
   const loadSources = useCallback(() => {
     return axios.get(`${base}/knowledge`, authHeaders).then((res) => setSources(res.data))
   }, [agentId, workspaceId, token])
+
+  const loadLemonsliceAvatars = useCallback(() => {
+    return axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/lemonslice-avatars`, authHeaders)
+      .then((res) => setLemonsliceAvatars(res.data.avatars || []))
+      .catch(() => setLemonsliceAvatars([]))
+  }, [workspaceId, token])
 
   const loadHistory = useCallback(() => {
     return axios.get(`${base}/history?limit=50`, authHeaders).then((res) => setHistory(res.data))
@@ -77,6 +84,7 @@ function AIDemoAgentPage({ authData }) {
       axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/anam-avatars`, authHeaders)
         .then((res) => setAvatars(res.data.avatars || []))
         .catch(() => setAvatars([])),
+      loadLemonsliceAvatars(),
       axios.get(`${ENV.STORIES_API}/workspaces/${workspaceId}/anam-voices`, authHeaders)
         .then((res) => setAnamVoices(res.data.voices || []))
         .catch(() => setAnamVoices([])),
@@ -217,6 +225,22 @@ function AIDemoAgentPage({ authData }) {
           agent={agent}
           voices={voices}
           avatars={avatars}
+          lemonsliceAvatars={lemonsliceAvatars}
+          onCreateLemonsliceAvatar={(file, name) => {
+            const data = new FormData()
+            data.append('image', file)
+            data.append('name', name)
+            return axios.post(`${ENV.STORIES_API}/workspaces/${workspaceId}/lemonslice-avatars`, data, authHeaders)
+              .then((res) => loadLemonsliceAvatars().then(() => res.data))
+              .catch((err) => {
+                showErrorsForResponse(err)
+                throw err
+              })
+          }}
+          onDeleteLemonsliceAvatar={(avatarId) => axios.delete(`${ENV.STORIES_API}/workspaces/${workspaceId}/lemonslice-avatars/${avatarId}`, authHeaders)
+            .then(() => Promise.all([loadLemonsliceAvatars(), loadAgent()]))
+            .then(() => toast.success('Avatar deleted'))
+            .catch(showErrorsForResponse)}
           anamVoices={anamVoices}
           onSave={(updates) => patchAgent(updates).then(() => toast.success('Persona saved'))}
         />

@@ -4,6 +4,7 @@ import Colors from '../../../constants/mainColors.js'
 // import { Rings } from 'react-loader-spinner'
 import Rings from '../../injectScriptComponents/Rings/Rings.js'
 import TooltipContentEditor from '../TooltipContent/TooltipContentEditor.js'
+import useAnchoredHotspot from '../../useAnchoredHotspot.js'
 
 import shortUuid from 'short-uuid'
 
@@ -79,6 +80,7 @@ function HotspotContentEditor({
                           wrapperHeight
 
                            }) {
+  view = useAnchoredHotspot(view)
 
   let [hasSetupDragging, setHasSetupDragging] = useState(false)
 

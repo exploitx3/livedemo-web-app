@@ -19,7 +19,11 @@ export function startAgentRecording(url, headers = {}) {
     const batch = events
     events = []
     axios.post(url, { events: batch }, { headers })
-      .catch(err => console.log('agent recording upload failed', err))
+      .catch(err => {
+        // 429 = per-IP or per-session cap: the server will reject every later flush too
+        if (err.response?.status === 429) stop()
+        else console.log('agent recording upload failed', err)
+      })
   }
 
   // Tab close: axios requests get cancelled; keepalive fetch survives (64 KB cap)
@@ -61,11 +65,16 @@ export function startAgentRecording(url, headers = {}) {
   const timer = setInterval(flush, FLUSH_MS)
   window.addEventListener('pagehide', flushOnHide)
 
-  return () => {
+  function stop() {
     clearInterval(posterTimer)
     clearInterval(timer)
     window.removeEventListener('pagehide', flushOnHide)
     if (stopRecord) stopRecord()
+    stopRecord = null
+  }
+
+  return () => {
+    stop()
     flush()
   }
 }

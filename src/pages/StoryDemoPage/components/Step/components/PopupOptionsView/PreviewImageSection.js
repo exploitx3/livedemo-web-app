@@ -1,8 +1,6 @@
 import React, { useRef, useState } from 'react'
 import axios from '../../../../../../utils/axiosInstance'
 import * as ENV from '../../../../../../config'
-import ScreenTypes from '../../../../../../constants/ScreenTypes'
-
 const PreviewImageSection = ({
   internalStep,
   setInternalStep,
@@ -20,7 +18,7 @@ const PreviewImageSection = ({
   const previewImageUrl = internalStep?.view?.popup?.previewImageUrl || ''
 
   const screenshotScreens = storyDemo && storyDemo.screens
-    ? storyDemo.screens.filter(s => s.type === ScreenTypes.SCREEN_SCREENSHOT && s.imageUrl)
+    ? storyDemo.screens.filter(s => s.imageUrl)
     : []
 
   function updateShowPreviewImage(value) {
@@ -134,7 +132,7 @@ const PreviewImageSection = ({
           {isSelectingStep ? (
             <div style={styles.screenGrid}>
               {screenshotScreens.length === 0 ? (
-                <div style={styles.noScreensMsg}>No screenshot screens available</div>
+                <div style={styles.noScreensMsg}>No screens with images available</div>
               ) : (
                 screenshotScreens.map((screen) => (
                   <div

@@ -8,7 +8,7 @@ export function isPcmAudio(payload) {
   return !!payload && payload.encoding === 'pcm_s16le'
 }
 
-function base64ToBytes(base64) {
+export function base64ToBytes(base64) {
   return Uint8Array.from(atob(base64), c => c.charCodeAt(0))
 }
 
@@ -39,7 +39,7 @@ export function playPcm({ audioBase64, sampleRate }) {
 // mode 'passthrough': we pipe ElevenLabs PCM (pushPcm).
 // mode 'talk': Anam's own voice speaks Gemini's text (say). Anam LLM stays off
 // server-side (llmId CUSTOMER_CLIENT_V1), so talk() only reads our text aloud.
-export function createAnamAvatar({ videoId, getSessionToken, mode = 'passthrough' }) {
+export function createAnamAvatar({ videoId, getSessionToken, mode = 'passthrough', onFailed }) {
   const talkMode = mode === 'talk'
   let client = null
   let stream = null
@@ -130,6 +130,7 @@ export function createAnamAvatar({ videoId, getSessionToken, mode = 'passthrough
       console.log(talkMode ? 'anam avatar failed, text only' : 'anam avatar failed, falling back to plain audio', err)
       failed = true
       flushQueue()
+      if (!stopped && onFailed) onFailed(err)
     }
   }
 

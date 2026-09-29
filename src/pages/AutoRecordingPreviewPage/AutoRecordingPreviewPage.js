@@ -6,6 +6,7 @@ import Layout from 'antd/es/layout'
 import Menu from 'antd/es/menu'
 import Modal from 'antd/es/modal'
 import Tabs from 'antd/es/tabs'
+import message from 'antd/es/message'
 
 import 'antd/es/carousel/style'
 import 'antd/es/form/style'
@@ -215,9 +216,12 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
 
   let [visibleStepsIndex, setVisibleStepsIndex] = useState(null)
   let [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(null)
+  let [isSlow, setIsSlow] = useState(false)
+  let [isGenerating, setIsGenerating] = useState(false)
   let checkUploadedTimer = useRef(null)
 
   const autoRecordingIdFromUrl = params.autoRecordingId
+  const workspaceIdForApi = params.workspaceId || currentSelectedWorkspace?._id
 
 
   let innerHeight = window.innerHeight
@@ -254,23 +258,19 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
       return;
     }
 
-    let retryCount = 0
-
     checkUploadedTimer.current = setInterval(function () {
       getAutoRecording(workspaceId, autoRecordingIdFromUrl, authData.token)
         .then((autoRecordingDoc) => {
 
-          if (autoRecordingDoc.status === AutoRecordingStatuses.completed || retryCount >= 30) {
+          if (autoRecordingDoc.status === AutoRecordingStatuses.completed || autoRecordingDoc.status === AutoRecordingStatuses.failed) {
 
             clearInterval(checkUploadedTimer.current)
             checkUploadedTimer.current = null
 
             setAutoRecordingDoc(autoRecordingDoc)
           }
-
-          retryCount++
-
         })
+        .catch((err) => console.warn('auto-recording poll failed', err))
     }, 3000)
   }
 
@@ -284,8 +284,7 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
 
     document.addEventListener('fullscreenerror', handleError);
 
-    // Check if currentSelectedWorkspace exists and has an _id before making API call
-    const workspaceId = currentSelectedWorkspace?._id;
+    const workspaceId = workspaceIdForApi;
     if (!workspaceId) {
       console.warn('currentSelectedWorkspace is not available yet');
       return () => {
@@ -295,7 +294,7 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
 
     getAutoRecording(workspaceId, autoRecordingIdFromUrl, authData.token)
       .then((autoRecordingDoc) => {
-        if (autoRecordingDoc.status !== AutoRecordingStatuses.completed) {
+        if (autoRecordingDoc.status !== AutoRecordingStatuses.completed && autoRecordingDoc.status !== AutoRecordingStatuses.failed) {
           intervalCheckIfReady(workspaceId)
         }
         setAutoRecordingDoc(autoRecordingDoc)
@@ -304,11 +303,16 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
         navigate('/')
       })
 
+    const slowTimer = setTimeout(() => setIsSlow(true), 3 * 60 * 1000)
+
     return () => {
       document.removeEventListener('fullscreenerror', handleError);
+      clearTimeout(slowTimer)
+      clearInterval(checkUploadedTimer.current)
+      checkUploadedTimer.current = null
     }
 
-  }, [currentSelectedWorkspace?._id, autoRecordingIdFromUrl, authData?.token, navigate])
+  }, [workspaceIdForApi, autoRecordingIdFromUrl, authData?.token, navigate])
 
 
   let wrapperHeight = '100%'
@@ -356,7 +360,6 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
       })
   }
 
-
   return (
     <React.Fragment>
       <Header
@@ -384,21 +387,26 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
                 <IconTextButton
                   onClick={async () => {
                     // Handle generate LiveDemo action
-                    if (autoRecordingDoc && selectedSuggestionIndex !== null) {
-                      console.log('Generate LiveDemo for suggestion:', selectedSuggestionIndex)
-
+                    if (autoRecordingDoc && selectedSuggestionIndex !== null && !isGenerating) {
                       let selectedSuggestion = autoRecordingDoc.demoSuggestions[selectedSuggestionIndex]
-                      console.log('selectedSuggestion', JSON.stringify(selectedSuggestion, null, 2))
 
-                      let liveDemoDoc = await generateLiveDemoFromDemoSuggestion(selectedSuggestion, authData.token)
+                      setIsGenerating(true)
+                      try {
+                        let liveDemoDoc = await generateLiveDemoFromDemoSuggestion(selectedSuggestion, authData.token)
 
-                      let url = '/livedemos/' + liveDemoDoc._id
-                      const newWindow = window.open(url, '_blank');
-                      if (newWindow) {
-                        newWindow.focus();
+                        let url = '/livedemos/' + liveDemoDoc._id
+                        const newWindow = window.open(url, '_blank');
+                        if (newWindow) {
+                          newWindow.focus();
+                        } else {
+                          navigate(url)
+                        }
+                      } catch (err) {
+                        console.error('generate-livedemo failed', err)
+                        message.error('Could not generate the LiveDemo, please try again')
+                      } finally {
+                        setIsGenerating(false)
                       }
-
-
                     }
                   }}
                   img={
@@ -435,8 +443,8 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
                       />
                     </S.LiveDemoIcon>
                   }
-                  text="Generate LiveDemo"
-                  disabled={selectedSuggestionIndex === null}
+                  text={isGenerating ? 'Generating...' : 'Generate LiveDemo'}
+                  disabled={selectedSuggestionIndex === null || isGenerating}
                   buttonStyles={{
                     backgroundColor: selectedSuggestionIndex !== null ? `${mainColors.primaryColor} !important` : '#d9d9d9 !important',
                     color: selectedSuggestionIndex !== null ? '#111 !important' : '#FFF !important',
@@ -485,6 +493,9 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
                         )}
                         <S.DemoSuggestionName
                           isSelected={selectedSuggestionIndex === index}>{suggestion.name}</S.DemoSuggestionName>
+                        {suggestion.description && (
+                          <S.DemoSuggestionDescription isSelected={selected}>{suggestion.description}</S.DemoSuggestionDescription>
+                        )}
                         {suggestion.steps && suggestion.steps.length > 0 && (
                           <>
                             <IconTextButton
@@ -542,7 +553,13 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
               )}
             </S.AutoRecordingWrapper>
           </S.Wrapper>
-        ) : (autoRecordingDoc && autoRecordingDoc.status !== AutoRecordingStatuses.completed ? (
+        ) : (autoRecordingDoc && autoRecordingDoc.status === AutoRecordingStatuses.failed ? (
+            <S.Wrapper>
+              <S.LoadingWrapper>
+                <S.LoadingText>Demo failed to be processed, please record again</S.LoadingText>
+              </S.LoadingWrapper>
+            </S.Wrapper>
+          ) : autoRecordingDoc ? (
             <S.Wrapper>
               <S.LoadingWrapper>
                 <S.LoadingCarousel
@@ -563,17 +580,12 @@ const AutoRecordingPreviewPage = ({collapsed, currentSelectedWorkspace, authData
                   })}
                 </S.LoadingCarousel>
                 <Spinner/>
-              </S.LoadingWrapper>
-            </S.Wrapper>
-          ) : (autoRecordingDoc && autoRecordingDoc.status === AutoRecordingStatuses.FAILED ? (
-            <S.Wrapper>
-              <S.LoadingWrapper>
-                <S.LoadingText>Demo failed to be processed, please record again</S.LoadingText>
+                {isSlow && (
+                  <S.SlowNotice>Still working, this can take a few minutes.</S.SlowNotice>
+                )}
               </S.LoadingWrapper>
             </S.Wrapper>
           ) : '')
-
-        )
         }
 
       </S.Content>
@@ -892,6 +904,19 @@ const S = {
     width: 24px;
     height: 24px;
     flex-shrink: 0;
+  `,
+  DemoSuggestionDescription: styled.p`
+    margin: 0 0 8px 0;
+    text-align: center;
+    font-size: 0.9em;
+    color: ${props => props.isSelected ? '#ffffff' : 'var(--ld-text-muted, #555)'};
+    font-family: ${mainColors.fontFamily};
+  `,
+  SlowNotice: styled.p`
+    margin-top: 24px;
+    text-align: center;
+    font-family: ${mainColors.fontFamily};
+    color: var(--ld-text-muted, #555);
   `
 }
 

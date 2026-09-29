@@ -4,6 +4,7 @@ import Colors from '../../../constants/mainColors.js'
 // import { Rings } from 'react-loader-spinner'
 import Rings from '../../injectScriptComponents/Rings/Rings.js'
 import TooltipContent from '../TooltipContent/TooltipContent.js'
+import useAnchoredHotspot from '../../useAnchoredHotspot.js'
 
 import 'tippy.js/dist/tippy.css' // optional
 import 'tippy.js/animations/shift-away.css'
@@ -85,7 +86,7 @@ function HotspotContent({
     prevHotspotY
 
 }) {
-
+    view = useAnchoredHotspot(view)
 
     // console.log('HotspotContent - rendered')
     let [hasSetupDragging, setHasSetupDragging] = useState(false)

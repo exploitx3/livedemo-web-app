@@ -684,7 +684,7 @@ const S = {
   `,
   Tabs: styled(Tabs)`
     &&.switch-tabs {
-      width: 250px;
+      width: 450px;
     }
 
     && .ant-tabs-tab{

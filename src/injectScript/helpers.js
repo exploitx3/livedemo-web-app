@@ -153,7 +153,7 @@ export function getFormSubmitIssue(formData, fieldsObj) {
 
 
 export function getStepAndScreenByStepIndex(stepIndex, storyDemo) {
-    let allSteps = storyDemo.screens.reduce((accum, screen) => {
+    let allSteps = [...storyDemo.screens].sort((a, b) => a.index - b.index).reduce((accum, screen) => {
 
         if (screen.steps && screen.steps.length) {
 
@@ -328,9 +328,10 @@ export function getIframeLoadedScreenId(iframe) {
 
 export function getScreenIndex(screenId, storyDemo) {
     let calculatedStepIndex = 0
+    let screens = [...storyDemo.screens].sort((a, b) => a.index - b.index)
 
     let screenIndex = null
-    storyDemo.screens.forEach((screen, index) => {
+    screens.forEach((screen, index) => {
         if (screen._id === screenId) {
             screenIndex = index
         }
@@ -338,7 +339,7 @@ export function getScreenIndex(screenId, storyDemo) {
 
 
     if (screenIndex !== null) {
-        let totalStepsBefore = storyDemo.screens.slice(0, screenIndex).reduce((accum, scr) => {
+        let totalStepsBefore = screens.slice(0, screenIndex).reduce((accum, scr) => {
             return accum + ((scr.steps && scr.steps.length) || 1)
         }, 0)
 

@@ -36,7 +36,7 @@ const TAB_KEYS = {
 }
 
 const ScreensTab = ({ currentStoryDemo, storyDemoRef, iframeRef, setStoryDemo, tabsWidth, authData, currentStepIndex, previousStepIndex, previousStep, changeStep, reloadStoryDemo }) => {
-  let screens = JSON.parse(JSON.stringify(currentStoryDemo.screens))
+  let screens = JSON.parse(JSON.stringify(currentStoryDemo.screens)).sort((a, b) => a.index - b.index)
   let [isLoading, setIsLoading] = useState(false)
 
   function setScreens(newScreens) {

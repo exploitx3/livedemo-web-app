@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import styled, { css } from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 import axios from 'axios'
 import ENV from '../config.json'
 import mainColors from '../constants/mainColors'
@@ -7,6 +7,7 @@ import AgentChatPanel from './components/AgentChatPanel/AgentChatPanel'
 import AgentVoiceBar from './components/AgentVoiceBar/AgentVoiceBar'
 import { createAiDemoController } from './aiDemoController'
 import { createAnamAvatar } from './anamAvatar'
+import { createLemonSliceAvatar } from './lemonsliceAvatar'
 import { startAgentRecording } from './agentRecording'
 import { ShareAltOutlined, FullscreenOutlined } from '@ant-design/icons'
 import { toast } from 'react-hot-toast'
@@ -26,6 +27,9 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
   const [soundOn, setSoundOn] = useState(true)
   const [captionsOn, setCaptionsOn] = useState(false)
   const [captionText, setCaptionText] = useState('')
+  // No Anam session (e.g. 429 per-IP cap): an empty <video> looks frozen, so drop it
+  const [avatarFailed, setAvatarFailed] = useState(false)
+  const [avatarPlaying, setAvatarPlaying] = useState(false)
 
   const avatarRef = useRef(null)
   const pendingSpeechRef = useRef([])
@@ -35,21 +39,33 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
     controllerRef.current = createAiDemoController(iframeRef)
   }
 
-  const avatarOn = !!(agent.avatarsEnabled && agent.anamAvatarId)
-  // Editor pane: still image only — no billed Anam session, and it is silent anyway.
+  const lemonSlice = agent.avatarProvider === 'lemonslice'
+  const avatarOn = !!(agent.avatarsEnabled && (lemonSlice ? agent.lemonsliceAvatarId : agent.anamAvatarId))
+  // Editor pane: still image only — no billed avatar session, and it is silent anyway.
   // speakWelcome is false while onboarding overlays are up; don't stream behind them.
   const avatarLive = avatarOn && agent.voiceEnabled && !isEditor && speakWelcome
-  const anamVoice = avatarLive && agent.avatarVoice === 'anam'
+  const anamVoice = avatarLive && !lemonSlice && agent.avatarVoice === 'anam'
 
   useEffect(() => {
     if (!avatarLive) return
+    setAvatarFailed(false)
+    setAvatarPlaying(false)
     const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {}
-    const avatar = createAnamAvatar({
-      videoId: avatarVideoIdRef.current,
-      mode: anamVoice ? 'talk' : 'passthrough',
-      getSessionToken: () => axios.post(`${ENV.STORIES_API}/agents/${agent._id}/anam-session`, {}, { headers })
-        .then(res => res.data.sessionToken),
-    })
+    const onFailed = () => setAvatarFailed(true)
+    const avatar = lemonSlice
+      ? createLemonSliceAvatar({
+        videoId: avatarVideoIdRef.current,
+        onFailed,
+        getSession: () => axios.post(`${ENV.STORIES_API}/agents/${agent._id}/lemonslice-session`, {}, { headers })
+          .then(res => res.data),
+      })
+      : createAnamAvatar({
+        videoId: avatarVideoIdRef.current,
+        mode: anamVoice ? 'talk' : 'passthrough',
+        onFailed,
+        getSessionToken: () => axios.post(`${ENV.STORIES_API}/agents/${agent._id}/anam-session`, {}, { headers })
+          .then(res => res.data.sessionToken),
+      })
     avatarRef.current = avatar
     pendingSpeechRef.current.splice(0).forEach(text => avatar.say(text))
     avatar.start()
@@ -57,7 +73,7 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
       avatar.stop()
       avatarRef.current = null
     }
-  }, [avatarLive, anamVoice, agent._id, authToken])
+  }, [avatarLive, anamVoice, lemonSlice, agent._id, authToken])
 
   // Session replay (Session type 'agent'). Editor pane sessions are not analytics.
   useEffect(() => {
@@ -145,6 +161,19 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
     setCurrentDemo(card)
   }
 
+  // LemonSlice video is portrait: same 3/2 box as Anam, face centered, blurred avatar fills the sides
+  function portraitFrame(media) {
+    if (!media || !lemonSlice) return media
+    return (
+      <S.PortraitFrame style={agent.avatarUrl ? { '--ld-avatar-bg': `url(${agent.avatarUrl})` } : undefined}>
+        {media}
+        {avatarLive && !avatarPlaying && (
+          <S.AvatarLoading role="status" aria-label="Loading avatar"><span /></S.AvatarLoading>
+        )}
+      </S.PortraitFrame>
+    )
+  }
+
   function handleShare() {
     const url = `${ENV.SERVER_URL}/agents/${agent._id}`
     navigator.clipboard.writeText(url)
@@ -226,18 +255,20 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
         onCaptionChange={setCaptionText}
         onVoiceAudio={avatarLive && !anamVoice ? handleVoiceAudio : undefined}
         onSpeakText={anamVoice ? handleSpeakText : undefined}
-        avatar={avatarLive ? (
+        avatar={portraitFrame(avatarFailed ? null : avatarLive ? (
           // Chat collapse/expand remounts this element; reattach keeps the live stream
           <S.AvatarVideo
+            $portrait={lemonSlice}
             id={avatarVideoIdRef.current}
             ref={(el) => { if (el && avatarRef.current) avatarRef.current.reattach(el) }}
             autoPlay
             playsInline
+            onPlaying={() => setAvatarPlaying(true)}
             style={agent.avatarUrl ? { backgroundImage: `url(${agent.avatarUrl})` } : undefined}
           />
         ) : avatarOn && agent.avatarUrl ? (
-          <S.AvatarImage src={agent.avatarUrl} alt="" />
-        ) : null}
+          <S.AvatarImage $portrait={lemonSlice} src={agent.avatarUrl} alt="" />
+        ) : null)}
       >
         <AgentVoiceBar
           voiceEnabled={agent.voiceEnabled}
@@ -301,12 +332,26 @@ function AgentSessionLayout({ agent, mode, sessionId, authToken, onHangUp, speak
   )
 }
 
+const spin = keyframes`
+  to { transform: rotate(360deg); }
+`
+
 const avatarBoxCss = css`
   display: block;
   width: 100%;
   aspect-ratio: 3 / 2;
   object-fit: cover;
   border-radius: 12px;
+
+  /* Inside PortraitFrame: 2x3 video at 125% of the box height, top-anchored (bottom 20% cut) */
+  ${p => p.$portrait && css`
+    position: relative;
+    width: auto;
+    height: 125%;
+    aspect-ratio: 2 / 3;
+    margin: 0 auto;
+    border-radius: 0;
+  `}
 `
 
 const S = {
@@ -377,6 +422,43 @@ const S = {
   AvatarVideo: styled.video`
     ${avatarBoxCss}
     background: #111318 center / cover no-repeat;
+  `,
+  PortraitFrame: styled.div`
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #111318;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -24px;
+      background: var(--ld-avatar-bg) center / cover no-repeat;
+      filter: blur(20px) brightness(0.75);
+    }
+  `,
+  AvatarLoading: styled.div`
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(17, 19, 24, 0.35);
+
+    span {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: ${spin} 0.8s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      span { animation-duration: 2.4s; }
+    }
   `,
   AvatarImage: styled.img`
     ${avatarBoxCss}
