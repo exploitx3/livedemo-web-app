@@ -57,6 +57,10 @@ const PRODUCT_IDS = {
     [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZkkwn0B77gSJ' : 'prod_UXbDm4HqbawhNo',
     [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZmCUin8ZKi0o' : 'prod_UXbDRK1gGrfWEh',
   },
+  'Trial - Growth': {
+    [PLAN_LENGTHS.Monthly]: IS_DEV ? 'prod_UXZluZhDivdyOl' : 'prod_UXbECZgFqrpCzI',
+    [PLAN_LENGTHS.Annually]: IS_DEV ? 'prod_UXZnkXaY05BRmV' : 'prod_UXbEreuawwjJ1v',
+  },
 }
 
 const subscriptionTypes = [
@@ -81,6 +85,13 @@ const subscriptionTypes = [
     price: `Free for 7 days, then $34/month`,
     priceMonthly: 34,
     priceAnnually: 324,
+    freeTrial: true,
+  },
+  {
+    name: 'Trial - Growth',
+    price: `Free for 7 days, then $49/month`,
+    priceMonthly: 49,
+    priceAnnually: 468,
     freeTrial: true,
   },
 ]
@@ -973,7 +984,7 @@ const U = {
     }
   `,
   FormUsers: styled.div`
-    height: 350px;
+    height: 440px;
     border: solid 1px #dae3f2;
     -webkit-box-shadow: 0 1px 5px rgb(0 0 0 / 5%);
     -moz-box-shadown: 0 1px 5px rgba(0,0,0,.05);

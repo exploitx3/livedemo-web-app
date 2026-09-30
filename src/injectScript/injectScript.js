@@ -36,7 +36,7 @@ function setDocumentDomain() {
 const outerPadding = ({ $paddingPx }) => `
     padding: ${$paddingPx != null && Number.isFinite($paddingPx) ? `${$paddingPx}px` : '24px'};
 
-    @media (max-width: 768px) {
+    @media (max-width: 490px) {
         padding-left: 0;
         padding-right: 0;
     }
